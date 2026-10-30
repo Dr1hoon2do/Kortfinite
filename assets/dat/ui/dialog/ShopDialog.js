@@ -1,4 +1,5 @@
 // 상점 창 (상인에게 말을 걸면). 물건마다 한 줄: 그림, 이름, 짧은 설명, 값 [사기].
+//   목록은 페이지식이다: 한 쪽에 들어가는 만큼만 보이고, 아래 [▲]/[▼]로 쪽을 넘긴다 (끌어서 스크롤하지 않는다).
 //   행동 카드(주문 포함)는 사면 덱에 들어간다. 장비·소모품·젬은 패에 들어간다 (자리가 있어야).
 //   맨 아래 [카드 빼기]: 덱에서 카드 한 장을 아주 없앤다 (상점마다 한 번, 값은 할 때마다 오른다).
 // 거래는 턴을 쓰지 않는다.
@@ -31,13 +32,25 @@ class ShopDialog extends Component {
         const list = box.createChild("list");
         this.list = list.getComponent(RectTransform);
         this.list.setAnchor(0, 0, 1, 1);
-        this.list.setOffsets(12, 82, 12, 52);
+        this.list.setOffsets(12, 82, 12, 94);
         list.addComponent(new UIRect({ color: "rgba(0, 0, 0, 0.25)" }));
         list.addComponent(new UIMask());
         this.content = this.list.createChild("content").getComponent(RectTransform);
-        const bar = this.list.createChild("scrollbar");
-        bar.addComponent(new UIRect({ color: "rgba(232, 217, 184, 0.45)" }));
-        this.scroll = list.addComponent(new UIScrollView({ content: this.content, bar: bar.getComponent(RectTransform) }));
+        this.content.setAnchor(0, 0, 1, 1);
+        this.content.setOffsets(0, 0, 0, 0);
+
+        // 쪽 넘기기: [▲] 1/2 쪽 [▼]
+        this.page = 0;
+        this.prevButton = UIKit.button(box, "prev", "▲ 위", () => this.turnPage(-1), { fontSize: 12 });
+        this.prevButton.rt.setAnchor(0, 1, 0.4, 1);
+        this.prevButton.rt.setOffsets(12, -86, 3, 52);
+        this.pageText = UIKit.label(box, "page", "", 0, 0, null, 18, { fontSize: 12, color: "#c8b890", align: "center", verticalAlign: "middle" });
+        const prt = this.pageText.gameObject.getComponent(RectTransform);
+        prt.setAnchor(0.4, 1, 0.6, 1);
+        prt.setOffsets(0, -86, 0, 52);
+        this.nextButton = UIKit.button(box, "next", "▼ 아래", () => this.turnPage(1), { fontSize: 12 });
+        this.nextButton.rt.setAnchor(0.6, 1, 1, 1);
+        this.nextButton.rt.setOffsets(3, -86, 12, 52);
 
         const close = UIKit.button(box, "close", "나가기", () => this.close(), { fontSize: 13 });
         close.rt.setAnchor(0, 1, 1, 1);
@@ -49,9 +62,9 @@ class ShopDialog extends Component {
         this.title.setText(`상점 · ${npc.displayName}`);
         this.line.setText(`"${npc.line()}"`);
         this._key = null;
+        this.page = 0;
         Modal.fit(this.engine, this.box, 360, 520);
         Modal.show(this.root, true);
-        this.scroll.scrollTo(0);
     }
 
     close() {
@@ -67,7 +80,7 @@ class ShopDialog extends Component {
         if (Input.getButtonDown("cancel")) return this.close();
         if (!this.npc.alive || this.npc.angry || !this.player.alive) return this.close();
         this.moneyText.setText(`내 돈 ${this.player.money} G`);
-        const key = [this.player.money, this.player.cards.version, this.npc.stock.map((s) => s.sold ? 1 : 0).join(""), this.run.removeCount].join("|");
+        const key = [this.player.money, this.player.cards.version, this.npc.stock.map((s) => s.sold ? 1 : 0).join(""), this.run.removeCount, this.page, this.pageSize()].join("|");
         if (key !== this._key) {
             this._key = key;
             this.rebuild();
@@ -101,13 +114,48 @@ class ShopDialog extends Component {
         return y + ShopDialog.ROW;
     }
 
+    // 한 쪽에 들어가는 줄 수 (목록 높이 ÷ 줄 높이)
+    pageSize() {
+        const h = this.list.rect.height / this.list.uiRoot.scale;
+        return Math.max(1, Math.floor((h - 6) / ShopDialog.ROW));
+    }
+
+    turnPage(d) {
+        CardInspector.hide(this);
+        this.page += d;
+        this._key = null; // 다음 update에서 다시 그린다 (쪽이 범위를 넘으면 rebuild가 바로잡는다)
+    }
+
+    // 목록의 모든 줄: 물건들 + 맨 아래 [카드 빼기]
+    entries() {
+        return [...this.npc.stock.map((offer) => ({ offer })), { remove: true }];
+    }
+
     rebuild() {
         for (const row of this.rows) row.destroy();
         this.rows = [];
         CardInspector.untrack(this);
         const p = this.player;
+        const entries = this.entries();
+        const size = this.pageSize();
+        const pages = Math.max(1, Math.ceil(entries.length / size));
+        this.page = Math.max(0, Math.min(pages - 1, this.page));
+        this.pageText.setText(`${this.page + 1} / ${pages} 쪽`);
+        UIKit.setEnabled(this.prevButton, this.page > 0);
+        UIKit.setEnabled(this.nextButton, this.page < pages - 1);
         let y = 6;
-        for (const offer of this.npc.stock) {
+        for (const entry of entries.slice(this.page * size, this.page * size + size)) {
+            if (entry.remove) {
+                const cost = this.run.removeCost;
+                y = this.addRow(y, {
+                    def: { sprite: "cards", frame: 9 }, name: "카드 빼기",
+                    info: `덱에서 카드 한 장을 아주 없앤다 (이 상점에서 뺄 때마다 +25 G${this.run.removeCount ? `, ${this.run.removeCount}번 뺐다` : ""})`,
+                    button: `${cost} G`, ok: p.money >= cost && p.cards.allActions.length > 1,
+                    onTap: () => this.remove()
+                });
+                continue;
+            }
+            const offer = entry.offer;
             const card = offer.card;
             const where = card.isSkill ? "덱에" : "패에";
             const kind = CardDef.kindName(card.def) + (card.def.rarity ? ` · ${ShopDialog.RARITY[card.def.rarity]}` : "");
@@ -122,14 +170,6 @@ class ShopDialog extends Component {
                 onTap: () => this.buy(offer, where)
             });
         }
-        const cost = this.run.removeCost;
-        y = this.addRow(y + 6, {
-            def: { sprite: "cards", frame: 9 }, name: "카드 빼기",
-            info: `덱에서 카드 한 장을 아주 없앤다 (이 상점에서 뺄 때마다 +25 G${this.run.removeCount ? `, ${this.run.removeCount}번 뺐다` : ""})`,
-            button: `${cost} G`, ok: p.money >= cost && p.cards.allActions.length > 1,
-            onTap: () => this.remove()
-        });
-        this.scroll.contentHeight = y + 4;
     }
 
     static RARITY = { common: "흔함", uncommon: "드묾", rare: "희귀", boss: "우두머리" };

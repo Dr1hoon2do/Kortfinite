@@ -5,6 +5,11 @@ on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
+    # 게임 파일이 바뀔 때만 배포한다 (문서·도구 커밋은 배포를 안 띄운다)
+    paths:
+      - "index.html"
+      - "KuntoGame/**"
+      - "assets/**"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
