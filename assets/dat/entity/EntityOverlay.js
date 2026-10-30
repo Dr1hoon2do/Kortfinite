@@ -186,7 +186,7 @@ class Intent {
         if (e.ai instanceof EnemyAI) return EnemyMoves.view(e.ai, p);
         if (!e.isHostileTo(p)) return null;
         const d = Math.abs(e.x - p.x) + Math.abs(e.y - p.y);
-        if (d <= (e.moves ?? 1)) return { kind: "attack", v: Math.max(1, e.stats.attack) };
+        if (d <= (e.moves ?? 1)) return { kind: "attack", v: e.stats.attack };
         if (d <= (e.ai.sight ?? 6)) return { kind: "chase" };
         return null;
     }

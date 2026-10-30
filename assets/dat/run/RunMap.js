@@ -125,7 +125,7 @@ class RunMap {
         const src = rows.slice(0, R - 1).flat();
         const total = RunMap.BRANCH.reduce((s, [, w]) => s + w, 0);
         const bag = [];
-        for (const [k, w] of RunMap.BRANCH) for (let i = 0; i < Math.round(src.length * w / total); i++) bag.push(k);
+        for (const [k, w] of RunMap.BRANCH) for (let i = 0; i < Math.floor(src.length * w / total); i++) bag.push(k);
         while (bag.length < src.length) bag.push(2);
         bag.length = src.length;
         Rng.shuffle(rng, bag);

@@ -111,7 +111,7 @@ class AllyAI extends AI {
                 if (e.alive && foe.alive && this.distance(e, foe) === 1) {
                     if (e.x !== foe.x) e.flipX = foe.x < e.x;
                     e.applyFlip();
-                    anims.push(...Combat.strike(e, foe, w, Math.max(1, e.stats.attack), null));
+                    anims.push(...Combat.strike(e, foe, w, e.stats.attack, null));
                     if (foe.alive && foe.ai && foe.ai.taunted) {
                         foe.ai.taunted(e, 1);
                         anims.push(new PopupAnim(foe, "도발", Status.DEFS.taunt.color));

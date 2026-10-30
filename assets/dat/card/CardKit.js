@@ -72,12 +72,12 @@ class CardKit {
     }
 
     static dmg(pct, user = Player.current) {
-        return Math.max(1, Math.floor(CardKit.atk(user) * pct / 100 + 1e-9));
+        return Math.floor(CardKit.atk(user) * pct / 100 + 1e-9);
     }
 
     static blk(pct, user = Player.current) {
         const d = user ? user.stats.defense : Player.BASE_DEFENSE;
-        return Math.max(1, Math.floor(d * pct / 100 + 1e-9));
+        return Math.floor(d * pct / 100 + 1e-9);
     }
 
     static isFoe(user, e) {

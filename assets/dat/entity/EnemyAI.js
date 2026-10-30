@@ -146,10 +146,10 @@ class EnemyMoves {
         return ctx.world.rng ?? Math.random;
     }
 
-    // e의 공격력/방어력 비례 값 (최소 1)
+    // e의 공격력/방어력 비례 값 
     static val(e, stat, pct) {
         const base = stat === "def" ? e.stats.defense : e.stats.attack;
-        return Math.max(1, Math.floor(base * pct / 100 + 1e-9));
+        return Math.floor(base * pct / 100 + 1e-9);
     }
 
     // ---------- 로테이션 ----------
@@ -430,7 +430,7 @@ class EnemyMoves {
 
     // 맞히기 (피해 계산·방어도·메시지). 플레이어든 소환수든
     static hurt(e, target, dmg, name, w) {
-        dmg = Status.modify(Math.max(1, dmg), e, target);
+        dmg = Status.modify(dmg, e, target);
         MessageLog.add(`${josa(e.displayName, "이가")} ${target instanceof Player ? "당신" : target.displayName}에게 ${dmg} 피해 (${name})`, "#f0a0a0");
         const list = [];
         if (EnemyMoves.dist(e, target) <= 1) list.push(new AttackAnim(e, target, w.tileSize));

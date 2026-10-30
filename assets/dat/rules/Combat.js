@@ -7,7 +7,7 @@ class Combat {
     // 부딪혀 공격 (몬스터·상인의 공격): 공격 연출 + 공격력만큼 피해. 방어력은 피해를 줄이지 않는다 (방어도만 막는다).
     // 플레이어는 부딪혀 공격하지 않고 공격 카드로 친다
     static attack(attacker, target, world) {
-        return Combat.strike(attacker, target, world, Math.max(1, attacker.stats.attack));
+        return Combat.strike(attacker, target, world, attacker.stats.attack);
     }
 
     // 정해진 피해로 한 번 친다 (공격 카드, 부딪히기). using: 메시지에 붙일 카드 이름

@@ -111,7 +111,7 @@ class Status {
     // 이동속도 (둔화: -%): base는 원래 이동속도
     static speed(e, base) {
         const slow = Status.get(e, "slow");
-        return slow ? Math.max(1, Math.floor(base * (100 - slow) / 100 + 1e-9)) : base;
+        return slow ? Math.floor(base * (100 - slow) / 100 + 1e-9) : base;
     }
 
     // 턴 시작 효과 (화상 피해). 연출 배열

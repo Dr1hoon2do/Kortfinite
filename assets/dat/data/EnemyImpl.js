@@ -165,7 +165,7 @@ EnemyMoves.SPECS = {
         actions: {
             A(ai, ctx, e, foe) {
                 if (EnemyMoves.dist(e, foe) > 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
-                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.max(1, Math.floor(e.stats.defense * 0.5 + 1e-9)), thrown: true, color: "#e8e8f0" };
+                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.floor(e.stats.defense * 0.5 + 1e-9), thrown: true, color: "#e8e8f0" };
             },
             B: () => ATK(100, { poison: 100, name: "독니" }),
             C: () => ({ kind: "idle" })
