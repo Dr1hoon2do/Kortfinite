@@ -356,7 +356,7 @@ class CardKit {
             run: (c, [p], f) => {
                 const hp = f.stats.hp;
                 const out = CardKit.hit(c, f, CardKit.dmg(p, c.user));
-                const got = Math.ceil((hp - f.stats.hp) / 2);
+                const got = Math.floor((hp - f.stats.hp) / 2);
                 if (got > 0) out.push(...CardKit.heal(c.user, got));
                 return out;
             },

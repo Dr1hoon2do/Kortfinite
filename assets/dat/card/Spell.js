@@ -117,7 +117,7 @@ class Spell {
         const s = Spell.spec(card);
         const { sockets, gems } = Spell.data(card);
         const base = s.price * Spell.PRICE_GROWTH ** Spell.points(card) * Spell.SOCKET_PRICE[sockets];
-        return Math.max(1, Math.round(base + gems.reduce((sum, g) => sum + Gem.priceOf(g), 0)));
+        return Math.max(1, Math.floor(base + gems.reduce((sum, g) => sum + Gem.priceOf(g), 0)));
     }
 
     // "마나 5" / "체력 3" / "쉼 3" / "비용 없음"

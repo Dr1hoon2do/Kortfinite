@@ -17,7 +17,7 @@ const EQUIP = {
     bent_dagger: {
         icon: "dagger", color: "#c8c0a8",
         dealt(dmg, user, target) {
-            return Equip.adjacent(user, target) ? Math.round(dmg * 1.25) : dmg;
+            return Equip.adjacent(user, target) ? Math.floor(dmg * 125 / 100) : dmg;
         }
     },
 

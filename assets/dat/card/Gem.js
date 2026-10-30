@@ -46,7 +46,7 @@ class Gem {
 
     static price(card) {
         const k = Gem.kind(card.defId);
-        return Math.max(1, Math.round(Gem.BASE_PRICE * Gem.GROWTH ** Gem.quality(card) * k.worth));
+        return Math.max(1, Math.floor(Gem.BASE_PRICE * Gem.GROWTH ** Gem.quality(card) * k.worth));
     }
 
     static describe(card) {
@@ -134,7 +134,7 @@ class Gem {
     }
 
     static removeFee(saved) {
-        return Math.max(Gem.REMOVE_MIN, Math.round(Gem.priceOf(saved) * Gem.REMOVE_RATE));
+        return Math.max(Gem.REMOVE_MIN, Math.floor(Gem.priceOf(saved) * Gem.REMOVE_RATE));
     }
 }
 

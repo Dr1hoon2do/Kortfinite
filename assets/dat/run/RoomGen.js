@@ -169,8 +169,8 @@ class RoomPlan {
     // 행동 카드 6장 (보상 풀에서). 값은 카드마다 정해진 값 ±10%
     static rollStock(rng, row) {
         const stock = [];
-        for (const card of Rewards.cards(rng, 6)) stock.push({ card, price: Math.max(1, Math.round(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
-        for (const card of Rewards.gear(rng, 2, "shop")) stock.push({ card, price: Math.max(1, Math.round(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
+        for (const card of Rewards.cards(rng, 6)) stock.push({ card, price: Math.max(1, Math.floor(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
+        for (const card of Rewards.gear(rng, 2, "shop")) stock.push({ card, price: Math.max(1, Math.floor(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
         return stock;
     }
 }

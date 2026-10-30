@@ -26,7 +26,7 @@ class Monster extends Entity {
             type: kind,
             name: R.title ? `${R.title} ${base}` : base,
             stats: {
-                maxHp: Math.round(k.hp * (1 + 0.3 * (lv - 1)) * R.hp),
+                maxHp: Math.floor(k.hp * (1 + 0.3 * (lv - 1)) * R.hp + 1e-9),
                 attack: k.attack + (lv - 1) + R.attack,
                 defense: k.defense + Math.floor((lv - 1) / 2)
             },

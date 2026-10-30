@@ -15,7 +15,7 @@ def tags(l): return ", ".join(tag.get(i, i) for i in l or []) or "-"
 def cell(s): return str(s or "").replace("|", "\\|").replace("\n", "<br>")
 o = ["# Kortfinite 데이터 표", "",
      "`assets/dat/data/GameData.js`(카드 공방 내보내기)에서 뽑은 표다. 직접 고치지 말고 공방에서 고친 뒤 `tools/import_data.py`로 갈아 끼우고, 이 표는 `python3 tools/gen_data_md.py`로 다시 만든다.",
-     "수치 규칙: 피해·방어도 %는 공격력·방어력 기준(능력치 비례 값은 내림, 최소 1), 이동속도 비례 값(칸·장수)은 반올림(최소 1).", ""]
+     "수치 규칙: 피해·방어도 %는 공격력·방어력 기준(모든 % 계산은 버림, 최소 1), 이동속도 비례 값(칸·장수)도 버림(최소 1).", ""]
 o += ["## 1. 카드 (%d장)" % len(D["cards"]), "", "한 카드에 비용 경우가 여럿이면 `/`로 구분한다. 경우마다 따로 한 장씩 나온다.", "", "| id | 이름 | 분류 | 비용 | 효과 | 태그 | 강화 |", "|---|---|---|---|---|---|---|"]
 for c in D["cards"]:
     o.append("| %s | %s | %s | %s | %s | %s | %s |" % (c["id"], c["name"], KIND.get(c.get("kind"), c.get("kind")), cost(c.get("costs")), cell(c.get("effect")), tags(c.get("tags")), ", ".join(u["key"] for u in c.get("upgrades", [])) or "-"))

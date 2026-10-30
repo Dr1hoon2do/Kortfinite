@@ -45,7 +45,7 @@ class RestDialog extends Component {
 
     healAmount() {
         const s = this.player.stats;
-        return Math.min(s.maxHp - s.hp, Math.ceil(s.maxHp * RestDialog.HEAL));
+        return Math.min(s.maxHp - s.hp, Math.floor(s.maxHp * RestDialog.HEAL + 1e-9));
     }
 
     open(fire) {

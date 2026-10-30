@@ -5,7 +5,7 @@
 //
 // 비용: 공방 카드의 costs는 "비용의 경우들"이다. 한 경우 안의 자원은 모두 함께 낸다 (기력 1 + 마나 1이면 둘 다).
 //   경우가 여럿이면 카드 한 장마다 그중 하나로 정해져 나온다 (Card.cost · data.pay, 도감에는 경우마다 한 장). 체력 비용은 체력이 모자라면 못 쓴다.
-// 수치 규칙: 능력치 비례 값은 내림 (최소 1), 이동속도 비례 값(칸·장수)은 반올림 (최소 1). 둔화는 이동속도를 줄인다.
+// 수치 규칙: 모든 % 계산은 버림 (최소 1). 능력치 비례 값도, 이동속도 비례 값(칸·장수)도 반올림·올림 없이 버린다. 둔화는 이동속도를 줄인다.
 class CardOps {
     static say(msg) {
         MessageLog.add(msg, "#c8b890");
@@ -30,7 +30,7 @@ class CardOps {
     }
 
     static spd(u, pct = 100) {
-        return Math.max(1, Math.round(CardOps.speed(u) * pct / 100 + 1e-9));
+        return Math.max(1, Math.floor(CardOps.speed(u) * pct / 100 + 1e-9));
     }
 
     static dist(a, b) {
@@ -729,7 +729,7 @@ class GameContent {
                 const v = stat === "공격력" ? CardOps.atk(u, +sp) : CardOps.def(u, +sp);
                 return CardText.stat(stat === "공격력" ? "atk" : "def", +sp, v);
             }
-            if (spd) return CardText.stat("spd", +spd, Math.max(1, Math.round(speed * +spd / 100 + 1e-9)));
+            if (spd) return CardText.stat("spd", +spd, Math.max(1, Math.floor(speed * +spd / 100 + 1e-9)));
             if (mh) return CardText.stat("hp", +mh, CardOps.pct(u.stats.maxHp, +mh));
             if (mm) return CardText.stat("mana", +mm, CardOps.pct(u.maxMana ?? Player.MAX_MANA, +mm));
             if (m === "이동속도") return CardText.stat("spd", null, speed);
@@ -747,7 +747,7 @@ class GameContent {
         const total = costs.reduce((a, c) => a + (c.energy ?? 0) + (c.mana ?? 0), 0) / costs.length;
         const def = {
             type: "skill", sprite: "kicons", frame, kit: true, icon: impl.icon ?? "card", color: extra.color ?? impl.color ?? "#e8d9b8",
-            name: data.name, cost, costs, price: Math.round(30 + 14 * total), tags: data.tags ?? [], effect: data.effect ?? "",
+            name: data.name, cost, costs, price: Math.floor(30 + 14 * total), tags: data.tags ?? [], effect: data.effect ?? "",
             exhaust: !!impl.exhaust, grudge: impl.grudge ?? null, picker: impl.picker ?? null,
             ...impl, ...extra,
             text: () => GameContent.render(data.effect) + (extra.upgradeMats?.length ? `\n(강화 재료: ${GameContent.matsText(extra.upgradeMats)})` : ""),
