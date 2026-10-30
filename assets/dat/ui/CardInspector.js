@@ -2,7 +2,9 @@
 //   상점·보상·덱 보기에서 카드를 고르면 뜨고, 마우스를 카드 위에 올려도 뜬다 (손을 떼거나 닫으면 사라진다).
 //   설정 "카드 정보 창"을 끄면 뜨지 않는다.
 //   창은 누르기를 막지 않는다 (아래 버튼이 그대로 눌린다).
-// 쓰기: CardInspector.show(card, { verbose, near: RectTransform }) / CardInspector.hide(owner)
+//   고정된 창(탭해서 연 것)은 창 바깥을 탭하면 닫힌다 (끌어서 스크롤하는 건 닫지 않는다). 다른 카드를 탭하면 그 카드로 바뀐다.
+// 쓰기: CardInspector.show(card, { verbose, near: RectTransform, onHide }) / CardInspector.hide(owner)
+//       onHide: 창이 닫힐 때(바깥 탭 포함) 부르는 함수 — 부르는 쪽이 "고른 카드" 표시를 지울 때 쓴다
 //       CardInspector.track(owner, rt, card, verbose) — 마우스를 올리면 뜨는 카드 (owner가 바뀌면 untrack(owner))
 class CardInspector extends Component {
     static current = null;
@@ -25,14 +27,22 @@ class CardInspector extends Component {
         const I = CardInspector.current;
         if (!I) return;
         if (!card || !CardInspector.enabled()) return I._hide();
-        I.pinned = { card, verbose: opts.verbose ?? true, near: opts.near ?? null, owner: opts.owner ?? null };
+        I._unpin(); // 바뀌기 전 것의 onHide (다른 카드를 탭하면 앞 카드의 고른 표시가 풀린다)
+        I.pinned = { card, verbose: opts.verbose ?? true, near: opts.near ?? null, owner: opts.owner ?? null, onHide: opts.onHide ?? null };
+        I._justPinned = true; // 이번 프레임의 탭은 바깥 탭으로 치지 않는다
     }
 
     static hide(owner = null) {
         const I = CardInspector.current;
         if (!I || !I.pinned) return;
         if (owner && I.pinned.owner !== owner) return;
-        I.pinned = null;
+        I._unpin();
+    }
+
+    _unpin() {
+        const p = this.pinned;
+        this.pinned = null;
+        if (p && p.onHide) p.onHide();
     }
 
     static track(owner, rt, card, verbose = true) {
@@ -93,6 +103,16 @@ class CardInspector extends Component {
             const alive = list.filter((t) => t.rt.gameObject && !t.rt.gameObject.isDestroyed);
             if (alive.length !== list.length) this.tracked.set(owner, alive);
         }
+        // 고정된 창: 창 바깥을 탭(끌지 않고 뗌)하면 닫는다
+        if (this.pinned && !this._justPinned) {
+            for (const p of Input.pointers) {
+                if (p.released && p.dragDistance <= Input.dragThreshold && !this.rt.containsPoint(p.position.x, p.position.y)) {
+                    this._unpin();
+                    break;
+                }
+            }
+        }
+        this._justPinned = false;
         const h = this.hovered();
         const want = h ? { card: h.card, verbose: h.verbose, near: h.rt } : this.pinned;
         if (!want) return this.card && this._hide();

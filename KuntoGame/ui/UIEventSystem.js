@@ -27,15 +27,27 @@ class UIEventSystem {
     }
 
     for (const pointer of Input.pointers) {
-      const captured = UIEventSystem._captured.get(pointer.id);
+      let captured = UIEventSystem._captured.get(pointer.id);
 
       if (captured) {
         pointer.consume();
+        // 스크롤 목록 안의 버튼을 끌기 시작하면 누른 것을 취소하고 목록 스크롤로 넘긴다 (행이 목록을 가득 채워도 끌어서 스크롤된다)
+        if (!pointer.released && captured instanceof UIButton && pointer.dragDistance > Input.dragThreshold) {
+          const view = UIEventSystem._scrollAncestor(captured);
+          if (view) {
+            captured.onPointerUp(pointer);
+            UIEventSystem._captured.set(pointer.id, view);
+            view.onPointerDown(pointer);
+            captured = view;
+          }
+        }
         if (pointer.released) {
           UIEventSystem._captured.delete(pointer.id);
           captured.onPointerUp(pointer);
           const hitNow = UIEventSystem._hitTest(engine, pointer.position.x, pointer.position.y);
-          if (hitNow === captured) captured.onClick(pointer);
+          // 버튼을 끌고 나서 뗀 것은 탭이 아니다
+          const dragged = captured instanceof UIButton && pointer.dragDistance > Input.dragThreshold;
+          if (hitNow === captured && !dragged) captured.onClick(pointer);
         } else {
           captured.onDrag(pointer);
         }
@@ -57,6 +69,15 @@ class UIEventSystem {
         }
       }
     }
+  }
+
+  // el 위쪽(부모들)에 있는 가장 가까운 UIScrollView. 없으면 null
+  static _scrollAncestor(el) {
+    for (let go = el.gameObject && el.gameObject.parent; go; go = go.parent) {
+      const view = go.getComponent(UIScrollView);
+      if (view && view.isActiveAndEnabled) return view;
+    }
+    return null;
   }
 
   // 화면 좌표(x, y)에 있는 맨 위 UI 요소. 없으면 null. 월드 입력이 UI 위인지 확인할 때 쓴다.

@@ -135,6 +135,7 @@ class HandBar extends Component {
     select(card) {
         if (this.targeting.active && this.targeting.card && this.targeting.card !== card) this.targeting.cancel(true);
         this.selected = card;
+        this._justSelected = true; // 이번 프레임의 탭은 바깥 탭으로 치지 않는다
         this._detailKey = null;
         this.layout();
         if (!card) return;
@@ -216,6 +217,7 @@ class HandBar extends Component {
         }
         this.refreshViews();
         this.refreshDetail(width);
+        this.dismissDetail();
 
         if (!p.alive || Modal.isOpen) return;
         if (Input.getButtonDown("draw")) {
@@ -350,6 +352,22 @@ class HandBar extends Component {
     }
 
     // 고른 카드 설명 칸
+    // 설명 창이 떠 있을 때 창 바깥을 탭(끌지 않고 뗌)하면 고르기를 푼다. 칸을 고르는 중(대상 지정)에는 땅 탭이 대상 고르기라 건드리지 않는다
+    dismissDetail() {
+        const fresh = this._justSelected;
+        this._justSelected = false;
+        if (!this.selected || fresh || this.targeting.active || Modal.isOpen || !this.detail.isActive) return;
+        const rt = this.detail.getComponent(RectTransform);
+        for (const p of Input.pointers) {
+            if (p.released && p.dragDistance <= Input.dragThreshold && !rt.containsPoint(p.position.x, p.position.y)) {
+                this.selected = null;
+                this._detailKey = null;
+                this.layout();
+                return;
+            }
+        }
+    }
+
     refreshDetail(width) {
         const card = this.selected;
         const show = !!card && !this.targeting.active && !Modal.isOpen;

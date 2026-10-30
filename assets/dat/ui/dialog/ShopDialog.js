@@ -136,12 +136,20 @@ class ShopDialog extends Component {
 
     // 물건 줄을 누르면 크게 보기 (다시 누르면 닫기)
     inspect(card, rt, bg) {
-        if (this._selBg) this._selBg.borderColor = UIKit.COLORS.border;
-        this.selected = this.selected === card ? null : card;
-        this._selBg = this.selected ? bg : null;
-        if (bg && this.selected) bg.borderColor = UIKit.COLORS.gold;
-        if (this.selected) CardInspector.show(card, { verbose: true, owner: this, near: rt });
-        else CardInspector.hide(this);
+        const same = this.selected === card;
+        CardInspector.hide(this); // 앞에 고른 줄 표시를 푼다 (onHide)
+        if (same) return;
+        this.selected = card;
+        this._selBg = bg;
+        if (bg) bg.borderColor = UIKit.COLORS.gold;
+        CardInspector.show(card, {
+            verbose: true, owner: this, near: rt,
+            onHide: () => {
+                if (this._selBg) this._selBg.borderColor = UIKit.COLORS.border;
+                this._selBg = null;
+                this.selected = null;
+            }
+        });
     }
 
     buy(offer, where) {
