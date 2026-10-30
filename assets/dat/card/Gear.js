@@ -27,6 +27,7 @@ class Gear {
     static lines(card) {
         const def = card.def;
         const lines = [];
+        if (def.noLines) return lines; // 공방 장비: 설명 글이 이미 능력치를 말한다
         for (const [key, v] of Object.entries(def.stats ?? {})) if (v) lines.push(`· ${Gear.STATS[key] ?? key} ${v > 0 ? "+" : ""}${v}`);
         for (const g of def.grants ?? []) lines.push(`· 덱에 [${CardDef.get(g.id)?.name ?? g.id}] ${g.n}장`);
         return lines;

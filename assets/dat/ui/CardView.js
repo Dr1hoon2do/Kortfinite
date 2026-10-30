@@ -52,7 +52,7 @@ class CardView extends Component {
         // 장착 중 표시 (그림 왼쪽 위)
         this.worn = rt.createChild("equipped");
         this.worn.addComponent(new UIRect({ color: "rgba(232, 184, 64, 0.95)", borderColor: "#2a1e16", borderWidth: 1 }));
-        const wt = this.worn.getComponent(RectTransform).createChild("text").addComponent(new UIText("장착", {
+        const wt = this.worn.getComponent(RectTransform).createChild("text").addComponent(new UIText("착용 중", {
             fontSize: 10, fontWeight: "bold", color: "#2a1e16"
         }));
         wt.getComponent(RectTransform).setAnchor(0, 0, 1, 1);
@@ -130,7 +130,7 @@ class CardView extends Component {
         const ix = Math.round((this.width - image) / 2);
 
         CardView.place(this.well, ix, inset, image, image);
-        CardView.place(this.worn, ix + 2, inset + 2, 30, 15);
+        CardView.place(this.worn, ix + 2, inset + 2, 44, 15);
         CardView.place(this.title, inset + 2, textTop, text, 16);
         this.tag.setActive(!this.narrow);
         const cw = Math.min(image - 2, 8 + this.costText.text.length * 6);

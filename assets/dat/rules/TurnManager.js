@@ -101,6 +101,7 @@ class TurnManager extends Component {
         if (player.alive) {
             player.startTurn();
             step.push(...Status.tickStart(player, this.world));
+            step.push(...Equip.turnStart(player, this.world)); // 장착한 장비 (마력석 마법서 …)
             player.cards.notify("turn", { turn: this.turn });
         }
         this.queue.enqueue(step);

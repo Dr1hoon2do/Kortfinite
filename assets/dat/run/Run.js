@@ -122,6 +122,7 @@ class Run extends Component {
         if (plan.combat) {
             player.mana = Math.min(player.maxMana, player.mana + Run.ROOM_MANA);
             player.cards.resetForRoom(Run.OPENING_HAND);
+            Equip.roomStart(player, room); // 장착한 장비 (철모, 마력석 마법서 …)
             MessageLog.add(node.type === "boss" ? "우두머리다! 쓰러뜨리면 이긴다" : "적을 모두 쓰러뜨리면 출구가 열린다", "#e8b860");
         } else {
             this.cleared = true;
@@ -147,9 +148,14 @@ class Run extends Component {
         return true;
     }
 
+    // 이미 가진 장비 id들 (보상에 같은 장비가 또 나오지 않게)
+    ownedGear() {
+        return this.player.cards.hand.filter((c) => c.def.gear).map((c) => c.defId);
+    }
+
     // 보물 상자를 열었다
     openTreasure(chest) {
-        const r = Rewards.treasure(Rng.make(Rng.mix(this.seed, 7000 + this.node.row)), this.node.row);
+        const r = Rewards.treasure(Rng.make(Rng.mix(this.seed, 7000 + this.node.row)), this.node.row, this.ownedGear());
         this.ui.reward.open({ title: "보물 상자", ...r });
     }
 
@@ -183,10 +189,11 @@ class Run extends Component {
             Events.emit(GameEvent.ROOM_CLEARED, { node: this.node, room: this.room });
             if (this.node.type === "boss") {
                 MessageLog.add("우두머리를 쓰러뜨렸다! 출구로 나가면 런이 끝난다", "#f0d878");
+                this.ui.reward.open({ title: "우두머리 처치 보상", ...Rewards.boss(Rng.make(Rng.mix(this.seed, 5000 + this.node.row * 16 + this.node.col)), this.node.row, this.ownedGear()) });
                 return;
             }
             MessageLog.add("방을 정리했다. 출구가 열렸다", "#a0d0a0");
-            const r = Rewards.battle(Rng.make(Rng.mix(this.seed, 5000 + this.node.row * 16 + this.node.col)), this.node.type, this.node.row);
+            const r = Rewards.battle(Rng.make(Rng.mix(this.seed, 5000 + this.node.row * 16 + this.node.col)), this.node.type, this.node.row, this.ownedGear());
             this.ui.reward.open({ title: this.node.type === "elite" ? "정예 처치 보상" : "전투 보상", ...r });
         }
     }

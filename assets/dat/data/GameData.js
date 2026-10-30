@@ -891,6 +891,106 @@ const GAME_DATA = {
    ]
   }
  ],
+ "equipment": [
+  {
+   "id": "bent_dagger",
+   "name": "구부러진 단검",
+   "slot": "hand",
+   "rarity": "uncommon",
+   "price": 60,
+   "source": "",
+   "effect": "바로 옆 칸의 대상에게 주는 피해 25% 증가",
+   "tags": [
+    "attack"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "mana_book",
+   "name": "마력석 꽂힌 마법서",
+   "slot": "back",
+   "rarity": "rare",
+   "price": 85,
+   "source": "",
+   "effect": "턴이 시작될 때마다 마나 2 회복. 전투방에 들어갈 때도 회복한다.",
+   "tags": [
+    "mana"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "red_charm",
+   "name": "붉은 부적",
+   "slot": "trinket",
+   "rarity": "uncommon",
+   "price": 55,
+   "source": "",
+   "effect": "적을 쓰러뜨리면 체력 2 회복",
+   "tags": [
+    "health"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "iron_helm",
+   "name": "철모",
+   "slot": "head",
+   "rarity": "common",
+   "price": 40,
+   "source": "",
+   "effect": "전투방에 들어갈 때 방어도 6 (2턴) 획득",
+   "tags": [
+    "defense"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "leather_armor",
+   "name": "가죽 갑옷",
+   "slot": "body",
+   "rarity": "common",
+   "price": 45,
+   "source": "",
+   "effect": "방어력 +2",
+   "tags": [
+    "defense"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "worn_boots",
+   "name": "낡은 장화",
+   "slot": "feet",
+   "rarity": "common",
+   "price": 40,
+   "source": "",
+   "effect": "이동속도 +1",
+   "tags": [
+    "move"
+   ],
+   "note": "",
+   "memo": []
+  },
+  {
+   "id": "work_belt",
+   "name": "작업용 벨트",
+   "slot": "waist",
+   "rarity": "rare",
+   "price": 80,
+   "source": "",
+   "effect": "행동 패 +1",
+   "tags": [
+    "draw"
+   ],
+   "note": "",
+   "memo": []
+  }
+ ],
  "materials": [
   {
    "id": "bone",

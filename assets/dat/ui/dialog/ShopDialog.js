@@ -132,7 +132,7 @@ class ShopDialog extends Component {
         this.scroll.contentHeight = y + 4;
     }
 
-    static RARITY = { common: "흔함", uncommon: "드묾", rare: "희귀" };
+    static RARITY = { common: "흔함", uncommon: "드묾", rare: "희귀", boss: "우두머리" };
 
     // 물건 줄을 누르면 크게 보기 (다시 누르면 닫기)
     inspect(card, rt, bg) {

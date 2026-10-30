@@ -12,6 +12,7 @@ class MapScreen extends Component {
         this.engine = options.engine;
         this.run = options.run;
         this.deckView = options.deckView ?? null;
+        this.equipDialog = options.equipDialog ?? null;
         this.mode = null; // "choose" | "view"
         this.nodes = new Map(); // id → { go, rt, ring, node }
     }
@@ -77,11 +78,15 @@ class MapScreen extends Component {
 
         // 아래 버튼
         this.deckButton = UIKit.button(rrt, "deck", "덱 보기", () => this.deckView && this.deckView.open(), { fontSize: 12 });
-        this.deckButton.rt.setAnchor(0, 1, 0.5, 1);
-        this.deckButton.rt.setOffsets(12, -46, 4, 10);
+        this.deckButton.rt.setAnchor(0, 1, 1 / 3, 1);
+        this.deckButton.rt.setOffsets(12, -46, 3, 10);
+        // 지도 화면은 아래 패를 가려서, 장비는 여기서 입고 벗는다
+        this.equipButton = UIKit.button(rrt, "equip", "장비", () => this.equipDialog && this.equipDialog.open(), { fontSize: 12 });
+        this.equipButton.rt.setAnchor(1 / 3, 1, 2 / 3, 1);
+        this.equipButton.rt.setOffsets(3, -46, 3, 10);
         this.closeButton = UIKit.button(rrt, "close", "닫기", () => this.close(), { fontSize: 12 });
-        this.closeButton.rt.setAnchor(0.5, 1, 1, 1);
-        this.closeButton.rt.setOffsets(4, -46, 12, 10);
+        this.closeButton.rt.setAnchor(2 / 3, 1, 1, 1);
+        this.closeButton.rt.setOffsets(3, -46, 12, 10);
 
         this.root.setActive(false);
     }
@@ -158,7 +163,7 @@ class MapScreen extends Component {
     update() {
         if (Input.getButtonDown("map")) this.toggleView();
         if (!this.mode) return;
-        if (this.mode === "view" && Input.getButtonDown("cancel")) return this.close();
+        if (this.mode === "view" && Input.getButtonDown("cancel") && !(this.equipDialog && this.equipDialog.isOpen)) return this.close();
         const screen = Math.round(this.engine.width / this.engine.uiRoot.scale);
         const side = Math.max(8, Math.floor((screen - 560) / 2));
         if (side !== this._side) {

@@ -242,10 +242,10 @@ const CARDS = {
             const cost = pick.cost?.mana ?? 0;
             const dumped = CardOps.dump(ctx, [pick]);
             if (!dumped.length) return null;
-            const got = CardOps.mana(ctx.user, 2 + cost);
+            const got = CardOps.mana(ctx.user, 1 + CardOps.def(ctx.user, 50) + cost);
             return [[new PopupAnim(ctx.user, `마나 +${got}`, "#7cb0f0")]];
         },
-        short: () => `1장 버리고 ${CK.mana("마나 2+")}`
+        short: () => `1장 버리고 ${CK.mana("마나 " + (1 + CardOps.def(PL(), 50)) + "+")}`
     },
 
     card_shield: {
@@ -261,22 +261,35 @@ const CARDS = {
         short: () => `버린 수+1 만큼 방어도 (${CK.def(CardOps.def(PL(), 100))}씩)`
     },
 
+    charge: {
+        icon: "bolt", color: "#f0a040",
+        use(ctx) {
+            const u = ctx.user;
+            const n = 2 + CardOps.spd(u, 25);
+            const got = Math.min(n, u.maxEnergy - u.energy);
+            if (got <= 0) return CardOps.say("기력이 이미 가득하다");
+            u.energy += got;
+            MessageLog.add(`기력 ${got} 회복`, "#f29a3a");
+            return [[new PopupAnim(u, `기력 +${got}`, "#f29a3a")]];
+        },
+        short: () => `${CK.energy("기력 +" + (2 + CardOps.spd(PL(), 25)))} 회복`
+    },
+
     chocolate: {
         icon: "heart", color: "#c89060",
-        // 쓸 수 없다: 버려질 때(원한)만 터진다
+        use: (ctx) => [CardOps.draw(ctx, 1)],
         grudge(ctx) {
-            ctx.cards.draw(1);
             const u = ctx.user;
             u.energy = Math.min(u.maxEnergy, u.energy + 1);
-            MessageLog.add("원한! 초콜렛 — 카드 1장을 뽑고 기력 1을 되찾았다", "#e8a870");
+            MessageLog.add("원한! 초콜릿 — 기력 1을 되찾았다", "#e8a870");
         },
-        short: () => "버려지면: 1장 뽑기 · 기력 +1"
+        short: () => "1장 뽑기 · 버려지면: 기력 +1"
     },
 
     concentration: {
         icon: "eye", color: "#f0d878",
-        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 50))],
-        short: () => `${CK.spd(CardOps.spd(PL(), 50))}장 뽑기`
+        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 50) + 2)],
+        short: () => `${CK.spd(CardOps.spd(PL(), 50) + 2)}장 뽑기`
     },
 
     dash: {
@@ -284,6 +297,26 @@ const CARDS = {
         target: () => ({ range: CardOps.spd(PL(), 50), radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
         use: (ctx) => CardOps.walk(ctx, CardOps.spd(ctx.user, 50)),
         short: () => `${CK.spd(CardOps.spd(PL(), 50))}칸 이동`
+    },
+
+    first_aid: {
+        icon: "plus", color: "#7cd47c",
+        target: () => ({ range: CardOps.spd(PL()), radius: 0, taps: 1, verb: "치료", color: "#7cd47c" }),
+        use(ctx) {
+            const u = ctx.user;
+            const t = ctx.target;
+            if (!t || (t.x === u.x && t.y === u.y)) return CardOps.say("치료할 아군을 골라야 한다 (자신에게는 쓸 수 없다)");
+            if (CardOps.dist(u, t) > CardOps.spd(u)) return CardOps.say(`${CardOps.spd(u)}칸 안의 아군을 골라야 한다`);
+            const ally = ctx.world.entityAt(t.x, t.y);
+            if (!(ally instanceof Ally) || !ally.alive) return CardOps.say("그 칸에는 아군이 없다");
+            const s = ally.stats;
+            if (s.hp >= s.maxHp) return CardOps.say(`${josa(ally.displayName, "은는")} 이미 체력이 가득하다`);
+            const got = Math.min(CardOps.def(u, 200), s.maxHp - s.hp);
+            s.hp += got;
+            MessageLog.add(`${josa(ally.displayName, "을를")} ${got} 치료했다`, "#7cd47c");
+            return [[new PopupAnim(ally, "+" + got, "#7cd47c")]];
+        },
+        short: () => `아군 체력 ${CK.def(CardOps.def(PL(), 200))} 회복 · ${CK.spd(CardOps.spd(PL()))}칸`
     },
 
     food: {
@@ -380,8 +413,8 @@ const CARDS = {
 
     insight: {
         icon: "eye", color: "#f0a0ff",
-        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 100), true)],
-        short: () => `${CK.spd(CardOps.spd(PL(), 100))}장 뽑기 (패 제한 무시)`
+        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 75) + 3, true)],
+        short: () => `${CK.spd(CardOps.spd(PL(), 75) + 3)}장 뽑기 (패 제한 무시)`
     },
 
     larry: {
@@ -459,43 +492,26 @@ const CARDS = {
 
     rest: {
         icon: "plus", color: "#7cd47c", heal: false,
-        // 낸 비용 종류마다 회복한다 (마나 회복 / 초록: 체력 회복)
+        // 방어력 50% + 1만큼 마나 회복 (초록: 1 + 방어력 25%만큼 체력 회복)
         use(ctx) {
             const u = ctx.user;
-            const c = ctx.card.cost ?? {};
-            const heal = !!ctx.card.def.heal;
-            let n = 0;
-            if (heal) {
-                if (c.energy) n += CardOps.atk(u, 50);
-                if (c.mana) n += CardOps.def(u, 50);
-                if (c.hp) n += 0;
+            if (ctx.card.def.heal) {
                 if (u.stats.hp >= u.stats.maxHp) return CardOps.say("이미 체력이 가득하다");
-                const got = CardOps.heal(u, n);
+                const got = CardOps.heal(u, 1 + CardOps.def(u, 25));
                 return [[new PopupAnim(u, "+" + got, "#7cd47c")]];
             }
-            if (c.energy) n += 1 + CardOps.atk(u, 50);
-            if (c.mana) n += 1 + CardOps.def(u, 50);
-            if (c.hp) n += 2 + CardOps.pct(u.maxMana, 20);
-            if (u.mana - (c.mana ?? 0) >= u.maxMana) return CardOps.say("이미 마나가 가득하다");
+            const paid = ctx.card.cost?.mana ?? 0;
+            const n = 1 + CardOps.def(u, 50);
+            if (u.mana - paid >= u.maxMana) return CardOps.say("이미 마나가 가득하다");
             // 마나 비용은 쓴 뒤에 나가므로, 그만큼 여유를 두고 채운다
-            u.mana = Math.min(u.maxMana + (c.mana ?? 0), u.mana + n);
+            u.mana = Math.min(u.maxMana + paid, u.mana + n);
             MessageLog.add(`마나 ${n} 회복`, "#7cb0f0");
             return [[new PopupAnim(u, `마나 +${n}`, "#7cb0f0")]];
         },
         short(card) {
             const u = PL();
-            const c = card.cost ?? {};
-            const parts = [];
-            if (card.def.heal) {
-                if (c.energy) parts.push(CardOps.atk(u, 50));
-                if (c.mana) parts.push(CardOps.def(u, 50));
-                return `${CK.hp("체력 +" + parts.reduce((a, b) => a + b, 0))}`;
-            }
-            let n = 0;
-            if (c.energy) n += 1 + CardOps.atk(u, 50);
-            if (c.mana) n += 1 + CardOps.def(u, 50);
-            if (c.hp) n += 2 + CardOps.pct(u.maxMana, 20);
-            return `${CK.mana("마나 +" + n)}`;
+            if (card.def.heal) return CK.hp("체력 +" + (1 + CardOps.def(u, 25)));
+            return CK.mana("마나 +" + (1 + CardOps.def(u, 50)));
         }
     },
 
@@ -505,14 +521,14 @@ const CARDS = {
         use(ctx) {
             const steps = CardOps.walk(ctx, CardOps.spd(ctx.user, 50));
             if (!steps) return null;
-            steps.push([...CardOps.draw(ctx, CardOps.spd(ctx.user, 25))]);
+            steps.push([...CardOps.draw(ctx, 1 + CardOps.spd(ctx.user, 25))]);
             if (ctx.card.def.cleanse && Status.cleanse(ctx.user, 1)) {
                 MessageLog.add("디버프를 하나 털어냈다", "#5cc86c");
                 steps.push([new PopupAnim(ctx.user, "정화", "#e8e8f0")]);
             }
             return steps;
         },
-        short: (c) => `${CK.spd(CardOps.spd(PL(), 50))}칸 이동 · ${CK.spd(CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
+        short: (c) => `${CK.spd(CardOps.spd(PL(), 50))}칸 이동 · ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
     },
 
     shield: {
@@ -547,10 +563,10 @@ const CARDS = {
         use(ctx) {
             const steps = CardOps.walk(ctx, 99);
             if (!steps) return null;
-            steps.push([...CardOps.draw(ctx, CardOps.spd(ctx.user, 25))]);
+            steps.push([...CardOps.draw(ctx, CardOps.spd(ctx.user, 50) + 2)]);
             return steps;
         },
-        short: () => `거리 제한 없이 이동 · ${CK.spd(CardOps.spd(PL(), 25))}장 뽑기`
+        short: () => `거리 제한 없이 이동 · ${CK.spd(CardOps.spd(PL(), 50) + 2)}장 뽑기`
     },
 
     step: {
@@ -584,6 +600,22 @@ const CARDS = {
         short: (c) => `${CK.atk(CardOps.atk(PL(), c.def.pct))} 피해${c.def.hits > 1 ? " ×" + c.def.hits : ""}`
     },
 
+    zoom_punch: {
+        icon: "fist", color: "#f0a060",
+        target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" }),
+        // 쓸 때마다 이 카드(한 장) 의 피해가 공격력 50%씩 영구히 늘어난다 (card.data.zoom = 쓴 횟수, 저장된다)
+        use(ctx) {
+            const foe = CardOps.pickAdjacent(ctx);
+            if (!foe) return null;
+            const data = ctx.card.ensureData();
+            const used = data.zoom ?? 0;
+            const steps = Combat.strike(ctx.user, foe, ctx.world, CardOps.atk(ctx.user, 50 * (1 + used)), ctx.card.name);
+            data.zoom = used + 1;
+            return [steps];
+        },
+        short: (c) => `${CK.atk(CardOps.atk(PL(), 50 * (1 + (c.data?.zoom ?? 0))))} 피해 · 쓸 때마다 공격력 50%씩 증가 (${c.data?.zoom ?? 0}번 씀)`
+    },
+
     totem: {
         icon: "totem", color: "#d09860", explode: false,
         target: () => ({ range: 1, radius: 0, taps: 1, verb: "소환", color: "#7cd47c", tiles: (w) => CardOps.adjacentFree(w, PL()) }),
@@ -607,8 +639,8 @@ const CARDS = {
 const VC = { red: "#e8584a", blue: "#58a0f0", yellow: "#f0d040", green: "#5cc86c", purple: "#b078e0" };
 const VARIANTS = {
     blast: {
-        red: { radius: 2, afterHit: (u, f) => CardOps.inflict(f, "burn", CardOps.atk(u, 50), 3) },
-        blue: { radius: 2, afterHit: (u, f) => CardOps.inflict(f, "ice", CardOps.atk(u, 50), 2) }
+        red: { afterHit: (u, f) => CardOps.inflict(f, "burn", CardOps.atk(u, 50), 3) },
+        blue: { afterHit: (u, f) => CardOps.inflict(f, "ice", CardOps.atk(u, 50), 2) }
     },
     blink: {
         blue: {

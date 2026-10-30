@@ -170,6 +170,7 @@ class RoomPlan {
     static rollStock(rng, row) {
         const stock = [];
         for (const card of Rewards.cards(rng, 6)) stock.push({ card, price: Math.max(1, Math.round(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
+        for (const card of Rewards.gear(rng, 2, "shop")) stock.push({ card, price: Math.max(1, Math.round(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
         return stock;
     }
 }
@@ -187,20 +188,51 @@ class Rewards {
         return ids.map((id) => Card.create(id, rng));
     }
 
+    // 장비 희귀도 무게 (장비가 나오는 곳마다 다르다)
+    static GEAR_WEIGHTS = {
+        shop: { common: 5, uncommon: 3, rare: 1 },
+        elite: { common: 2, uncommon: 3, rare: 2 },
+        treasure: { common: 2, uncommon: 3, rare: 2 },
+        boss: { rare: 3, boss: 3 }
+    };
+
+    // 장비 카드 n장 (서로 다른 것, 이미 가진 것(owned: 장비 id들)은 뺀다). 무게는 희귀도별
+    static gear(rng, n, where = "shop", owned = []) {
+        const weights = Rewards.GEAR_WEIGHTS[where];
+        const pool = [...CardDef.defs.values()].filter((d) => d.gear && weights[d.rarity] && !owned.includes(d.id));
+        const out = [];
+        for (let k = 0; k < n && pool.length; k++) {
+            let roll = rng() * pool.reduce((s, d) => s + weights[d.rarity], 0);
+            let i = 0;
+            for (; i < pool.length - 1; i++) {
+                roll -= weights[pool[i].rarity];
+                if (roll < 0) break;
+            }
+            out.push(new Card(pool.splice(i, 1)[0].id));
+        }
+        return out;
+    }
+
     static cardPrice(card) {
         return card.def.price ?? 50;
     }
 
     // 전투 보상: 돈 + 카드 3장 중 하나
-    static battle(rng, type, row) {
+    // 정예는 장비도 하나 준다 (owned: 이미 가진 장비 id들)
+    static battle(rng, type, row, owned = []) {
         const elite = type === "elite";
         const gold = elite ? Rng.int(rng, 28, 40) : Rng.int(rng, 12, 20);
-        return { gold, cards: Rewards.cards(rng, 3), items: [] };
+        return { gold, cards: Rewards.cards(rng, 3), items: elite ? Rewards.gear(rng, 1, "elite", owned) : [] };
     }
 
-    // 보물 상자: 돈 + 카드 3장 중 하나
-    static treasure(rng, row) {
+    // 보물 상자: 돈 + 카드 3장 중 하나 + 장비 하나
+    static treasure(rng, row, owned = []) {
         const gold = Rng.int(rng, 30, 50);
-        return { gold, cards: Rewards.cards(rng, 3), items: [] };
+        return { gold, cards: Rewards.cards(rng, 3), items: Rewards.gear(rng, 1, "treasure", owned) };
+    }
+
+    // 우두머리: 돈 + 장비 하나
+    static boss(rng, row, owned = []) {
+        return { gold: Rng.int(rng, 60, 90), cards: [], items: Rewards.gear(rng, 1, "boss", owned) };
     }
 }

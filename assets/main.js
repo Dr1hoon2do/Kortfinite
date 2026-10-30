@@ -51,20 +51,21 @@ async function main() {
                       "card/CardText.js", "card/CardDef.js", "card/CardEffects.js", "card/defs/ActionCards.js", "card/Card.js", "card/CardKit.js",
                       "card/Gear.js", "card/Spell.js", "card/Gem.js", "card/DrawRule.js",
                       // data: 카드 공방에서 내보낸 카드·적 (GameData) + 그 동작 (CardImpl · EnemyImpl)
-                      "data/GameData.js", "data/CardImpl.js", "data/EnemyImpl.js",
+                      "data/GameData.js", "data/CardImpl.js", "data/EquipImpl.js", "data/EnemyImpl.js",
                       // run: 지도 · 방 · 런
                       "run/RunMap.js", "run/RoomGen.js", "run/Run.js",
                       // ui
                       "ui/UIKit.js", "ui/CardView.js", "ui/CardInspector.js", "ui/SidePanel.js", "ui/panel/StatusPanel.js",
                       "ui/TileTargeting.js", "ui/WorldInput.js", "ui/PlayerHud.js", "ui/HandBar.js", "ui/MapScreen.js",
                       "ui/dialog/GemDialog.js", "ui/dialog/DeckViewer.js", "ui/dialog/RewardDialog.js", "ui/dialog/ShopDialog.js",
-                      "ui/dialog/RestDialog.js", "ui/dialog/EndScreen.js", "ui/dialog/Codex.js",
+                      "ui/dialog/RestDialog.js", "ui/dialog/EquipDialog.js", "ui/dialog/EndScreen.js", "ui/dialog/Codex.js",
                       // system
                       "system/Settings.js", "system/SaveSystem.js", "system/TitleScreen.js", "system/DebugConsole.js",
                       // player
                       "player/Player.js"]);
   console.log("Scripts Loaded");
   GameContent.load(); // 공방 카드 등록
+  EquipContent.load();  // 공방 장비 등록 (아이콘 시트에 같이 들어간다)
   EnemyData.load();   // 공방 적 등록
   CardKit.buildIcons(); // 카드 아이콘 시트 "kicons"
   Debug.opacity = Settings.get("debugAlpha"); // 시작 화면부터 설정대로 (기본 0%: 숨김)
@@ -163,7 +164,8 @@ function startGame(App, meta) {
   const reward = ui.addComponent(new RewardDialog({ engine: App, player }));
   const shop = ui.addComponent(new ShopDialog({ engine: App, player, run, deckView }));
   const rest = ui.addComponent(new RestDialog({ engine: App, player, deckView }));
-  const map = ui.addComponent(new MapScreen({ engine: App, run, deckView }));
+  const equip = ui.addComponent(new EquipDialog({ engine: App, player }));
+  const map = ui.addComponent(new MapScreen({ engine: App, run, deckView, equipDialog: equip }));
   const end = ui.addComponent(new EndScreen({ engine: App, player }));
   ui.addComponent(new CardInspector({ engine: App }));
   // 디버그 명령 (새 런을 만들 때 켠 런만): "/" 키나 오른쪽 가운데 버튼
@@ -177,7 +179,7 @@ function startGame(App, meta) {
   App.add(ui);
   run.ui = { map, reward, shop, rest, end };
 
-  window.Game = { run, world, player, turns, queue, targeting, hand, deckView, gems, reward, shop, rest, map, end, debugConsole, follow, meta };
+  window.Game = { run, world, player, turns, queue, targeting, hand, deckView, gems, reward, shop, rest, equip, map, end, debugConsole, follow, meta };
   MessageLog.add(meta.save ? "이어서 한다" : "새 런을 시작한다. 지도에서 첫 방을 고르자", "#e8b840");
   MessageLog.add("카드를 써서 움직이고 싸운다 (쓰기는 턴이 안 든다). 뽑기·대기만 1턴", "#c8b890");
   // UI가 다 만들어진 다음 프레임에 Run이 시작한다 (지도를 열거나, 못 끝낸 방으로)

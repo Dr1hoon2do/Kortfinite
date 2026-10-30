@@ -103,6 +103,7 @@ class Status {
 
     // 피해 보정: 맞는 쪽이 빙결이면 수치만큼 추가 피해
     static modify(dmg, source, target) {
+        if (typeof Equip !== "undefined") dmg = Equip.dealt(dmg, source, target); // 장착한 장비 (구부러진 단검 …)
         if (target && dmg > 0) dmg += Status.get(target, "ice");
         return Math.max(dmg > 0 ? 1 : 0, dmg);
     }

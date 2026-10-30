@@ -30,7 +30,7 @@ class CardDef {
     }
 
     // 장착 부위 이름 (새 부위는 여기 한 줄)
-    static SLOTS = { hand: "손", waist: "허리", back: "등" };
+    static SLOTS = { hand: "손", head: "머리", body: "몸", waist: "허리", back: "등", feet: "발", trinket: "장신구" };
 
     static slotName(slot) {
         return CardDef.SLOTS[slot] ?? slot;

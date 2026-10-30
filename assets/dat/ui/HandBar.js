@@ -369,7 +369,7 @@ class HandBar extends Component {
         const bottom = HandBar.CARD_H + 20 + 6 + HandBar.BUTTON + 8;
         this.detail.getComponent(RectTransform).setOffsets(-w / 2, -(bottom + h), -w / 2, bottom);
         const cost = CardDef.costText(card.cost);
-        const worn = this.cards.isEquipped(card) ? " · 장착 중" : "";
+        const worn = this.cards.isEquipped(card) ? " · 착용 중" : "";
         this.detailTitle.setText(`${card.name} · ${CardDef.kindName(card.def)}${cost ? " · " + cost : ""}${worn}`);
         this.detailText.getComponent(RectTransform).setOffsets(10, 26, 10, -(26 + th + 4));
 
