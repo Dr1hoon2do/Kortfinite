@@ -40,9 +40,11 @@
   ];
 
   const bootstrap = document.createElement('script');
-  bootstrap.src = ENGINE_BASE + 'core/Load.js';
+  const build = window.BUILD_ID && window.BUILD_ID !== '__BUILD__' ? '?v=' + window.BUILD_ID : '';
+  bootstrap.src = ENGINE_BASE + 'core/Load.js' + build;
 
   bootstrap.onload = () => {
+    Load.version = window.BUILD_ID && window.BUILD_ID !== '__BUILD__' ? window.BUILD_ID : '';
     Load.basePath = ENGINE_BASE;
     Load.Script('config.js')
       .then(() => Load.Scripts(ENGINE_FILES))

@@ -31,7 +31,9 @@
 
 <body>
   <canvas id="game"></canvas>
-  <script src="KuntoGame/init.js"></script>
+  <!-- 배포할 때 __BUILD__가 커밋 번호로 바뀐다 (캐시 무효화). 로컬에서는 그대로 두면 된다 -->
+  <script>window.BUILD_ID = "__BUILD__";</script>
+  <script src="KuntoGame/init.js?v=__BUILD__"></script>
 </body>
 
 </html>

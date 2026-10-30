@@ -1,9 +1,15 @@
 class Load {
   static basePath = '';
+  // 파일 주소 뒤에 붙는 버전 (?v=). 배포할 때마다 바뀌어서 브라우저가 옛 파일을 캐시로 쓰지 않는다. 비어 있으면 안 붙인다
+  static version = '';
   static assetBasePath = '';
   static _loaded = new Set();
   static _pending = new Map();
   static _pendingImages = new Map();
+
+  static _versioned(url) {
+    return Load.version ? url + (url.includes('?') ? '&' : '?') + 'v=' + Load.version : url;
+  }
 
   static Script(src) {
     const full = Load._resolve(src, Load.basePath);
@@ -15,7 +21,7 @@ class Load {
 
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = full;
+      script.src = Load._versioned(full);
 
       script.onload = () => {
         script.remove();
@@ -77,7 +83,7 @@ class Load {
         reject(new Error(`Load.Image: failed to load "${key}" from "${full}"`));
       };
 
-      img.src = full;
+      img.src = Load._versioned(full);
     });
 
     Load._pendingImages.set(key, promise);
