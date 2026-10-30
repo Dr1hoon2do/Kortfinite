@@ -16,7 +16,8 @@ class Ally extends Entity {
         const k = Ally.KINDS[kind];
         super(x, y, k.sprite, {
             type: kind, name: k.name,
-            stats: { maxHp: data.hp ?? k.hp, attack: data.attack ?? k.attack, defense: data.defense ?? 0 },
+            // 소환수 체력은 최소 1 (소환하자마자 사라지지 않게). % 계산이 0이어도 1
+            stats: { maxHp: Math.max(1, data.hp ?? k.hp), attack: data.attack ?? k.attack, defense: data.defense ?? 0 },
             tags: ["creature", "ally", kind],
             ai: new AllyAI()
         });
