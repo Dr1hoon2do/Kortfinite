@@ -2,9 +2,9 @@
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
+  # main에 올리면 바로 배포한다
   push:
-    branches: ["claude/kuntogame-kortfinite-review-zkzey9"]
+    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -33,11 +33,16 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      # 게임을 돌리는 데 필요한 파일만 배포한다 (문서·도구·워크플로는 뺀다)
+      - name: Build site
+        run: |
+          mkdir _site
+          cp -r index.html KuntoGame assets _site/
+          touch _site/.nojekyll
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
