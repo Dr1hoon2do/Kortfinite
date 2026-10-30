@@ -3,7 +3,8 @@
 //   - 실제 동작은 이 파일의 CARDS[카드 id] (변형은 VARIANTS[카드 id][변형 key]에서 CARDS를 덮어쓴다)에 짜 둔다.
 //   새 카드가 데이터에 생기면: CARDS에 그 id의 동작을 한 덩어리 추가하면 된다 (tools/import_data.py가 빠진 id를 알려 준다).
 //
-// 비용: 카드의 비용은 모두 함께 낸다 (기력 1 + 마나 1이면 둘 다). 체력 비용은 체력이 모자라면 못 쓴다.
+// 비용: 공방 카드의 costs는 "비용의 경우들"이다. 한 경우 안의 자원은 모두 함께 낸다 (기력 1 + 마나 1이면 둘 다).
+//   경우가 여럿이면 카드 한 장마다 그중 하나로 정해져 나온다 (Card.cost · data.pay, 도감에는 경우마다 한 장). 체력 비용은 체력이 모자라면 못 쓴다.
 // 수치 규칙: 능력치 비례 값은 내림 (최소 1), 이동속도 비례 값(칸·장수)은 반올림 (최소 1). 둔화는 이동속도를 줄인다.
 class CardOps {
     static say(msg) {
@@ -671,8 +672,16 @@ class GameContent {
 
     static costObject(cost) {
         const out = {};
-        for (const k of ["energy", "hp", "mana"]) if (cost && cost[k]) out[k] = cost[k];
+        for (const k of ["energy", "hp", "mana", "gold"]) if (cost && cost[k]) out[k] = cost[k];
         return out;
+    }
+
+    // 공방 카드·강화의 비용 경우들 [{ energy: 2 }, { mana: 2 }, …]. 줄이 없으면 비용 없음 [{}].
+    // 옛 데이터(cost 하나)는 자원마다 한 경우로 쪼갠다 (기력 1 + 마나 1 → 기력 1짜리 · 마나 1짜리)
+    static costOptions(data) {
+        const list = data.costs ?? ["energy", "mana", "hp", "gold"].filter((k) => data.cost?.[k]).map((k) => ({ [k]: data.cost[k] }));
+        const out = list.map((c) => GameContent.costObject(c));
+        return out.length ? out : [{}];
     }
 
     // 설명글: 공방 글 그대로, "공격력 60%" 같은 말만 지금 숫자로 바꿔 보여 준다
@@ -701,11 +710,12 @@ class GameContent {
     // data: 공방 카드 또는 강화 { name, cost, effect, tags }, impl: 합쳐진 동작
     static register(defId, data, impl, extra) {
         const frame = CardKit.list.length;
-        const cost = GameContent.costObject(data.cost);
-        const total = (cost.energy ?? 0) + (cost.mana ?? 0);
+        const costs = GameContent.costOptions(data);
+        const cost = costs[0];
+        const total = costs.reduce((a, c) => a + (c.energy ?? 0) + (c.mana ?? 0), 0) / costs.length;
         const def = {
             type: "skill", sprite: "kicons", frame, kit: true, icon: impl.icon ?? "card", color: extra.color ?? impl.color ?? "#e8d9b8",
-            name: data.name, cost, price: 30 + 14 * total, tags: data.tags ?? [], effect: data.effect ?? "",
+            name: data.name, cost, costs, price: Math.round(30 + 14 * total), tags: data.tags ?? [], effect: data.effect ?? "",
             exhaust: !!impl.exhaust, grudge: impl.grudge ?? null, picker: impl.picker ?? null,
             ...impl, ...extra,
             text: () => GameContent.render(data.effect) + (extra.upgradeMats?.length ? `\n(강화 재료: ${GameContent.matsText(extra.upgradeMats)})` : ""),

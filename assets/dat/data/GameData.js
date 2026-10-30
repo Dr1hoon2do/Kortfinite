@@ -5,10 +5,6 @@ const GAME_DATA = {
  "cards": [
   {
    "id": "arrow",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
    "effect": "이동속도 거리 내 단일대상 공격력 60% 피해",
    "kind": "reward",
    "name": "화살",
@@ -18,14 +14,18 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "blast",
-   "cost": {
-    "energy": 3,
-    "mana": 3
-   },
    "effect": "이동속도 거리 내 선택 타일 3x3 영역 대상 공격력 300% 피해",
    "kind": "reward",
    "name": "폭발",
@@ -37,11 +37,7 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 3,
-      "mana": 3
-     },
-     "effect": "이동속도 거리 내 선택 타일 2칸 범위 대상 공격력 300% 피해, 공격력 50%에 해당하는 화상 3턴 부여",
+     "effect": "이동속도 거리 내 선택 타일 3x3 범위 대상 공격력 300% 피해, 공격력 50%에 해당하는 화상 3턴 부여",
      "from": "default",
      "key": "red",
      "name": "붉은 폭발",
@@ -52,14 +48,18 @@ const GAME_DATA = {
       "area",
       "burning"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 3
+      },
+      {
+       "mana": 3
+      }
+     ]
     },
     {
-     "cost": {
-      "energy": 3,
-      "mana": 3
-     },
-     "effect": "이동속도 거리 내 선택 타일 2칸 범위 대상 공격력 300% 피해, 공격력 50%에 해당하는 빙결 2턴 부여",
+     "effect": "이동속도 거리 내 선택 타일 3x3 범위 대상 공격력 300% 피해, 공격력 50%에 해당하는 빙결 2턴 부여",
      "from": "default",
      "key": "blue",
      "name": "푸른 폭발",
@@ -70,16 +70,29 @@ const GAME_DATA = {
       "area",
       "ice"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 3
+      },
+      {
+       "mana": 3
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 3
+    },
+    {
+     "mana": 3
+    }
+   ]
   },
   {
    "id": "blink",
-   "cost": {
-    "mana": 2
-   },
    "effect": "이동속도 200% 거리 내 지형과 상관없이 이동",
    "kind": "reward",
    "name": "순간이동",
@@ -89,9 +102,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "mana": 2
-     },
      "effect": "이동속도 200% 거리 내 지형과 상관없이 이동, 도착한 칸 옆에 적이 있으면 마나 3 회복",
      "from": "default",
      "key": "blue",
@@ -101,17 +111,24 @@ const GAME_DATA = {
       "move",
       "mana"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "mana": 2
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "mana": 2
+    }
+   ]
   },
   {
    "id": "card_absorbing",
-   "cost": {
-    "energy": 1
-   },
-   "effect": "패를 1장 버리고, 마나 2만큼 회복. 버린 카드가 마나를 사용하는 카드라면, 그 비용만큼 추가로 회복.",
+   "effect": "패를 1장 버리고, 방어력 50% + 1만큼 마나 회복. 버린 카드가 마나를 사용하는 카드라면, 그 비용만큼 추가로 회복.",
    "kind": "reward",
    "name": "카드 흡수",
    "note": "",
@@ -120,13 +137,15 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    }
+   ]
   },
   {
    "id": "card_shield",
-   "cost": {
-    "energy": 1
-   },
    "effect": "카드를 원하는 수만큼 골라 버리고, 방어력 100%*(버린 카드 수 + 1)만큼 방어도 (버린 카드 수 + 1)턴 획득",
    "kind": "reward",
    "name": "카드 방패",
@@ -136,13 +155,38 @@ const GAME_DATA = {
     "defense"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    }
+   ]
+  },
+  {
+   "id": "charge",
+   "effect": "2 + 이동속도 25%만큼 기력 회복",
+   "kind": "reward",
+   "name": "충전",
+   "note": "",
+   "tags": [
+    "energy"
+   ],
+   "memo": [],
+   "upgrades": [],
+   "costs": [
+    {
+     "mana": 4
+    },
+    {
+     "hp": 2
+    }
+   ]
   },
   {
    "id": "chocolate",
-   "effect": "원한: 카드 1장 드로우, 기력 1 회복",
+   "effect": "1장 드로우\n원한: 기력 1 회복",
    "kind": "reward",
-   "name": "초콜렛",
+   "name": "초콜릿",
    "note": "",
    "tags": [
     "energy",
@@ -150,17 +194,12 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "cost": {},
-   "upgrades": []
+   "upgrades": [],
+   "costs": []
   },
   {
    "id": "concentration",
-   "cost": {
-    "energy": 1,
-    "hp": 1,
-    "mana": 1
-   },
-   "effect": "이동속도 50%만큼 드로우",
+   "effect": "이동속도 50% + 2만큼 드로우",
    "kind": "reward",
    "name": "집중",
    "note": "",
@@ -168,7 +207,18 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "dash",
@@ -180,8 +230,25 @@ const GAME_DATA = {
     "move"
    ],
    "memo": [],
-   "cost": {},
-   "upgrades": []
+   "upgrades": [],
+   "costs": []
+  },
+  {
+   "id": "first_aid",
+   "effect": "대상의 체력을 방어력 200%만큼 회복한다. 자신에게는 사용할 수 없다.",
+   "kind": "reward",
+   "name": "응급처치",
+   "note": "",
+   "tags": [
+    "health"
+   ],
+   "memo": [],
+   "upgrades": [],
+   "costs": [
+    {
+     "mana": 2
+    }
+   ]
   },
   {
    "id": "food",
@@ -193,15 +260,11 @@ const GAME_DATA = {
     "health"
    ],
    "memo": [],
-   "cost": {},
-   "upgrades": []
+   "upgrades": [],
+   "costs": []
   },
   {
    "id": "frost",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
    "effect": "이동속도 50% 거리 내에 대상에게 공격력 60% 만큼 빙결 2턴 부여",
    "kind": "reward",
    "name": "서리",
@@ -211,14 +274,18 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "guard",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
    "effect": "방어력 100%만큼 방어도 1턴 획득",
    "kind": "reward",
    "name": "방어",
@@ -228,10 +295,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 1,
-      "mana": 1
-     },
      "effect": "옆칸 단일대상에게 지금 가진 방어도 100% 피해",
      "from": "default",
      "key": "purple",
@@ -241,13 +304,17 @@ const GAME_DATA = {
       "attack",
       "defense"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ]
     },
     {
-     "cost": {
-      "energy": 1,
-      "mana": 1
-     },
      "effect": "방어력 100%만큼 방어도 3턴 획득",
      "from": "default",
      "key": "blue",
@@ -256,17 +323,29 @@ const GAME_DATA = {
      "tags": [
       "defense"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "harden",
-   "cost": {
-    "hp": 1,
-    "mana": 2
-   },
    "effect": "이번 전투동안 현재 방어력 20%만큼 경질화 부여",
    "kind": "reward",
    "name": "단단해지기",
@@ -275,15 +354,18 @@ const GAME_DATA = {
     "hardening"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "heavy",
-   "cost": {
-    "energy": 2,
-    "hp": 1,
-    "mana": 2
-   },
    "effect": "옆칸 단일대상 공격력 250% 피해",
    "kind": "reward",
    "name": "강타",
@@ -293,11 +375,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 2,
-      "hp": 1,
-      "mana": 2
-     },
      "effect": "옆칸 단일대상 공격력 250% 피해 + 대상 최대체력의 10% 피해",
      "from": "default",
      "key": "red",
@@ -306,14 +383,20 @@ const GAME_DATA = {
      "tags": [
       "attack"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      },
+      {
+       "hp": 1
+      }
+     ]
     },
     {
-     "cost": {
-      "energy": 2,
-      "hp": 1,
-      "mana": 2
-     },
      "effect": "옆칸 단일대상 공격력 250% 피해, 대상 1턴 기절 부여",
      "from": "default",
      "key": "yellow",
@@ -323,14 +406,20 @@ const GAME_DATA = {
       "attack",
       "sturn"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      },
+      {
+       "hp": 1
+      }
+     ]
     },
     {
-     "cost": {
-      "energy": 2,
-      "hp": 1,
-      "mana": 2
-     },
      "effect": "옆칸 단일대상 공격력 250% 피해, 대상을 처치하면 준 피해의 절반만큼 마나 회복",
      "from": "default",
      "key": "blue",
@@ -340,17 +429,35 @@ const GAME_DATA = {
       "attack",
       "mana"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      },
+      {
+       "hp": 1
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 2
+    },
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "ignite",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
    "effect": "이동속도 50% 거리 내 대상에게 공격력 60% 만큼 화상 2턴 부여",
    "kind": "reward",
    "name": "방화",
@@ -360,16 +467,19 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "insight",
-   "cost": {
-    "energy": 3,
-    "hp": 2,
-    "mana": 3
-   },
-   "effect": "이동속도 100%만큼 드로우, 행동패 제한을 초과할 수 있다.",
+   "effect": "이동속도 75% + 3만큼 드로우, 행동패 제한을 초과할 수 있다.",
    "kind": "reward",
    "name": "통찰",
    "note": "",
@@ -377,14 +487,21 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 3
+    },
+    {
+     "mana": 3
+    },
+    {
+     "hp": 2
+    }
+   ]
   },
   {
    "id": "larry",
-   "cost": {
-    "hp": 2,
-    "mana": 3
-   },
    "effect": "자신 옆칸에 아군 해골병사 소환\n(체력: 방어력의 300%, 공격력: 공격력의 80%, 이동속도: 1, 나머지는 0)\n해골병사: 플레이어 턴 시작시마다 가장 가까운 적에게 이동속도만큼 다가가 공격력 100% 피해, 대상을 도발. ",
    "kind": "reward",
    "name": "해골병사",
@@ -395,14 +512,18 @@ const GAME_DATA = {
     "taunt"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "mana": 3
+    },
+    {
+     "hp": 2
+    }
+   ]
   },
   {
    "id": "lightning_bolt",
-   "cost": {
-    "energy": 2,
-    "mana": 2
-   },
    "effect": "현재위치 3x3 영역 대상 공격력 100% 피해 + 기절 1턴 부여",
    "kind": "reward",
    "name": "천둥",
@@ -413,7 +534,15 @@ const GAME_DATA = {
     "area"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 2
+    },
+    {
+     "mana": 2
+    }
+   ]
   },
   {
    "id": "overload",
@@ -426,15 +555,11 @@ const GAME_DATA = {
     "lethargy"
    ],
    "memo": [],
-   "cost": {},
-   "upgrades": []
+   "upgrades": [],
+   "costs": []
   },
   {
    "id": "pray",
-   "cost": {
-    "hp": 1,
-    "mana": 2
-   },
    "effect": "덱/묘지에서 카드 1장을 골라 패로 가져옴",
    "kind": "reward",
    "name": "기도",
@@ -443,16 +568,19 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "reload",
-   "cost": {
-    "energy": 1,
-    "hp": 1,
-    "mana": 1
-   },
-   "effect": "패를 1장 버리고, 덱에서 1장 + 이동속도 25%만큼 드로우",
+   "effect": "패를 1장 버리고, 1장 + 이동속도 25%만큼 드로우",
    "kind": "reward",
    "name": "리로드",
    "note": "",
@@ -461,16 +589,22 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "rest",
-   "cost": {
-    "energy": 1,
-    "hp": 1,
-    "mana": 1
-   },
-   "effect": "비용 종류에 따라 마나를 회복한다.\n기력: 1 + 공격력의 50%만큼 마나를 회복한다.\n마나: 1 + 방어력의 50%만큼 마나를 회복한다.\n체력: 2 + 최대마나의 20%만큼 마나를 회복한다.",
+   "effect": "방어력 50% + 1만큼 마나를 회복한다.",
    "kind": "reward",
    "name": "휴식",
    "note": "",
@@ -479,11 +613,7 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 3,
-      "mana": 3
-     },
-     "effect": "비용 종류에 따라 체력을 회복한다.\n기력: 공격력 50%만큼 체력을 회복한다.\n마나: 방어력 50%만큼 체력을 회복한다.",
+     "effect": "1 + 방어력 25%만큼 체력을 회복한다.",
      "from": "default",
      "key": "green",
      "name": "초록 휴식",
@@ -491,18 +621,36 @@ const GAME_DATA = {
      "tags": [
       "health"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 3
+      },
+      {
+       "mana": 4
+      },
+      {
+       "hp": 2
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "roll",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
-   "effect": "이동속도 50% 거리 내 이동, 이동속도 25%만큼 드로우",
+   "effect": "이동속도 50% 거리 내 이동, 이동속도 25% + 1만큼 드로우",
    "kind": "reward",
    "name": "구르기",
    "note": "",
@@ -512,11 +660,7 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 1,
-      "mana": 1
-     },
-     "effect": "이동속도 50% 거리 내 이동, 이동속도 25%만큼 드로우, 디버프 상태이상 1개 제거",
+     "effect": "이동속도 50% 거리 내 이동, 이동속도 25% + 1만큼 드로우, 디버프 상태이상 1개 제거",
      "from": "default",
      "key": "green",
      "name": "초록 구르기",
@@ -526,18 +670,29 @@ const GAME_DATA = {
       "draw",
       "cleanse"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "shield",
-   "cost": {
-    "energy": 2,
-    "hp": 1,
-    "mana": 2
-   },
    "effect": "방어력 200%만큼 방어도 3턴 획득",
    "kind": "reward",
    "name": "보호막",
@@ -546,14 +701,21 @@ const GAME_DATA = {
     "defense"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 2
+    },
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
   },
   {
    "id": "shield_fix",
-   "cost": {
-    "energy": 1,
-    "mana": 1
-   },
    "effect": "적용된 모든 방어도에 방어도 30% 증가 + 지속시간 1턴 증가",
    "kind": "reward",
    "name": "방패고정",
@@ -562,15 +724,19 @@ const GAME_DATA = {
     "defense"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 1
+    },
+    {
+     "mana": 1
+    }
+   ]
   },
   {
    "id": "sprint",
-   "cost": {
-    "energy": 3,
-    "mana": 3
-   },
-   "effect": "거리 제한없이 이동, 이동속도 25%만큼 드로우",
+   "effect": "거리 제한없이 이동, 이동속도 50% + 2만큼 드로우",
    "kind": "reward",
    "name": "전력질주",
    "note": "",
@@ -579,13 +745,18 @@ const GAME_DATA = {
     "move"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 3
+    },
+    {
+     "mana": 3
+    }
+   ]
   },
   {
    "id": "step",
-   "cost": {
-    "energy": 1
-   },
    "effect": "이동속도 거리 이내 이동",
    "kind": "basic",
    "name": "이동",
@@ -595,9 +766,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 1
-     },
      "effect": "이동속도 거리 이내 이동, 이동한 칸 수만큼 힘 1턴 부여",
      "from": "default",
      "key": "red",
@@ -607,16 +775,23 @@ const GAME_DATA = {
       "move",
       "strength"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 1
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 1
+    }
+   ]
   },
   {
    "id": "strike",
-   "cost": {
-    "energy": 1
-   },
    "effect": "옆칸 단일대상 공격력 100% 피해",
    "kind": "basic",
    "name": "공격",
@@ -626,9 +801,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 1
-     },
      "effect": "옆칸 단일대상 공격력 80% 피해 2회",
      "from": "default",
      "key": "red",
@@ -637,17 +809,23 @@ const GAME_DATA = {
      "tags": [
       "attack"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 1
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "energy": 1
+    }
+   ]
   },
   {
    "id": "totem",
-   "cost": {
-    "hp": 1,
-    "mana": 2
-   },
    "effect": "방어력 200%의 체력을 가진 토템 소환(3턴 지속)\n토템: 토템으로부터 3칸 이내의 적에게 도발 부여",
    "kind": "reward",
    "name": "토템",
@@ -658,11 +836,6 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "cost": {
-      "energy": 2,
-      "hp": 2,
-      "mana": 2
-     },
      "effect": "방어력 200%의 체력을 가진 토템 소환(3턴 지속)\n토템: 토템으로부터 3칸 이내의 적에게 도발 부여, 지속시간이 끝나거나 파괴되면 2칸 이내의 적에게 공격력 100% 피해",
      "from": "default",
      "key": "red",
@@ -673,10 +846,49 @@ const GAME_DATA = {
       "attack",
       "taunt"
      ],
-     "materials": []
+     "materials": [],
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      },
+      {
+       "hp": 2
+      }
+     ]
     }
    ],
-   "memo": []
+   "memo": [],
+   "costs": [
+    {
+     "mana": 2
+    },
+    {
+     "hp": 1
+    }
+   ]
+  },
+  {
+   "id": "zoom_punch",
+   "effect": "옆칸 대상 공격력 50% 피해\n사용시마다 \"줌 펀치\" 카드 피해량이 공격력 50%만큼 증가",
+   "kind": "reward",
+   "name": "줌 펀치",
+   "note": "",
+   "tags": [
+    "attack"
+   ],
+   "memo": [],
+   "upgrades": [],
+   "costs": [
+    {
+     "energy": 2
+    },
+    {
+     "mana": 2
+    }
+   ]
   }
  ],
  "materials": [

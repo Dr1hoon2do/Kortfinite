@@ -11,11 +11,11 @@ class Codex extends Component {
         return [k.note, k.pattern, drops ? `재료: ${drops}` : ""].filter(Boolean).join("\n");
     }
 
-    // 비용이 여러 종류인 카드는 종류마다 따로 한 장씩 (나올 때 그중 하나가 정해지니까)
+    // 비용 경우가 여럿인 카드는 경우마다 따로 한 장씩 (나올 때 그중 하나가 정해지니까)
     static variants(def) {
-        const keys = Card.costKeys(def);
-        if (keys.length < 2) return [new Card(def.id)];
-        return keys.map((k) => { const c = new Card(def.id); c.ensureData().pay = k; return c; });
+        const n = Card.costOptions(def).length;
+        if (n < 2) return [new Card(def.id)];
+        return Array.from({ length: n }, (_, i) => { const c = new Card(def.id); c.ensureData().pay = i; return c; });
     }
 
     constructor(options) {

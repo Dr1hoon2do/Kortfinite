@@ -31,23 +31,28 @@ class Card {
     // 쓸 때 내는 비용 { energy: 1 } / { mana: 5 } 등. 주문은 카드마다 다르다 (Spell.js)
     get cost() {
         if (this.def.spell) return Spell.costObject(this);
-        const d = this.def.cost;
-        const keys = Card.costKeys(this.def);
-        if (keys.length < 2) return d;
-        // 비용이 여러 종류로 적힌 카드는 "그중 하나": 카드 한 장마다 하나로 정해져 있다 (data.pay)
-        const key = keys.includes(this.data?.pay) ? this.data.pay : keys[0];
-        return { [key]: d[key] };
+        const opts = Card.costOptions(this.def);
+        if (opts.length < 2) return this.def.cost;
+        // 비용 경우가 여럿인 카드는 "그중 하나": 카드 한 장마다 하나로 정해져 있다 (data.pay = 몇 번째 경우)
+        return opts[this.costIndex];
     }
 
-    // 정의에 적힌 비용 종류들 (기력·마나·체력 …)
-    static costKeys(def) {
-        return Object.keys(def.cost ?? {}).filter((k) => def.cost[k]);
+    // 정의에 적힌 비용의 경우들 [{ energy: 2 }, { mana: 2 }, { energy: 1, mana: 1 }]. 공방 카드의 costs. 없으면 def.cost 하나
+    static costOptions(def) {
+        return def.costs?.length ? def.costs : [def.cost];
     }
 
-    // 비용을 고를 수 있는 카드면 이 카드의 비용 종류를 정한다 (이미 있으면 그대로)
+    // 이 카드가 낼 비용이 정의의 몇 번째 경우인가
+    get costIndex() {
+        const n = Card.costOptions(this.def).length;
+        const i = this.data?.pay;
+        return Number.isInteger(i) && i >= 0 && i < n ? i : 0;
+    }
+
+    // 비용 경우가 여럿이면 이 카드가 낼 경우를 정한다 (이미 정해져 있으면 그대로, 강화로 정의가 바뀌어 범위를 벗어나면 다시)
     rollCost(rng = Math.random) {
-        const keys = Card.costKeys(this.def);
-        if (keys.length > 1 && !keys.includes(this.data?.pay)) this.ensureData().pay = keys[Math.floor(rng() * keys.length)];
+        const n = Card.costOptions(this.def).length;
+        if (n > 1 && !(Number.isInteger(this.data?.pay) && this.data.pay >= 0 && this.data.pay < n)) this.ensureData().pay = Math.floor(rng() * n);
         return this;
     }
 
