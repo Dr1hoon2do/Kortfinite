@@ -13,7 +13,8 @@ head = "// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우�
 impl = (root / "assets/dat/data/CardImpl.js").read_text(encoding="utf-8") + (root / "assets/dat/data/EnemyImpl.js").read_text(encoding="utf-8")
 def known(kind, i): return re.search(r'\b' + re.escape(i) + r'\b', impl) is not None
 missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])]
-print("카드 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
+print("카드 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
+if d.get("equipment"): print("장비는 아직 게임에 동작이 없다 (GameData.js에는 들어간다)")
 if missing:
     print("동작이 아직 없는 것 (CardImpl.js / EnemyImpl.js에 추가 필요):")
     for k, i in missing: print("  -", k, i)

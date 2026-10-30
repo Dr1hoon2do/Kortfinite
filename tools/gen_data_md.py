@@ -25,6 +25,12 @@ for c in D["cards"]:
 o += ["", "## 2. 적 (%d종)" % len(D["enemies"]), "", "| id | 이름 | 층 | 체력 | 공격 | 방어 | 이동 | 드랍 | 패턴 |", "|---|---|---|---|---|---|---|---|---|"]
 for e in D["enemies"]:
     o.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], e.get("floors", ""), e.get("hp"), e.get("atk"), e.get("def"), e.get("speed"), ", ".join("%s×%s(%s%%)" % (mat.get(d["id"], d["id"]), d.get("count", 1), d.get("chance", 100)) for d in e.get("drops", [])) or "-", cell(e.get("pattern"))))
+SLOT = {"hand": "손", "head": "머리", "body": "몸", "waist": "허리", "back": "등", "trinket": "장신구"}
+RAR = {"common": "흔함", "uncommon": "드묾", "rare": "희귀", "boss": "우두머리"}
+eq = D.get("equipment", [])
+o += ["", "## 2-1. 장비 (%d개)" % len(eq), "", "소지품 패에서 장착해야 효과가 나는 유물형 장비 (공방 '장비' 탭). 게임 동작은 아직 없다.", "",
+      "| id | 이름 | 부위 | 희귀도 | 값 | 효과 | 태그 |", "|---|---|---|---|---|---|---|"]
+for e in eq: o.append("| %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], SLOT.get(e.get("slot"), "-"), RAR.get(e.get("rarity"), "-"), e.get("price", "-"), cell(e.get("effect")), tags(e.get("tags"))))
 o += ["", "## 3. 재료 (%d개)" % len(D["materials"]), "", "| id | 이름 | 얻는 곳 | 비고 |", "|---|---|---|---|"]
 for m in D["materials"]: o.append("| %s | %s | %s | %s |" % (m["id"], m["name"], cell(m.get("source")), cell(m.get("note"))))
 o += ["", "## 4. 태그 (%d개)" % len(D["tags"]), "", "| id | 이름 | 설명 | 소속 |", "|---|---|---|---|"]
