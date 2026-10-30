@@ -375,6 +375,8 @@ class CardSystem {
         card._drawn = ++this.drawSeq;
         this.hand.push(card);
         this._changed();
+        // 공방 장비는 패에 들어오면 자동으로 입는다 (그 부위가 비어 있을 때. 이미 입은 게 있으면 그대로 두고, 직접 바꿔 입는다)
+        if (card.def.gear && !this.equipped[card.def.slot]) this.equip(card);
         return true;
     }
 
