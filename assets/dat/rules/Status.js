@@ -33,6 +33,7 @@ class Status {
     //   (여러 명에게 걸리면 그 범위들의 교집합). 화면에 보이는 상태효과 수치는 가장 좁은 n, 턴은 가장 긴 것
     static charm(by, target, n = 2, turns = 1) {
         const list = (target.charms ??= []).filter((c) => c.by !== by);
+        Status.casterName(by); // 시전자 번호는 거는 순서대로
         list.push({ by, n, t: turns });
         target.charms = list;
         Status.syncCharm(target);
@@ -205,10 +206,46 @@ class Status {
         return l;
     }
 
-    // "독 3 · 화상 2(3턴)"
+    // 시전자 이름 (같은 이름이 둘 이상이면 A·B…를 붙여 가른다). 방에 들어갈 때 번호는 처음부터
+    static _labels = new Map();
+    static casterName(by) {
+        const base = by.displayName ?? "?";
+        if (by.world && Status._lw !== by.world) { // 방이 바뀌면 번호는 처음부터
+            Status._lw = by.world;
+            Status._labels.clear();
+        }
+        if (!by._label) {
+            const n = (Status._labels.get(base) ?? 0) + 1;
+            Status._labels.set(base, n);
+            by._label = String.fromCharCode(64 + Math.min(n, 26));
+        }
+        return by._label === "A" && !Status._dup(base, by) ? base : `${base}${by._label}`;
+    }
+
+    static _dup(base, by) {
+        return (Status._labels.get(base) ?? 0) > 1;
+    }
+
+    // 화면에 그릴 상태이상 목록 [{ key, name, color, value, t, from }]. 매료는 시전자마다 하나씩
+    static entries(e) {
+        const out = [];
+        for (const k of Object.keys(e.status ?? {})) {
+            const d = Status.DEFS[k];
+            if (!d) continue;
+            if (k === "charm") {
+                for (const c of e.charms ?? []) if (c.t > 0) out.push({ key: k, name: d.name, color: d.color, value: c.n, t: c.t, from: c.by ? Status.casterName(c.by) : null });
+            } else out.push({ key: k, name: d.name, color: d.color, value: e.status[k], t: Status.turns(e, k), from: null });
+        }
+        return out;
+    }
+
+    // "독 3 · 화상 2(3턴)"  ·  매료는 "매료(서큐버스A) 2칸(3턴) · 매료(서큐버스B) 2칸(1턴)"
     static text(e) {
         return Object.keys(e.status ?? {}).filter((k) => Status.DEFS[k]).map((k) => {
             const d = Status.DEFS[k];
+            if (k === "charm" && e.charms && e.charms.length) {
+                return e.charms.filter((c) => c.t > 0).map((c) => `${d.name}(${c.by ? Status.casterName(c.by) : "?"}) ${c.n}칸(${c.t}턴)`).join(" · ");
+            }
             const t = Status.turns(e, k);
             const unit = k === "slow" ? "%" : "";
             if (d.kind === "turns") return `${d.name} ${t >= Status.ENDLESS ? "" : t + "턴"}`.trim();

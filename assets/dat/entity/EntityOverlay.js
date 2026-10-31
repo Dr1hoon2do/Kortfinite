@@ -57,7 +57,7 @@ class EntityOverlay extends Renderer {
                 ctx.fillText(String(e.guard), -w / 2 - 4, -10.5);
             }
             // 상태 이상: 발밑에 색 칸 + 수치 (독·약화 등)
-            const keys = Object.keys(e.status ?? {});
+            const keys = Status.entries(e);
             if (keys.length) {
                 ctx.font = "bold 4px monospace";
                 ctx.textAlign = "center";
@@ -66,10 +66,10 @@ class EntityOverlay extends Renderer {
                 for (const k of keys) {
                     ctx.fillStyle = "rgba(20, 14, 10, 0.85)";
                     ctx.fillRect(x - 0.5, 7.5, 5, 5);
-                    ctx.fillStyle = Status.DEFS[k].color;
+                    ctx.fillStyle = k.color;
                     ctx.fillRect(x, 8, 4, 4);
                     ctx.fillStyle = "#000000";
-                    ctx.fillText(String(e.status[k]), x + 2, 10.2);
+                    ctx.fillText(String(k.value), x + 2, 10.2);
                     x += 5;
                 }
             }
