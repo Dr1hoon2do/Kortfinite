@@ -24,7 +24,7 @@ class ActionCards {
         for (const k of prev.keys()) {
             if (k === start) continue;
             const [kx, ky] = k.split(",").map(Number);
-            if (Status.charmBlocks(mover, kx, ky)) continue; // 매료: 건 상대에게서 멀어지는 칸은 못 간다
+            if (Status.charmBlocks(mover, kx, ky)) continue; // 매료: 건 상대에게서 n칸 안의 칸만 갈 수 있다
             const path = [];
             let at = k;
             while (prev.get(at)) {

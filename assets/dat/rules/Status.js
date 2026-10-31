@@ -26,22 +26,45 @@ class Status {
         root: { name: "속박", color: "#e8e8f0", kind: "turns", max: 9, tag: "root", desc: "움직이지 못한다" },
         stun: { name: "기절", color: "#f0e070", kind: "turns", max: 3, tag: "sturn", desc: "행동할 수 없다" },
         taunt: { name: "도발", color: "#f08080", kind: "turns", max: 9, tag: "taunt", desc: "공격 대상이 도발한 쪽이 된다" },
-        charm: { name: "매료", color: "#f080c0", kind: "vt", max: 9, tag: "charm", desc: "건 상대에게서 수치칸 이상 멀어지도록 이동할 수 없다" }
+        charm: { name: "매료", color: "#f080c0", kind: "vt", max: 9, tag: "charm", desc: "건 상대에게서 수치칸 이내로만 움직일 수 있다 (여럿이면 겹치는 범위)" }
     };
 
-    // by가 target을 매료한다 (n칸, turns턴). 매료당한 쪽은 by에게서 n칸 이상 멀어지는 칸으로 못 간다
+    // 매료: 건 사람(by)마다 { by, n, t }가 따로 있다 (e.charms). 매료당한 쪽은 모든 시전자에게서 n칸 이내인 칸으로만 움직일 수 있다
+    //   (여러 명에게 걸리면 그 범위들의 교집합). 화면에 보이는 상태효과 수치는 가장 좁은 n, 턴은 가장 긴 것
     static charm(by, target, n = 2, turns = 1) {
-        Status.set(target, "charm", n, turns);
-        target.charmedBy = by;
+        const list = (target.charms ??= []).filter((c) => c.by !== by);
+        list.push({ by, n, t: turns });
+        target.charms = list;
+        Status.syncCharm(target);
     }
 
-    // e가 (x, y)로 가면 매료한 상대에게서 수치칸 이상으로 멀어지는가 (그러면 갈 수 없다)
+    static syncCharm(e) {
+        const list = (e.charms ?? []).filter((c) => c.t > 0);
+        e.charms = list;
+        if (!list.length) {
+            if (e.status) delete e.status.charm;
+            if (e.statusT) delete e.statusT.charm;
+            return;
+        }
+        e.status ??= {};
+        e.statusT ??= {};
+        e.status.charm = Math.min(...list.map((c) => c.n));
+        e.statusT.charm = Math.max(...list.map((c) => c.t));
+    }
+
+    // 턴이 지나면 매료도 한 턴씩 줄어든다
+    static tickCharm(e) {
+        for (const c of e.charms ?? []) c.t--;
+        Status.syncCharm(e);
+    }
+
+    // e가 (x, y)에 설 수 있는가? 매료한 상대(살아 있는) 모두에게서 n칸 이내여야 한다 (그 밖이면 못 간다)
     static charmBlocks(e, x, y) {
-        const c = e.charmedBy;
-        if (!c || !c.alive || Status.get(e, "charm") <= 0) return false;
-        const d = (ax, ay) => Math.abs(ax - c.x) + Math.abs(ay - c.y);
-        const n = Status.get(e, "charm");
-        return d(x, y) >= n && d(x, y) > d(e.x, e.y); // n칸 이상 떨어진 칸으로, 지금보다 멀어지는 이동만 막는다
+        for (const c of e.charms ?? []) {
+            if (!c.by || !c.by.alive || c.t <= 0) continue;
+            if (Math.abs(x - c.by.x) + Math.abs(y - c.by.y) > c.n) return true;
+        }
+        return false;
     }
 
     // 예전 키 → 지금 키 (저장·옛 코드 호환)
@@ -78,6 +101,7 @@ class Status {
             delete e.status[key];
             delete e.statusT[key];
         }
+        if (key === "charm" && !v) e.charms = [];
         if ((key === "str" || key === "harden") && e.statsChanged) e.statsChanged();
         return v;
     }
@@ -157,10 +181,12 @@ class Status {
         for (const k of Object.keys(e.statusT ?? {})) {
             const d = Status.DEFS[k];
             if (skipLate && d && d.late) continue;
+            if (k === "charm") continue; // 매료는 시전자별로 따로 센다 (tickCharm)
             if (e.statusT[k] >= Status.ENDLESS) continue;
             e.statusT[k]--;
             if (e.statusT[k] <= 0) Status.set(e, k, 0);
         }
+        if (e.charms && e.charms.length) Status.tickCharm(e);
     }
 
     // 몬스터·소환수가 자기 턴 시작에 부른다 (예전 이름 호환): 화상 피해

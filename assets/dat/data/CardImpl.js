@@ -128,7 +128,7 @@ class CardOps {
         const t = ctx.target;
         if (u.root > 0) return CardOps.say(`속박되어 움직일 수 없다 (${u.root}턴 남음)`);
         if (!t || !CardOps.freeTiles(ctx.world, u, n).includes(`${t.x},${t.y}`)) return CardOps.say(`${n}칸 안의 빈칸을 골라야 한다`);
-        if (Status.charmBlocks(u, t.x, t.y)) return CardOps.say("매료당해 건 상대에게서 멀어질 수 없다");
+        if (Status.charmBlocks(u, t.x, t.y)) return CardOps.say("매료당해 건 상대에게서 벗어난 칸으로는 갈 수 없다");
         const w = ctx.world;
         const fx = u.x;
         const fy = u.y;
