@@ -49,8 +49,10 @@ class PlayerHud extends Component {
     get logWidth() {
         const screen = this.engine.width / this.engine.uiRoot.scale;
         // 버튼이 두 줄인 좁은 화면은 둘째 줄 버튼(의뢰) 자리를 비운다
-        const right = SidePanel.twoRows(this.engine) ? 16 + SidePanel.BUTTON + 8 : 16;
-        const full = Math.max(160, Math.min(PlayerHud.LOG_MAX_WIDTH, Math.floor(screen - 16 - right)));
+        // 오른쪽 위 버튼 줄과 같은 높이에 있으면 버튼 왼쪽까지만, 버튼 줄 아래로 내려갔으면 화면 끝까지
+        const beside = this.logY < SidePanel.BUTTON + 16 + 4;
+        const room0 = beside ? this.leftZone : screen - 32;
+        const full = Math.max(120, Math.min(PlayerHud.LOG_MAX_WIDTH, Math.floor(room0)));
         // 넓은 화면: 방 왼쪽 빈 곳이 220 이상이면 그 폭만 써서 방을 가리지 않는다
         const run = this.run;
         if (run && run.state === "room" && run.plan && Camera.main) {
@@ -73,6 +75,8 @@ class PlayerHud extends Component {
         this._dead = false;
         this._statusKey = null;
         this.statusOpen = false;
+        this.logY = PlayerHud.LOG_Y;
+        this.leftZone = 200; // 오른쪽 위 버튼 왼쪽의 빈 폭 (fitWidth가 정한다)
     }
 
     start() {
@@ -135,7 +139,7 @@ class PlayerHud extends Component {
             const go = this.engine.createUI("log");
             const rt = go.getComponent(RectTransform);
             rt.setPivot(0, 0);
-            rt.setSizeAndPosition(w, 15, 22, PlayerHud.LOG_Y + 4 + i * 15);
+            rt.setSizeAndPosition(w, 15, 22, this.logY + 4 + i * 15);
             this.lines.push(go.addComponent(new UIText("", { fontSize: 11, color: "#e8d9b8", align: "left", verticalAlign: "top" })));
         }
     }
@@ -267,15 +271,30 @@ class PlayerHud extends Component {
         bar.text.setText(label);
     }
 
-    // 좁은 화면에서 오른쪽 위 버튼들과 겹치지 않게 돈·층 칸 너비를 줄인다
+    // 왼쪽 위 칸들(돈·층·메시지)이 오른쪽 위 버튼들과 겹치지 않게 자리를 잡는다.
+    //   버튼은 오른쪽 끝에서 4개(48 + 틈 8) 높이 16~64. 그 왼쪽 빈 폭(leftZone) 안에 돈·층을 한 줄로 놓을 수 있으면 한 줄,
+    //   모자라면 돈 아래에 층을 놓는다. 메시지는 빈 폭이 넉넉하면 버튼 옆(위쪽), 아니면 버튼 줄 아래로 내려간다.
     fitWidth() {
         const screen = this.engine.width / this.engine.uiRoot.scale;
         const n = SidePanel.twoRows(this.engine) ? 4 : SidePanel.SLOTS;
         const buttons = 16 + n * SidePanel.BUTTON + (n - 1) * 8;
-        const w = Math.max(110, Math.min(this.maxWidth, Math.floor(screen - buttons - 16 - 8)));
-        if (w === this.width) return;
-        this.width = w;
-        this.levelRT.setSizeAndPosition(Math.max(70, Math.min(130, w - 82)), 18, 16 + 76 + 6, 16);
+        const zone = Math.max(60, Math.floor(screen - buttons - 8 - 16)); // x=16 부터 쓸 수 있는 폭
+        const moneyW = 76;
+        const oneRow = zone >= moneyW + 6 + 70;
+        const levelW = oneRow ? Math.min(130, zone - moneyW - 6) : Math.min(130, zone);
+        const rowsBottom = oneRow ? 34 : 56;               // 돈·층 칸이 끝나는 y
+        const buttonBottom = 16 + SidePanel.BUTTON + 6;     // 버튼 줄이 끝나는 y
+        // 메시지가 버튼 옆에 놓이려면 폭이 160은 돼야 한다. 아니면 버튼 줄 아래(= 패널이 시작하는 높이)로
+        const besideOk = zone >= 160;
+        const logY = besideOk ? rowsBottom + 6 : Math.max(rowsBottom + 6, buttonBottom);
+        const key = `${zone}:${oneRow}:${logY}`;
+        this.leftZone = zone;
+        if (key === this._fitKey) return;
+        this._fitKey = key;
+        this.logY = logY;
+        this._logVersion = -1; // 메시지 칸 다시 배치
+        this.moneyRT.setSizeAndPosition(moneyW, 18, 16, 16);
+        this.levelRT.setSizeAndPosition(levelW, 18, oneRow ? 16 + moneyW + 6 : 16, oneRow ? 16 : 38);
     }
 
     update() {
@@ -295,7 +314,7 @@ class PlayerHud extends Component {
         // 메시지: 최근 logLines줄 (설정)
         const shown = Settings.get("logLines");
         const logWidth = this.logWidth;
-        const key = MessageLog.version + ":" + shown + ":" + logWidth;
+        const key = MessageLog.version + ":" + shown + ":" + logWidth + ":" + this.logY;
         if (key !== this._logVersion) {
             this._logVersion = key;
             const messages = MessageLog.lines.slice(-shown);
@@ -313,12 +332,12 @@ class PlayerHud extends Component {
                     text.color = row.color;
                     text.opacity = row.opacity;
                 }
-                text.getComponent(RectTransform).setSizeAndPosition(logWidth - 8, 15, 22, PlayerHud.LOG_Y + 4 + i * 15);
+                text.getComponent(RectTransform).setSizeAndPosition(logWidth - 8, 15, 22, this.logY + 4 + i * 15);
             });
             const n = Math.min(rows.length, this.lines.length);
             const brt = this.logBack.getComponent(RectTransform);
             brt.setPivot(0, 0);
-            brt.setSizeAndPosition(logWidth, n * 15 + 6, 16, PlayerHud.LOG_Y);
+            brt.setSizeAndPosition(logWidth, n * 15 + 6, 16, this.logY);
             this.logBack.setActive(n > 0);
         }
 
