@@ -26,6 +26,7 @@ class Status {
         root: { name: "속박", color: "#e8e8f0", kind: "turns", max: 9, tag: "root", desc: "움직이지 못한다" },
         stun: { name: "기절", color: "#f0e070", kind: "turns", max: 3, tag: "sturn", desc: "행동할 수 없다" },
         taunt: { name: "도발", color: "#f08080", kind: "turns", max: 9, tag: "taunt", desc: "공격 대상이 도발한 쪽이 된다" },
+        growth: { name: "성장", color: "#e0605a", kind: "vt", max: 99, buff: true, tag: "growth", desc: "최대 체력이 수치만큼 증가" },
         charm: { name: "매료", color: "#f080c0", kind: "vt", max: 9, tag: "charm", desc: "건 상대에게서 수치칸 이내로만 움직일 수 있다 (여럿이면 겹치는 범위)" }
     };
 
@@ -103,7 +104,7 @@ class Status {
             delete e.statusT[key];
         }
         if (key === "charm" && !v) e.charms = [];
-        if ((key === "str" || key === "harden") && e.statsChanged) e.statsChanged();
+        if ((key === "str" || key === "harden" || key === "growth") && e.statsChanged) e.statsChanged();
         return v;
     }
 
@@ -234,13 +235,14 @@ class Status {
             if (!d) continue;
             if (k === "charm") {
                 for (const c of e.charms ?? []) if (c.t > 0) out.push({ key: k, name: d.name, color: d.color, value: c.n, t: c.t, from: c.by ? Status.casterName(c.by) : null });
-            } else out.push({ key: k, name: d.name, color: d.color, value: e.status[k], t: Status.turns(e, k), from: null });
+            } else out.push({ key: k, name: d.name, color: d.color, value: e.status[k], t: Status.turns(e, k), from: null, buff: !!d.buff });
         }
         return out;
     }
 
     // 상태이상 목록 창에 쓸 글: { title, desc }  (예: "매료(서큐버스A) 2칸 · 3턴")
     static describe(en) {
+        if (en.key === "block") return { title: `방어도 ${en.value} · ${en.t}턴`, desc: "피해를 체력보다 먼저 막는다. 곧 끝나는 것부터 깎이고, 턴이 지나면 사라진다" };
         const d = Status.DEFS[en.key];
         const unit = en.key === "slow" ? "%" : "";
         const turns = en.t >= Status.ENDLESS ? "전투 중" : `${en.t}턴`;

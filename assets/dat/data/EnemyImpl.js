@@ -213,11 +213,11 @@ EnemyMoves.SPECS = {
 
     // 서큐버스: [AAAB] 로테이션 (시작 위치 무작위)
     //   A 다가가거나 옆칸이면 매료(2칸) 3턴, 이미 매료 상태면 공격력 100% 피해
-    //     (피해를 입히면 방어력 100% 체력 회복 · 힘 1 · 경질화 1) / B 방어력 100% 방어도 2턴
+    //     (피해를 입히면 방어력 100% 체력 회복 · 힘 1 · 경질화 1 · 성장 1) / B 방어력 100% 방어도 2턴
     succubus: {
         rotations: ["AAAB"],
         actions: {
-            A: () => ATK(100, { charm: { n: 2, turns: 3, heal: 100, str: 1, harden: 1 }, name: "흡정" }),
+            A: () => ATK(100, { charm: { n: 2, turns: 3, heal: 100, str: 1, harden: 1, growth: 1 }, name: "흡정" }),
             B: () => ({ kind: "block", pct: 100, turns: 2 })
         }
     },

@@ -6,7 +6,7 @@
 // 카드 줄 위 왼쪽: [드로우 (덱 n)] [대기], 오른쪽: 덱·묘지 장수 (누르면 이번 전투의 덱 보기)
 // 카드 쓰기·버리기·장착은 턴을 쓰지 않는다. 뽑기·대기만 1턴.
 class HandBar extends Component {
-    static HEIGHT = 170;   // 아래에서 차지하는 높이 (UI 단위). 카메라가 이만큼 피해서 방을 맞춘다
+    static HEIGHT = 196;   // 아래에서 차지하는 높이 (UI 단위). 카메라가 이만큼 피해서 방을 맞춘다
     static CARD_W = 60;
     static CARD_H = 100;
     static BUTTON = 44;

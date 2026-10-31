@@ -247,7 +247,7 @@ const CARDS = {
         use(ctx) {
             const [pick] = ctx.picks ?? [];
             if (!pick || !ctx.cards.hand.includes(pick)) return CardOps.say("버릴 카드를 골라야 한다");
-            const cost = pick.cost?.mana ?? 0;
+            const cost = Math.floor((pick.cost?.mana ?? 0) / 2); // 버린 카드의 마나 비용의 절반 (버림)
             const dumped = CardOps.dump(ctx, [pick]);
             if (!dumped.length) return null;
             const got = CardOps.mana(ctx.user, 2 + CardOps.def(ctx.user, 10) + cost);
@@ -292,6 +292,21 @@ const CARDS = {
             MessageLog.add("원한! 초콜릿 — 기력 1을 되찾았다", "#e8a870");
         },
         short: () => "1장 뽑기 · 버려지면: 기력 +1"
+    },
+
+    // 몽둥이: 옆칸 단일 대상 공격력 150% 피해 + 기절 1턴
+    club: {
+        icon: "hammer", color: "#b08860",
+        target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" }),
+        use(ctx) {
+            const foe = CardOps.pickAdjacent(ctx);
+            if (!foe) return null;
+            const steps = Combat.strike(ctx.user, foe, ctx.world, CardOps.atk(ctx.user, 150), ctx.card.name);
+            const out = [steps];
+            if (foe.alive) out.push([CardOps.inflict(foe, "stun", 1)]);
+            return out;
+        },
+        short: () => `${CK.atk(CardOps.atk(PL(), 150))} 피해 · ${CK.st("stun", "기절")} 1턴`
     },
 
     concentration: {
@@ -444,12 +459,12 @@ const CARDS = {
             const t = ctx.target;
             if (!t || !CardOps.adjacentFree(ctx.world, u).includes(`${t.x},${t.y}`)) return CardOps.say("옆 빈칸을 골라야 한다");
             const a = ctx.world.spawn(new Ally(t.x, t.y, "soldier", {
-                hp: CardOps.def(u, 300), attack: CardOps.atk(u, 80), moves: 1, defense: 0
+                hp: CardOps.def(u, 100) + 10, attack: 2 + CardOps.atk(u, 50), moves: 1, defense: 0
             }));
             MessageLog.add(`${josa(a.displayName, "을를")} 불렀다 (체력 ${a.stats.maxHp}, 공격 ${a.stats.attack})`, "#a0d0a0");
             return [[new PopupAnim(a, "!", "#7cd47c")]];
         },
-        short: () => `해골병사 소환 (체력 ${CK.def(CardOps.def(PL(), 300))} · 공격 ${CK.atk(CardOps.atk(PL(), 80))})`
+        short: () => `해골병사 소환 (체력 ${CK.def(CardOps.def(PL(), 100) + 10)} · 공격 ${CK.atk(2 + CardOps.atk(PL(), 50))})`
     },
 
     lightning_bolt: {

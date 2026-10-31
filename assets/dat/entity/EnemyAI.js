@@ -268,7 +268,8 @@ class EnemyMoves {
                                 }
                                 Status.add(e, "str", c.str ?? 1, Status.ENDLESS);
                                 Status.add(e, "harden", c.harden ?? 1, Status.ENDLESS);
-                                MessageLog.add(`${josa(e.displayName, "이가")} 기운을 빨아들였다 (체력 +${heal}, 힘 +${c.str ?? 1}, 경질화 +${c.harden ?? 1})`, "#f0a0c8");
+                                Status.add(e, "growth", c.growth ?? 1, Status.ENDLESS);
+                                MessageLog.add(`${josa(e.displayName, "이가")} 기운을 빨아들였다 (체력 +${heal}, 힘 +${c.str ?? 1}, 경질화 +${c.harden ?? 1}, 성장 +${c.growth ?? 1})`, "#f0a0c8");
                                 anims.push(new PopupAnim(e, "흡수", "#f080c0"));
                             }
                         }

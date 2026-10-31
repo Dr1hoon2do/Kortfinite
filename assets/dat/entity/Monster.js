@@ -52,6 +52,10 @@ class Monster extends Entity {
     statsChanged() {
         this.stats.attack = this.baseAttack + Status.get(this, "str");
         this.stats.defense = this.baseDefense + Status.get(this, "harden");
+        const g = Status.get(this, "growth"); // 성장: 최대 체력 +수치
+        if (this.baseMaxHp === undefined) this.baseMaxHp = this.stats.maxHp - (this._growth ?? 0);
+        this._growth = g;
+        this.stats.maxHp = this.baseMaxHp + g;
     }
 
     // ---------- 방어도 ----------
