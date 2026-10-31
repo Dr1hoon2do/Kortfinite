@@ -204,11 +204,11 @@ class EnemyMoves {
         return !!EnemyMoves.lineDir(e, foe) && EnemyMoves.clearBetween(world, e, foe);
     }
 
-    // 돌진 의도: 줄을 따라 벽·무엇이든 부딪힐 때까지
-    static chargeIntent(ctx, e, foe, pct) {
+    // 돌진 의도: 줄을 따라 벽·무엇이든 부딪힐 때까지 (최대 maxLen칸)
+    static chargeIntent(ctx, e, foe, pct, maxLen = Infinity) {
         const dir = EnemyMoves.lineDir(e, foe);
         const tiles = [];
-        for (let x = e.x + dir[0], y = e.y + dir[1]; EnemyMoves.walkableTile(ctx.world, x, y); x += dir[0], y += dir[1]) {
+        for (let x = e.x + dir[0], y = e.y + dir[1]; tiles.length < maxLen && EnemyMoves.walkableTile(ctx.world, x, y); x += dir[0], y += dir[1]) {
             tiles.push([x, y]);
             if (ctx.world.entityAt(x, y)) break;
         }
@@ -247,7 +247,39 @@ class EnemyMoves {
                 if (!bumped && e.alive && foe.alive && EnemyMoves.dist(e, foe) === 1 && moved < n) {
                     if (e.x !== foe.x) e.flipX = foe.x < e.x;
                     e.applyFlip();
-                    if (intent.poison) {
+                    if (intent.charm) {
+                        // 서큐버스: 매료가 안 걸려 있으면 매료를 건다. 이미 매료 상태면 피해 + 마나 감소, 피해를 입혔다면 체력 회복·힘·경질화
+                        const c = intent.charm;
+                        if (Status.get(foe, "charm") <= 0) {
+                            anims.push(new AttackAnim(e, foe, t));
+                            Status.charm(e, foe, c.turns ?? 2);
+                            MessageLog.add(`${josa(e.displayName, "이가")} ${foe.displayName}을 매료했다 (${c.turns ?? 2}턴)`, Status.DEFS.charm.color);
+                            anims.push(new PopupAnim(foe, `매료 ${c.turns ?? 2}턴`, Status.DEFS.charm.color));
+                        } else {
+                            const dmg = EnemyMoves.val(e, "atk", intent.pct ?? 100);
+                            anims.push(...Combat.strike(e, foe, w, dmg, intent.name ?? null));
+                            const dealt = Combat.last?.dealt ?? 0;
+                            if (c.drain && foe.alive && foe.mana !== undefined) {
+                                const lost = Math.min(foe.mana, EnemyMoves.val(e, "def", c.drain));
+                                if (lost > 0) {
+                                    foe.mana -= lost;
+                                    MessageLog.add(`${josa(foe.displayName, "의")} 마나가 ${lost} 줄었다`, "#7cb0f0");
+                                    anims.push(new PopupAnim(foe, `마나 -${lost}`, "#7cb0f0"));
+                                }
+                            }
+                            if (dealt > 0 && e.alive) {
+                                const heal = Math.min(e.stats.maxHp - e.stats.hp, EnemyMoves.val(e, "def", c.heal ?? 100));
+                                if (heal > 0) {
+                                    e.stats.hp += heal;
+                                    anims.push(new PopupAnim(e, "+" + heal, "#7cd47c"));
+                                }
+                                Status.add(e, "str", c.str ?? 1, Status.ENDLESS);
+                                Status.add(e, "harden", c.harden ?? 1, Status.ENDLESS);
+                                MessageLog.add(`${josa(e.displayName, "이가")} 기운을 빨아들였다 (체력 +${heal}, 힘 +${c.str ?? 1}, 경질화 +${c.harden ?? 1})`, "#f0a0c8");
+                                anims.push(new PopupAnim(e, "흡수", "#f080c0"));
+                            }
+                        }
+                    } else if (intent.poison) {
                         anims.push(new AttackAnim(e, foe, t));
                         const v = EnemyMoves.val(e, intent.stat ?? "atk", intent.poison);
                         MessageLog.add(`${josa(e.displayName, "이가")} ${foe.displayName}에게 독을 걸었다 (독 ${v})`, "#9ce05c");
@@ -540,6 +572,7 @@ class EnemyMoves {
                 const foe = ai.focus({ world: e.world, player: p });
                 const d = EnemyMoves.dist(e, foe);
                 if (Status.get(e, "root") && d > 1) return { kind: "idle" };
+                if (it.charm && foe === p && Status.get(foe, "charm") <= 0 && d <= e.speedNow) return { kind: "area", name: "매료" };
                 if (d <= 1) {
                     if (it.poison) return { kind: "attack", v: EnemyMoves.val(e, it.stat ?? "atk", it.poison), poison: EnemyMoves.val(e, it.stat ?? "atk", it.poison) };
                     return { kind: "attack", v: Status.modify(EnemyMoves.val(e, it.stat ?? "atk", it.pct ?? 100), e, foe) };
@@ -571,7 +604,7 @@ class EnemyMoves {
         const text = {
             approach: () => {
                 const dmg = EnemyMoves.val(e, it.stat ?? "atk", it.poison ?? it.pct ?? 100);
-                const what = it.poison ? `독 ${dmg}을 건다` : `${dmg} 피해${it.lifesteal ? " (준 만큼 절반 회복)" : ""}`;
+                const what = it.charm ? (Status.get(foe, "charm") > 0 ? `${dmg} 피해 + 마나 ${EnemyMoves.val(e, "def", it.charm.drain ?? 100)} 감소 (피해를 입히면 체력 회복·힘·경질화)` : `매료 ${it.charm.turns ?? 2}턴을 건다`) : it.poison ? `독 ${dmg}을 건다` : `${dmg} 피해${it.lifesteal ? " (준 만큼 절반 회복)" : ""}`;
                 return EnemyMoves.dist(e, foe) <= 1 ? `닿으면 친다: ${what}` : `다가온다 (한 턴에 ${n}칸) · 이동을 다 쓰지 않고 닿으면 친다`;
             },
             charge: () => `돌진 준비: 빨간 줄을 따라 돌진, 부딪히면 ${it.dmg} 피해`,

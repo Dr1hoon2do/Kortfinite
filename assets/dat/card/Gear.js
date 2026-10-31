@@ -2,7 +2,7 @@
 //
 // 장비 카드 정의 (CardDef):
 //   slot:   부위 ("hand" 손, "waist" 허리, "back" 등). 부위마다 한 장만 장착된다
-//   stats:  { attack, defense, speed, actionHand, invHand } — 장착하는 동안 오르는 능력치·패 크기
+//   stats:  { attack, defense, defensePct(방어력 %), speed, actionHand, invHand } — 장착하는 동안 오르는 능력치·패 크기
 //   grants: [{ id, n }] — 장착하면 덱에 섞여 들어오는 행동 카드 (장비 카드, def.token)
 //
 // 장비 카드 흐름 (CardSystem.equip / unequip):
@@ -13,7 +13,7 @@
 // 무작위 옵션은 없다 (장비는 종류마다 고정). 내구도도 없다.
 class Gear {
     static STATS = {
-        attack: "공격력", defense: "방어력", speed: "이동속도", actionHand: "행동 패", invHand: "인벤토리 패", maxHp: "최대 체력"
+        attack: "공격력", defense: "방어력", speed: "이동속도", actionHand: "행동 패", invHand: "인벤토리 패", maxHp: "최대 체력", defensePct: "방어력 %"
     };
 
     // 장착한 장비들의 능력치 합 (key: attack, defense, speed, actionHand, invHand, maxHp)

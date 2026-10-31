@@ -44,7 +44,7 @@ class CardOps {
     // x, y에 있는 적 (살아 있고 적대인 것)
     static foeAt(ctx, x, y) {
         const e = ctx.world.entityAt(x, y);
-        return e && e !== ctx.user && e.alive && !e.invulnerable && e.attitude === "hostile" && ctx.user.isHostileTo(e) ? e : null;
+        return e && e !== ctx.user && e.alive && !e.invulnerable && e.attitude === "hostile" && ctx.user.isHostileTo(e) && !Status.charmedBy(ctx.user, e) ? e : null;
     }
 
     // 중심 (cx, cy) 정사각형 반경 r 안의 모든 적
@@ -123,6 +123,7 @@ class CardOps {
         const t = ctx.target;
         if (u.root > 0) return CardOps.say(`속박되어 움직일 수 없다 (${u.root}턴 남음)`);
         if (!t || !CardOps.freeTiles(ctx.world, u, n).includes(`${t.x},${t.y}`)) return CardOps.say(`${n}칸 안의 빈칸을 골라야 한다`);
+        if (Status.charmBlocks(u, t.x, t.y)) return CardOps.say("매료당해 건 상대에게서 멀어질 수 없다");
         const w = ctx.world;
         const fx = u.x;
         const fy = u.y;
@@ -130,6 +131,7 @@ class CardOps {
         u.x = t.x;
         u.y = t.y;
         w.addEntity(u);
+        Equip.stepped(u, w);
         if (t.x !== fx) u.flipX = t.x < fx;
         u.applyFlip();
         MessageLog.add(`${josa(u.displayName, "이가")} 순간이동했다`, "#c8a0f8");
@@ -228,7 +230,7 @@ const CARDS = {
 
     blink: {
         icon: "wing", color: "#b890f0",
-        target: () => ({ range: CardOps.spd(PL(), 200), radius: 0, taps: 1, verb: "순간이동", color: "#c8a0f8", move: true, tiles: (w) => CardOps.freeTiles(w, PL(), CardOps.spd(PL(), 200)) }),
+        target: () => ({ range: CardOps.spd(PL(), 200), radius: 0, taps: 1, verb: "순간이동", color: "#c8a0f8", move: true, tiles: (w) => CardOps.freeTiles(w, PL(), CardOps.spd(PL(), 200)).filter((k) => !Status.charmBlocks(PL(), ...k.split(",").map(Number))) }),
         use: (ctx) => CardOps.teleport(ctx, CardOps.spd(ctx.user, 200)),
         short: () => `${CK.spd(CardOps.spd(PL(), 200))}칸 순간이동`
     },
@@ -242,10 +244,10 @@ const CARDS = {
             const cost = pick.cost?.mana ?? 0;
             const dumped = CardOps.dump(ctx, [pick]);
             if (!dumped.length) return null;
-            const got = CardOps.mana(ctx.user, 1 + CardOps.def(ctx.user, 50) + cost);
+            const got = CardOps.mana(ctx.user, 2 + CardOps.def(ctx.user, 10) + cost);
             return [[new PopupAnim(ctx.user, `마나 +${got}`, "#7cb0f0")]];
         },
-        short: () => `1장 버리고 ${CK.mana("마나 " + (1 + CardOps.def(PL(), 50)) + "+")}`
+        short: () => `1장 버리고 ${CK.mana("마나 " + (2 + CardOps.def(PL(), 10)) + "+")}`
     },
 
     card_shield: {
@@ -288,15 +290,15 @@ const CARDS = {
 
     concentration: {
         icon: "eye", color: "#f0d878",
-        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 50) + 2)],
-        short: () => `${CK.spd(CardOps.spd(PL(), 50) + 2)}장 뽑기`
+        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 25) + 2)],
+        short: () => `${CK.spd(CardOps.spd(PL(), 25) + 2)}장 뽑기`
     },
 
     dash: {
         icon: "boot", color: "#7cc4e8",
-        target: () => ({ range: CardOps.spd(PL(), 50), radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
-        use: (ctx) => CardOps.walk(ctx, CardOps.spd(ctx.user, 50)),
-        short: () => `${CK.spd(CardOps.spd(PL(), 50))}칸 이동`
+        target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
+        use: (ctx) => CardOps.walk(ctx, CardOps.spd(ctx.user, 50) + 1),
+        short: () => `${CK.spd(CardOps.spd(PL(), 50) + 1)}칸 이동`
     },
 
     first_aid: {
@@ -333,18 +335,18 @@ const CARDS = {
 
     frost: {
         icon: "drop", color: "#8cd0ff",
-        target: () => ({ range: CardOps.spd(PL(), 50), radius: 0, taps: 1, verb: "시전", color: "#7ab8ff" }),
+        target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, taps: 1, verb: "시전", color: "#7ab8ff" }),
         use(ctx) {
             const u = ctx.user;
-            const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50));
+            const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50) + 1);
             if (!foe) return null;
             const w = ctx.world;
             const fly = new ProjectileAnim(w, "kicons", ctx.card.def.frame, CardOps.px(w, u), CardOps.px(w, foe));
-            const n = CardOps.atk(u, 60);
+            const n = CardOps.def(u, 60);
             MessageLog.add(`${josa(foe.displayName, "이가")} 얼어붙는다 (빙결 ${n}, 2턴)`, "#7ab8ff");
             return [[fly], [CardOps.inflict(foe, "ice", n, 2)]];
         },
-        short: () => `${CK.st("ice", "빙결 " + CardOps.atk(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50))}칸`
+        short: () => `${CK.st("ice", "빙결 " + CardOps.def(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸`
     },
 
     guard: {
@@ -397,10 +399,10 @@ const CARDS = {
 
     ignite: {
         icon: "flame", color: "#ff8a40",
-        target: () => ({ range: CardOps.spd(PL(), 50), radius: 0, taps: 1, verb: "시전", color: "#ff8a40" }),
+        target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, taps: 1, verb: "시전", color: "#ff8a40" }),
         use(ctx) {
             const u = ctx.user;
-            const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50));
+            const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50) + 1);
             if (!foe) return null;
             const w = ctx.world;
             const fly = new ProjectileAnim(w, "kicons", ctx.card.def.frame, CardOps.px(w, u), CardOps.px(w, foe));
@@ -408,13 +410,13 @@ const CARDS = {
             MessageLog.add(`${josa(foe.displayName, "이가")} 불타오른다 (화상 ${n}, 2턴)`, "#ff8a40");
             return [[fly], [CardOps.inflict(foe, "burn", n, 2)]];
         },
-        short: () => `${CK.st("burn", "화상 " + CardOps.atk(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50))}칸`
+        short: () => `${CK.st("burn", "화상 " + CardOps.atk(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸`
     },
 
     insight: {
         icon: "eye", color: "#f0a0ff",
-        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 75) + 3, true)],
-        short: () => `${CK.spd(CardOps.spd(PL(), 75) + 3)}장 뽑기 (패 제한 무시)`
+        use: (ctx) => [CardOps.draw(ctx, CardOps.spd(ctx.user, 50) + 3, true)],
+        short: () => `${CK.spd(CardOps.spd(PL(), 50) + 3)}장 뽑기 (패 제한 무시)`
     },
 
     larry: {
@@ -485,14 +487,14 @@ const CARDS = {
             const [pick] = ctx.picks ?? [];
             if (!pick || !ctx.cards.hand.includes(pick)) return CardOps.say("버릴 카드를 골라야 한다");
             CardOps.dump(ctx, [pick]);
-            return [CardOps.draw(ctx, 1 + CardOps.spd(ctx.user, 25))];
+            return [CardOps.draw(ctx, 2 + CardOps.spd(ctx.user, 25))];
         },
-        short: () => `1장 버리고 ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기`
+        short: () => `1장 버리고 ${CK.spd(2 + CardOps.spd(PL(), 25))}장 뽑기`
     },
 
     rest: {
         icon: "plus", color: "#7cd47c", heal: false,
-        // 방어력 50% + 1만큼 마나 회복 (초록: 1 + 방어력 25%만큼 체력 회복)
+        // 2 + 방어력 10%만큼 마나 회복 (초록: 1 + 방어력 25%만큼 체력 회복)
         use(ctx) {
             const u = ctx.user;
             if (ctx.card.def.heal) {
@@ -501,7 +503,7 @@ const CARDS = {
                 return [[new PopupAnim(u, "+" + got, "#7cd47c")]];
             }
             const paid = ctx.card.cost?.mana ?? 0;
-            const n = 1 + CardOps.def(u, 50);
+            const n = 2 + CardOps.def(u, 10);
             if (u.mana - paid >= u.maxMana) return CardOps.say("이미 마나가 가득하다");
             // 마나 비용은 쓴 뒤에 나가므로, 그만큼 여유를 두고 채운다
             u.mana = Math.min(u.maxMana + paid, u.mana + n);
@@ -511,15 +513,16 @@ const CARDS = {
         short(card) {
             const u = PL();
             if (card.def.heal) return CK.hp("체력 +" + (1 + CardOps.def(u, 25)));
-            return CK.mana("마나 +" + (1 + CardOps.def(u, 50)));
+            return CK.mana("마나 +" + (2 + CardOps.def(u, 10)));
         }
     },
 
     roll: {
         icon: "swirl", color: "#7cc4e8",
-        target: () => ({ range: CardOps.spd(PL(), 50), radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
+        // 이동속도 50% + 1 (초록은 +1 없음)
+        target: (c) => ({ range: CardOps.spd(PL(), 50) + (c?.def?.cleanse ? 0 : 1), radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
         use(ctx) {
-            const steps = CardOps.walk(ctx, CardOps.spd(ctx.user, 50));
+            const steps = CardOps.walk(ctx, CardOps.spd(ctx.user, 50) + (ctx.card.def.cleanse ? 0 : 1));
             if (!steps) return null;
             steps.push([...CardOps.draw(ctx, 1 + CardOps.spd(ctx.user, 25))]);
             if (ctx.card.def.cleanse && Status.cleanse(ctx.user, 1)) {
@@ -528,7 +531,7 @@ const CARDS = {
             }
             return steps;
         },
-        short: (c) => `${CK.spd(CardOps.spd(PL(), 50))}칸 이동 · ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
+        short: (c) => `${CK.spd(CardOps.spd(PL(), 50) + (c.def.cleanse ? 0 : 1))}칸 이동 · ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
     },
 
     shield: {

@@ -10,54 +10,34 @@
 //   dealt      — dealt(피해, 공격자, 대상) → 바뀐 피해. 플레이어가 주는 피해가 정해질 때 (Status.modify)
 //   turnStart  — turnStart(플레이어, 월드) → 연출 배열. 새 턴이 시작될 때
 //   roomStart  — roomStart(플레이어, 월드). 전투방에 들어갈 때 (방어도·마나가 채워진 다음)
+//   hit        — hit(플레이어, 맞은 대상, 월드). 플레이어가 적에게 피해를 입혔을 때 (체력이 깎인 경우)
 //   kill       — kill(플레이어, 쓰러뜨린 대상). 플레이어가 적을 쓰러뜨렸을 때
 //   (icon: card_glyphs 칸 이름, color)
 const EQUIP = {
-    // 구부러진 단검: 바로 옆 칸 대상에게 주는 피해 +25%
-    bent_dagger: {
-        icon: "dagger", color: "#c8c0a8",
+    // 배낭: 소지품 패 +3
+    bag: { icon: "chain", color: "#b08860", stats: { invHand: 3 } },
+
+    // 구부러진 동전: 적에게 피해를 입힐 때마다 내 주변 3x3 칸에 동전이 1개 떨어진다. 그 칸으로 가면 5G, 턴이 끝나면 사라진다
+    bent_coin: {
+        icon: "coin", color: "#e8c040",
+        hit(user, target, world) {
+            Equip.dropCoin(user, world);
+        }
+    },
+
+    // 조잡한 방패: 방어력 +20%
+    crude_shield: { icon: "shield", color: "#a8a090", stats: { defensePct: 20 } },
+
+    // 녹슨 단검: 옆칸 대상에게 입히는 피해 +35%
+    rusty_dagger: {
+        icon: "dagger", color: "#b08a6a",
         dealt(dmg, user, target) {
-            return Equip.adjacent(user, target) ? Math.floor(dmg * 125 / 100) : dmg;
+            return Equip.adjacent(user, target) ? Math.floor(dmg * 135 / 100 + 1e-9) : dmg;
         }
     },
 
-    // 마력석 꽂힌 마법서: 턴이 시작될 때마다 마나 +2 (전투방에 들어갈 때도)
-    mana_book: {
-        icon: "book", color: "#78a8f0",
-        turnStart(user) {
-            const got = CardOps.mana(user, 2);
-            return got ? [new PopupAnim(user, `마나 +${got}`, "#7cb0f0")] : [];
-        },
-        roomStart(user) {
-            CardOps.mana(user, 2);
-        }
-    },
-
-    // 붉은 부적: 적을 쓰러뜨리면 체력 2 회복
-    red_charm: {
-        icon: "heart", color: "#e0605a",
-        kill(user) {
-            CardOps.heal(user, 2);
-        }
-    },
-
-    // 철모: 전투방에 들어가면 방어도 6 (2턴)
-    iron_helm: {
-        icon: "crown", color: "#a8b0c0",
-        roomStart(user) {
-            user.addBlock(6, 2);
-            MessageLog.add("철모: 방어도 +6 (2턴)", "#8cc8f0");
-        }
-    },
-
-    // 가죽 갑옷: 방어력 +2
-    leather_armor: { icon: "shield", color: "#b08860", stats: { defense: 2 } },
-
-    // 낡은 장화: 이동속도 +1
-    worn_boots: { icon: "boot", color: "#a89070", stats: { speed: 1 } },
-
-    // 작업용 벨트: 행동 패 +1
-    work_belt: { icon: "chain", color: "#c0a060", stats: { actionHand: 1 } }
+    // 공구허리띠: 행동 패 +1
+    tool_belt: { icon: "chain", color: "#c0a060", stats: { actionHand: 1 } }
 };
 
 // 장착한 장비의 효과를 부르는 곳 (규칙 코드가 부른다)
@@ -67,6 +47,34 @@ class Equip {
         const p = player ?? Player.current;
         if (!p || !p.cards) return [];
         return p.cards.equippedCards.map((c) => EQUIP[c.defId]).filter(Boolean);
+    }
+
+    // 내 주변 3x3 칸 중 빈 칸 하나에 동전을 떨어뜨린다 (구부러진 동전)
+    static dropCoin(user, world) {
+        if (!world || !user) return;
+        const spots = [];
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const x = user.x + dx;
+            const y = user.y + dy;
+            if (!(dx || dy) || !world.getChunkAt(x, y) || !world.isWalkable(x, y)) continue;
+            if (world.entitiesAt(x, y).some((o) => o.isHazard || o.solid)) continue;
+            spots.push([x, y]);
+        }
+        if (!spots.length) return;
+        const [x, y] = spots[Math.floor(Math.random() * spots.length)];
+        world.spawn(new Hazard(x, y, "coin", { life: 1, name: "동전" }));
+    }
+
+    // 플레이어가 (칸 이동으로) 새 칸에 섰다: 그 칸의 동전을 줍는다 (ChunkManager.moveEntity · 순간이동)
+    static stepped(player, world) {
+        for (const o of [...world.entitiesAt(player.x, player.y)]) {
+            if (!(o instanceof Hazard) || o.kind !== "coin" || !o.world) continue;
+            o.remove(world);
+            player.money += 5;
+            MessageLog.add("동전을 주웠다: +5G", "#f0d060");
+            const q = world.run ? world.run.queue : null;
+            if (q) q.play(new PopupAnim(player, "+5G", "#f0d060"));
+        }
     }
 
     static adjacent(a, b) {
@@ -93,6 +101,11 @@ class Equip {
     }
 }
 
+Events.on(GameEvent.DAMAGED, ({ target, source, world, dealt }) => {
+    if (!(source instanceof Player) || target === source || !(dealt > 0) || target.attitude !== "hostile") return;
+    for (const e of Equip.active(source)) if (e.hit) e.hit(source, target, world);
+});
+
 Events.on(GameEvent.KILLED, ({ target, killer, world }) => {
     if (!(killer instanceof Player) || target === killer) return;
     for (const e of Equip.active(killer)) if (e.kill) e.kill(killer, target, world);
@@ -113,7 +126,7 @@ class EquipContent {
             const frame = CardKit.list.length;
             CardDef.register(e.id, {
                 type: "item", sprite: "kicons", frame, kit: true, icon: impl.icon ?? "star", color: impl.color ?? "#e8d9b8",
-                name: e.name, slot: e.slot, rarity: e.rarity, price: e.price ?? 50, tags: e.tags ?? [],
+                name: e.name, slot: e.slot || "trinket", rarity: e.rarity, price: e.price ?? 50, tags: e.tags ?? [],
                 stats: impl.stats ?? null, gear: true, noLines: true, // 설명은 공방 글 그대로 (능력치 줄을 따로 안 붙인다)
                 effect: e.effect ?? "",
                 text: () => GameContent.render(e.effect),

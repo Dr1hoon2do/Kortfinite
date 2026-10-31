@@ -180,7 +180,8 @@ class Player extends Entity {
         this._gearVersion = key;
         const pm = this.perm ?? {};
         this.stats.attack = Player.BASE_ATTACK + this.gear("attack") + (pm.attack ?? 0) + Status.get(this, "str");
-        this.stats.defense = Player.BASE_DEFENSE + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
+        const def = Player.BASE_DEFENSE + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
+        this.stats.defense = Math.floor(def * (100 + this.gear("defensePct")) / 100 + 1e-9); // 방어력 % 증가는 버림
         this.speed = Player.BASE_SPEED + this.gear("speed") + (pm.speed ?? 0); // 둔화는 Status.speed가 따로 반영한다
         const max = this.baseMaxHp + this.gear("maxHp") + (pm.maxHp ?? 0);
         if (max !== this.stats.maxHp) {

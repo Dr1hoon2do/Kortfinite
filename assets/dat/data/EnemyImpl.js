@@ -44,7 +44,8 @@ EnemyMoves.SPECS = {
         }
     },
 
-    // 고블린: A(같은 줄이면 끝없이 돌진, 공격력 250%) 뒤에는 항상 B(쉬기). A를 못 하면 C(거리 3 이상 두기)·D(A를 할 수 있게 자리 잡기)를 번갈아
+    // 고블린: A(같은 줄이고 벽이 없으면 이동속도의 500%칸 돌진, 공격력 250%) 뒤에는 항상 B(쉬기).
+    //   A를 못 하면 C(A를 할 수 있는 칸으로 이동속도 거리 안에서 자리 잡기)를 하고, 다음 턴 A. C를 반복
     goblin: {
         brain(ai, ctx, e, foe) {
             const m = ai.mem;
@@ -55,22 +56,9 @@ EnemyMoves.SPECS = {
             }
             if (EnemyMoves.canCharge(w, e, foe)) {
                 m.rest = true;
-                return EnemyMoves.chargeIntent(ctx, e, foe, 250);
+                return EnemyMoves.chargeIntent(ctx, e, foe, 250, e.speedNow * 5);
             }
-            m.cd = !m.cd;
-            const n = e.speedNow;
-            const tiles = EnemyMoves.reach(w, e, n);
-            if (m.cd) {
-                // C: 가능한 한 멀어진다 (3칸 이상이 되도록)
-                let best = null;
-                for (const t of tiles) {
-                    const d = EnemyMoves.dist(t, foe);
-                    if (!best || d > best.d) best = { ...t, d };
-                }
-                if (best && best.d > EnemyMoves.dist(e, foe)) return { kind: "move", to: { x: best.x, y: best.y }, name: "거리 두기" };
-                return { kind: "idle" };
-            }
-            // D: A를 할 수 있는 칸(같은 줄 · 사이가 빔)으로, 가장 적게 걷는 곳
+            const tiles = EnemyMoves.reach(w, e, e.speedNow);
             let best = null;
             for (const t of tiles) {
                 if (!(t.x === foe.x || t.y === foe.y) || (t.x === foe.x && t.y === foe.y)) continue;
@@ -83,14 +71,13 @@ EnemyMoves.SPECS = {
         }
     },
 
-    // 미니 돌 골렘: [ABC] 로테이션
-    //   A 다가가거나 옆칸이면 방어력 100% 피해 / B 방어력 100% 방어도 1턴 / C 쉼
+    // 미니 돌 골렘: [AB] 로테이션
+    //   A 다가가거나 옆칸이면 방어력 100% 피해 / B 방어력 100% 방어도 1턴
     mini_stone_golem: {
-        rotations: ["ABC"],
+        rotations: ["AB"],
         actions: {
             A: () => ATK(100, { stat: "def", name: "박치기" }),
-            B: () => ({ kind: "block", pct: 100, turns: 1 }),
-            C: () => ({ kind: "idle" })
+            B: () => ({ kind: "block", pct: 100, turns: 1 })
         }
     },
 
@@ -120,11 +107,11 @@ EnemyMoves.SPECS = {
         }
     },
 
-    // 해골: [AADBC, AACBD, ACADAB] 중 하나
+    // 해골: [AABC, ABAC, AACB] 중 하나
     //   A 다가가거나 옆칸이면 공격력 100% / B 사거리 5, 플레이어 칸 + 3거리 안 무작위 두 칸에 뼈 3개 (각 공격력 80%) — 사거리 밖이면 이전과 같은 행동
-    //   C 방어력 100% 방어도 1턴 / D 쉼
+    //   C 방어력 100% 방어도 1턴
     skeleton: {
-        rotations: ["AADBC", "AACBD", "ACADAB"],
+        rotations: ["AABC", "ABAC", "AACB"],
         fallback: { B: "prev" },
         actions: {
             A: () => ATK(),
@@ -135,16 +122,15 @@ EnemyMoves.SPECS = {
                 const extra = Rng.shuffle(EnemyMoves.rng(ctx), near).slice(0, 2);
                 return { kind: "area", name: "뼈 던지기", tiles: [[foe.x, foe.y], ...extra], dmg: EnemyMoves.val(e, "atk", 80), thrown: true, color: "#e8e0c0" };
             },
-            C: () => ({ kind: "block", pct: 100, turns: 1 }),
-            D: () => ({ kind: "idle" })
+            C: () => ({ kind: "block", pct: 100, turns: 1 })
         }
     },
 
-    // 슬라임: [AABCD, ABACD, AAACDB] 중 하나
+    // 슬라임: [ABCD, ACBD, ACDB] 중 하나
     //   A 다가가거나 옆칸이면 공격력 100% / B 방어력 100% 방어도 1턴 / C 쉼
     //   D 사거리 5 (벽에 막힌다), 플레이어 칸 + 1칸 거리에 점액: 공격력 80% + 둔화(50%, 2턴) — 못 쓰면 A
     slime: {
-        rotations: ["AABCD", "ABACD", "AAACDB"],
+        rotations: ["ABCD", "ACBD", "ACDB"],
         fallback: { D: "A" },
         actions: {
             A: () => ATK(),
@@ -158,17 +144,28 @@ EnemyMoves.SPECS = {
     },
 
     // 거미: [BBCA, BCBA] 중 하나
-    //   A 사거리 5 (벽에 막힌다) 실을 쏴 맞으면 방어력 50%턴 속박 — 못 닿으면 B / B 다가가거나 옆칸이면 공격력 100%의 독 / C 쉼
+    //   A 사거리 5 (벽에 막힌다) 실을 쏴 맞으면 방어력 100%턴 속박 — 못 닿으면 B / B 다가가거나 옆칸이면 공격력 100%의 독 / C 쉼
     spider: {
         rotations: ["BBCA", "BCBA"],
         fallback: { A: "B" },
         actions: {
             A(ai, ctx, e, foe) {
                 if (EnemyMoves.dist(e, foe) > 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
-                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.floor(e.stats.defense * 0.5 + 1e-9), thrown: true, color: "#e8e8f0" };
+                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.floor(e.stats.defense * 1.0 + 1e-9), thrown: true, color: "#e8e8f0" };
             },
             B: () => ATK(100, { poison: 100, name: "독니" }),
             C: () => ({ kind: "idle" })
+        }
+    },
+
+    // 서큐버스: [AAAB] 로테이션 (시작 위치 무작위)
+    //   A 다가가거나 옆칸이면 매료 2턴, 이미 매료 상태면 공격력 100% 피해 + 방어력 100%만큼 마나 감소
+    //     (피해를 입히면 방어력 100% 체력 회복 · 힘 1 · 경질화 1) / B 방어력 100% 방어도 2턴
+    succubus: {
+        rotations: ["AAAB"],
+        actions: {
+            A: () => ATK(100, { charm: { turns: 2, drain: 100, heal: 100, str: 1, harden: 1 }, name: "흡정" }),
+            B: () => ({ kind: "block", pct: 100, turns: 2 })
         }
     },
 

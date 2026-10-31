@@ -149,9 +149,9 @@ class Hazard extends Entity {
     // kind: barrier | mine | field. data: { life, dmg, status, n, color }
     constructor(x, y, kind, data = {}) {
         const barrier = kind === "barrier";
-        super(x, y, barrier ? "barrier" : kind === "mine" ? "mine" : "field", {
+        super(x, y, barrier ? "barrier" : kind === "mine" ? "mine" : "field", { // 동전도 "field" 그림(안 보임)을 쓰고 HazardOverlay가 그린다
             type: kind,
-            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판" }[kind],
+            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판", coin: "동전" }[kind],
             stats: { maxHp: data.hp ?? 12, attack: 0, defense: 0 },
             solid: barrier,
             tags: ["hazard"]
@@ -168,7 +168,7 @@ class Hazard extends Entity {
 
     start() {
         super.start();
-        if (this.kind === "field" && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
+        if ((this.kind === "field" || this.kind === "coin") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
         if (this.sr) this.sr.orderInLayer = this.kind === "barrier" ? 2 : 1;
     }
 
@@ -218,6 +218,7 @@ class Hazard extends Entity {
 EntityTypes.register("barrier", (x, y, d) => new Hazard(x, y, "barrier", d));
 EntityTypes.register("mine", (x, y, d) => new Hazard(x, y, "mine", d));
 EntityTypes.register("field", (x, y, d) => new Hazard(x, y, "field", d));
+EntityTypes.register("coin", (x, y, d) => new Hazard(x, y, "coin", d));
 
 // 장판을 땅에 그린다 (반투명 색 칸)
 class HazardOverlay extends Renderer {
@@ -240,6 +241,17 @@ class HazardOverlay extends Renderer {
         ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
         const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
         for (const h of room.hazards ?? []) {
+            if (h.kind === "coin" && h.world) {
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#6a4a10";
+                ctx.fillRect(h.x * t - 3, h.y * t - 3, 6, 6);
+                ctx.fillStyle = "#f0c840";
+                ctx.fillRect(h.x * t - 2, h.y * t - 4 + pulse, 4, 6);
+                ctx.fillRect(h.x * t - 3, h.y * t - 3 + pulse, 6, 4);
+                ctx.fillStyle = "#fff0a0";
+                ctx.fillRect(h.x * t - 1, h.y * t - 3 + pulse, 1, 2);
+                continue;
+            }
             if (h.kind !== "field" || !h.world) continue;
             ctx.globalAlpha = 0.25 + 0.1 * pulse;
             ctx.fillStyle = h.color;
