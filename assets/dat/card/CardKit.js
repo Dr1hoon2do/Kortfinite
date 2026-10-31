@@ -81,7 +81,7 @@ class CardKit {
     }
 
     static isFoe(user, e) {
-        return e && e !== user && e.alive && !e.invulnerable && e.ai && e.attitude === "hostile" && !Status.charmedBy(user, e);
+        return e && e !== user && e.alive && !e.invulnerable && e.ai && e.attitude === "hostile";
     }
 
     static foesIn(world, user, tiles) {

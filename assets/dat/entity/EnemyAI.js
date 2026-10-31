@@ -212,7 +212,7 @@ class EnemyMoves {
             tiles.push([x, y]);
             if (ctx.world.entityAt(x, y)) break;
         }
-        return { kind: "charge", dir, tiles, len: tiles.length, dmg: EnemyMoves.val(e, "atk", pct), name: "돌진" };
+        return { kind: "charge", dir, tiles, len: tiles.length, max: maxLen, dmg: EnemyMoves.val(e, "atk", pct), name: "돌진" };
     }
 
     // ---------- 하기 ----------
@@ -382,7 +382,7 @@ class EnemyMoves {
                 const fy = e.y;
                 let moved = 0;
                 let hit = null;
-                for (let i = 0; i < 99; i++) {
+                for (let i = 0; i < (intent.max ?? 99); i++) {
                     const nx = e.x + dx;
                     const ny = e.y + dy;
                     const block = w.entityAt(nx, ny);

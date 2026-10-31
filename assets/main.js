@@ -9,6 +9,7 @@ async function main() {
     ["skeleton", "entities/skeleton.png"],
     ["goblin", "entities/goblin.png"],
     ["ogre", "entities/ogre.png"],
+    ["succubus", "entities/succubus.png"],
     ["stone_golem", "entities/stone_golem.png"],
     ["mini_stone_golem", "entities/mini_stone_golem.png"],
     ["villager_merchant", "entities/villager_merchant.png"],
