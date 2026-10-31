@@ -239,6 +239,22 @@ class Status {
         return out;
     }
 
+    // 상태이상 목록 창에 쓸 글: { title, desc }  (예: "매료(서큐버스A) 2칸 · 3턴")
+    static describe(en) {
+        const d = Status.DEFS[en.key];
+        const unit = en.key === "slow" ? "%" : "";
+        const turns = en.t >= Status.ENDLESS ? "전투 중" : `${en.t}턴`;
+        let part;
+        if (d.kind === "dot") part = `${en.value}`;
+        else if (d.kind === "turns") part = en.t >= Status.ENDLESS ? "" : turns;
+        else if (en.key === "charm") part = `${en.value}칸 · ${turns}`;
+        else part = `${en.value}${unit} · ${turns}`;
+        const from = en.from ? `(${en.from})` : "";
+        if (en.key === "charm") return { title: `${d.name}${from} ${part}`, desc: `${en.from ?? "건 상대"}에게서 ${en.value}칸 안으로만 움직일 수 있다 (여럿에게 걸리면 겹치는 범위)` };
+        const desc = d.kind === "dot" ? "턴이 끝날 때 수치만큼 피해를 입고, 수치가 1 줄어든다" : d.desc ?? "";
+        return { title: `${d.name}${from}${part ? " " + part : ""}`, desc };
+    }
+
     // "독 3 · 화상 2(3턴)"  ·  매료는 "매료(서큐버스A) 2칸(3턴) · 매료(서큐버스B) 2칸(1턴)"
     static text(e) {
         return Object.keys(e.status ?? {}).filter((k) => Status.DEFS[k]).map((k) => {
