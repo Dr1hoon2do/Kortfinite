@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pen</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #game {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+  <!-- 배포할 때 __BUILD__가 커밋 번호로 바뀐다 (캐시 무효화). 로컬에서는 그대로 두면 된다 -->
+  <script>window.BUILD_ID = "__BUILD__";</script>
+  <script src="KuntoGame/init.js?v=__BUILD__"></script>
+</body>
+
+</html>
