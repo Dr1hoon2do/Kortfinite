@@ -227,6 +227,11 @@ class Status {
         return (Status._labels.get(base) ?? 0) > 1;
     }
 
+    // e에게 by가 건 매료가 아직 있는가
+    static charmedBy(e, by) {
+        return (e.charms ?? []).some((c) => c.by === by && c.t > 0);
+    }
+
     // 화면에 그릴 상태이상 목록 [{ key, name, color, value, t, from }]. 매료는 시전자마다 하나씩
     static entries(e) {
         const out = [];

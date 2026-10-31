@@ -249,9 +249,9 @@ class EnemyMoves {
                     if (e.x !== foe.x) e.flipX = foe.x < e.x;
                     e.applyFlip();
                     if (intent.charm) {
-                        // 서큐버스: 매료가 안 걸려 있으면 매료를 건다. 이미 매료 상태면 피해, 피해를 입혔다면 체력 회복·힘·경질화
+                        // 서큐버스: 상대에게 걸린 매료가 자기 것이 아니면 (다른 서큐버스 것이거나 없으면) 매료를 건다. 자기 매료가 걸려 있으면 피해, 피해를 입혔다면 체력 회복·힘·경질화
                         const c = intent.charm;
-                        if (Status.get(foe, "charm") <= 0) {
+                        if (!Status.charmedBy(foe, e)) {
                             anims.push(new AttackAnim(e, foe, t));
                             Status.charm(e, foe, c.n ?? 2, c.turns ?? 3);
                             MessageLog.add(`${josa(e.displayName, "이가")} ${foe.displayName}을 매료했다 (${c.n ?? 2}칸, ${c.turns ?? 3}턴)`, Status.DEFS.charm.color);
@@ -605,7 +605,7 @@ class EnemyMoves {
                 const foe = ai.focus({ world: e.world, player: p });
                 const d = EnemyMoves.dist(e, foe);
                 if (Status.get(e, "root") && d > 1) return { kind: "idle" };
-                if (it.charm && foe === p && Status.get(foe, "charm") <= 0 && d <= e.speedNow) return { kind: "area", name: "매료" };
+                if (it.charm && foe === p && !Status.charmedBy(foe, e) && d <= e.speedNow) return { kind: "area", name: "매료" };
                 if (d <= 1) {
                     if (it.poison) return { kind: "attack", v: EnemyMoves.val(e, it.stat ?? "atk", it.poison), poison: EnemyMoves.val(e, it.stat ?? "atk", it.poison) };
                     return { kind: "attack", v: Status.modify(EnemyMoves.val(e, it.stat ?? "atk", it.pct ?? 100), e, foe) };
@@ -638,7 +638,7 @@ class EnemyMoves {
         const text = {
             approach: () => {
                 const dmg = EnemyMoves.val(e, it.stat ?? "atk", it.poison ?? it.pct ?? 100);
-                const what = it.charm ? (Status.get(foe, "charm") > 0 ? `${dmg} 피해 (피해를 입히면 체력 회복·힘·경질화)` : `매료 ${it.charm.n ?? 2}칸 ${it.charm.turns ?? 3}턴을 건다`) : it.poison ? `독 ${dmg}을 건다` : `${dmg} 피해${it.lifesteal ? " (준 만큼 절반 회복)" : ""}`;
+                const what = it.charm ? (Status.charmedBy(foe, e) ? `${dmg} 피해 (피해를 입히면 체력 회복·힘·경질화)` : `매료 ${it.charm.n ?? 2}칸 ${it.charm.turns ?? 3}턴을 건다`) : it.poison ? `독 ${dmg}을 건다` : `${dmg} 피해${it.lifesteal ? " (준 만큼 절반 회복)" : ""}`;
                 return EnemyMoves.dist(e, foe) <= 1 ? `닿으면 친다: ${what}` : `다가온다 (한 턴에 ${n}칸) · 이동을 다 쓰지 않고 닿으면 친다`;
             },
             charge: () => `돌진 준비: 빨간 줄을 따라 돌진, 부딪히면 ${it.dmg} 피해`,
