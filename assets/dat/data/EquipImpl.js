@@ -10,6 +10,7 @@
 //   dealt      — dealt(피해, 공격자, 대상) → 바뀐 피해. 플레이어가 주는 피해가 정해질 때 (Status.modify)
 //   turnStart  — turnStart(플레이어, 월드) → 연출 배열. 새 턴이 시작될 때
 //   roomStart  — roomStart(플레이어, 월드). 전투방에 들어갈 때 (방어도·마나가 채워진 다음)
+//   moved      — moved(플레이어). 이동 카드로 움직였을 때 (걷기·순간이동)
 //   hit        — hit(플레이어, 맞은 대상, 월드). 플레이어가 적에게 피해를 입혔을 때 (체력이 깎인 경우)
 //   kill       — kill(플레이어, 쓰러뜨린 대상). 플레이어가 적을 쓰러뜨렸을 때
 //   (icon: card_glyphs 칸 이름, color)
@@ -33,6 +34,17 @@ const EQUIP = {
         icon: "dagger", color: "#b08a6a",
         dealt(dmg, user, target) {
             return Equip.adjacent(user, target) ? Math.floor(dmg * 135 / 100 + 1e-9) : dmg;
+        }
+    },
+
+    // 나이프 홀스터: 이동할 때마다 투척용 단검 1장 (임시 카드)
+    knife_holster: {
+        icon: "dagger", color: "#a8a8b8",
+        moved(user) {
+            const c = new Card("throwing_knife");
+            c.ensureData().temp = true;
+            if (!user.cards.addToHand(c)) user.cards.addToDeck(c);
+            MessageLog.add("투척용 단검을 얻었다", "#c8c8d8");
         }
     },
 
@@ -88,6 +100,11 @@ class Equip {
         return dmg;
     }
 
+    // 이동 카드를 썼다 (ActionCards.move · 순간이동)
+    static moved(player) {
+        for (const e of Equip.active(player)) if (e.moved) e.moved(player);
+    }
+
     // 새 턴 시작 (TurnManager). 연출 배열
     static turnStart(player, world) {
         const out = [];
@@ -104,6 +121,13 @@ class Equip {
 Events.on(GameEvent.DAMAGED, ({ target, source, world, dealt }) => {
     if (!(source instanceof Player) || target === source || !(dealt > 0) || target.attitude !== "hostile") return;
     for (const e of Equip.active(source)) if (e.hit) e.hit(source, target, world);
+});
+
+// 전투가 끝나면 남은 동전은 사라진다
+Events.on(GameEvent.ROOM_CLEARED, () => {
+    const w = Game.world;
+    if (!w) return;
+    for (const h of [...(w.hazards ?? [])]) if (h.kind === "coin") h.remove(w);
 });
 
 Events.on(GameEvent.KILLED, ({ target, killer, world }) => {

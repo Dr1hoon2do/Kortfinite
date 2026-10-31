@@ -44,7 +44,7 @@ EnemyMoves.SPECS = {
         }
     },
 
-    // 고블린: A(같은 줄이고 벽이 없으면 이동속도의 500%칸 돌진, 공격력 250%) 뒤에는 항상 B(쉬기).
+    // 고블린: A(같은 줄이고 벽이 없으면 이동속도의 500%칸 돌진, 공격력 200%) 뒤에는 항상 B(쉬기).
     //   A를 못 하면 C(A를 할 수 있는 칸으로 이동속도 거리 안에서 자리 잡기)를 하고, 다음 턴 A. C를 반복
     goblin: {
         brain(ai, ctx, e, foe) {
@@ -56,7 +56,7 @@ EnemyMoves.SPECS = {
             }
             if (EnemyMoves.canCharge(w, e, foe)) {
                 m.rest = true;
-                return EnemyMoves.chargeIntent(ctx, e, foe, 250, e.speedNow * 5);
+                return EnemyMoves.chargeIntent(ctx, e, foe, 200, e.speedNow * 5);
             }
             const tiles = EnemyMoves.reach(w, e, e.speedNow);
             let best = null;
@@ -144,27 +144,80 @@ EnemyMoves.SPECS = {
     },
 
     // 거미: [BBCA, BCBA] 중 하나
-    //   A 사거리 5 (벽에 막힌다) 실을 쏴 맞으면 방어력 100%턴 속박 — 못 닿으면 B / B 다가가거나 옆칸이면 공격력 100%의 독 / C 쉼
+    //   A 사거리 5 (벽에 막힌다) 이동속도 500% 거리 안의 플레이어 칸에 실을 쏴 방어력 75%턴 속박 — 못 닿으면 B / B 다가가거나 옆칸이면 공격력 100%의 독 / C 쉼
     spider: {
         rotations: ["BBCA", "BCBA"],
         fallback: { A: "B" },
         actions: {
             A(ai, ctx, e, foe) {
-                if (EnemyMoves.dist(e, foe) > 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
-                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.floor(e.stats.defense * 1.0 + 1e-9), thrown: true, color: "#e8e8f0" };
+                if (EnemyMoves.dist(e, foe) > e.speedNow * 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
+                return { kind: "area", name: "거미줄", tiles: [[foe.x, foe.y]], dmg: 0, root: Math.floor(e.stats.defense * 0.75 + 1e-9), thrown: true, color: "#e8e8f0" };
             },
             B: () => ATK(100, { poison: 100, name: "독니" }),
             C: () => ({ kind: "idle" })
         }
     },
 
+    // 해골 기사: [AABC, ABAC, AACB] 중 하나
+    //   A 다가가거나 옆칸이면 공격력 100% / B 방어력 100% 방어도 2턴 + 이동속도 300% 거리 안에서 플레이어에게 돌진
+    //     (닿으면 충돌 공격력 200%) + 돌진 뒤 주변 3x3에 공격력 150%
+    //   C 플레이어 쪽으로 길이(이동속도 300%) × 두께(이동속도 100%)의 직선 범위, 공격력 150%
+    skeleton_kinght: {
+        rotations: ["AABC", "ABAC", "AACB"],
+        actions: {
+            A: () => ATK(),
+            B(ai, ctx, e, foe) {
+                const w = ctx.world;
+                const range = e.speedNow * 3;
+                // 이동속도 300% 걸음 안에서 플레이어에게 가장 가까워지는 칸 (가장 적게 걷는 곳)
+                let best = null;
+                for (const t of EnemyMoves.reach(w, e, range)) {
+                    const d = EnemyMoves.dist(t, foe);
+                    if (!best || d < best.d || (d === best.d && t.path.length < best.path.length)) best = { ...t, d };
+                }
+                const path = best && best.d < EnemyMoves.dist(e, foe) ? best.path : [];
+                const to = best && path.length ? { x: best.x, y: best.y } : { x: e.x, y: e.y };
+                return {
+                    kind: "rush", to, path, pathTiles: EnemyMoves.pathTiles(e, path), block: { pct: 100, turns: 2 },
+                    col: EnemyMoves.val(e, "atk", 200), swing: EnemyMoves.val(e, "atk", 150), name: "돌진 베기",
+                    tiles: EnemyMoves.square(w, to.x, to.y, 1).filter(([x, y]) => x !== to.x || y !== to.y), color: "#c8c8d8"
+                };
+            },
+            C(ai, ctx, e, foe) {
+                const w = ctx.world;
+                const len = e.speedNow * 3;
+                const thick = Math.max(1, e.speedNow);
+                const dx = foe.x - e.x;
+                const dy = foe.y - e.y;
+                const horiz = Math.abs(dx) >= Math.abs(dy);
+                const dir = horiz ? [Math.sign(dx) || 1, 0] : [0, Math.sign(dy) || 1];
+                const side = horiz ? [0, 1] : [1, 0];
+                const tiles = [];
+                const lo = -Math.floor((thick - 1) / 2);
+                for (let i = 1; i <= len; i++) {
+                    const cx = e.x + dir[0] * i;
+                    const cy = e.y + dir[1] * i;
+                    if (!EnemyMoves.walkableTile(w, cx, cy)) break; // 벽에 막힌다
+                    for (let k = lo; k < lo + thick; k++) {
+                        const x = cx + side[0] * k;
+                        const y = cy + side[1] * k;
+                        if (EnemyMoves.walkableTile(w, x, y)) tiles.push([x, y]);
+                    }
+                }
+                if (!tiles.length) return null;
+                return { kind: "area", name: "검 휘두르기", tiles, dmg: EnemyMoves.val(e, "atk", 150), color: "#c8c8d8" };
+            }
+        },
+        fallback: { C: "A" }
+    },
+
     // 서큐버스: [AAAB] 로테이션 (시작 위치 무작위)
-    //   A 다가가거나 옆칸이면 매료 2턴, 이미 매료 상태면 공격력 100% 피해 + 방어력 100%만큼 마나 감소
+    //   A 다가가거나 옆칸이면 매료(2칸) 3턴, 이미 매료 상태면 공격력 100% 피해
     //     (피해를 입히면 방어력 100% 체력 회복 · 힘 1 · 경질화 1) / B 방어력 100% 방어도 2턴
     succubus: {
         rotations: ["AAAB"],
         actions: {
-            A: () => ATK(100, { charm: { turns: 2, drain: 100, heal: 100, str: 1, harden: 1 }, name: "흡정" }),
+            A: () => ATK(100, { charm: { n: 2, turns: 3, heal: 100, str: 1, harden: 1 }, name: "흡정" }),
             B: () => ({ kind: "block", pct: 100, turns: 2 })
         }
     },

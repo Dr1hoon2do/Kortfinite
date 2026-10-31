@@ -26,21 +26,22 @@ class Status {
         root: { name: "속박", color: "#e8e8f0", kind: "turns", max: 9, tag: "root", desc: "움직이지 못한다" },
         stun: { name: "기절", color: "#f0e070", kind: "turns", max: 3, tag: "sturn", desc: "행동할 수 없다" },
         taunt: { name: "도발", color: "#f08080", kind: "turns", max: 9, tag: "taunt", desc: "공격 대상이 도발한 쪽이 된다" },
-        charm: { name: "매료", color: "#f080c0", kind: "turns", max: 9, tag: "charm", desc: "건 상대에게서 멀어지도록 이동할 수 없다" }
+        charm: { name: "매료", color: "#f080c0", kind: "vt", max: 9, tag: "charm", desc: "건 상대에게서 수치칸 이상 멀어지도록 이동할 수 없다" }
     };
 
-    // by가 target을 매료한다 (turns턴). 매료당한 쪽은 by에게서 멀어지는 칸으로 못 간다
-    static charm(by, target, turns = 1) {
-        Status.add(target, "charm", turns);
+    // by가 target을 매료한다 (n칸, turns턴). 매료당한 쪽은 by에게서 n칸 이상 멀어지는 칸으로 못 간다
+    static charm(by, target, n = 2, turns = 1) {
+        Status.set(target, "charm", n, turns);
         target.charmedBy = by;
     }
 
-    // e가 (x, y)로 가면 매료한 상대에게서 멀어지는가 (그러면 갈 수 없다)
+    // e가 (x, y)로 가면 매료한 상대에게서 수치칸 이상으로 멀어지는가 (그러면 갈 수 없다)
     static charmBlocks(e, x, y) {
         const c = e.charmedBy;
         if (!c || !c.alive || Status.get(e, "charm") <= 0) return false;
         const d = (ax, ay) => Math.abs(ax - c.x) + Math.abs(ay - c.y);
-        return d(x, y) > d(e.x, e.y);
+        const n = Status.get(e, "charm");
+        return d(x, y) >= n && d(x, y) > d(e.x, e.y); // n칸 이상 떨어진 칸으로, 지금보다 멀어지는 이동만 막는다
     }
 
     // 예전 키 → 지금 키 (저장·옛 코드 호환)

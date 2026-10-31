@@ -110,6 +110,11 @@ class CardOps {
         return CardOps.freeTiles(world, u, 1);
     }
 
+    // 토템이 서 있는 턴: 이동속도 200% (붉은 토템은 3턴). 0턴이면 영영 서 있으니 최소 1
+    static totemLife(def, u) {
+        return def.explode ? 3 : Math.max(1, CardOps.spd(u ?? Player.current, 200));
+    }
+
     // 걸어서 이동 (ActionCards.move). 움직인 칸 수를 steps.moved에 적어 준다
     static walk(ctx, n) {
         const steps = ActionCards.move(ctx, n);
@@ -132,6 +137,7 @@ class CardOps {
         u.y = t.y;
         w.addEntity(u);
         Equip.stepped(u, w);
+        Equip.moved(u);
         if (t.x !== fx) u.flipX = t.x < fx;
         u.applyFlip();
         MessageLog.add(`${josa(u.displayName, "이가")} 순간이동했다`, "#c8a0f8");
@@ -419,6 +425,17 @@ const CARDS = {
         short: () => `${CK.spd(CardOps.spd(PL(), 50) + 3)}장 뽑기 (패 제한 무시)`
     },
 
+    // 투척용 단검: 나이프 홀스터가 준다 (임시 카드 — 쓰거나 전투가 끝나면 사라진다)
+    throwing_knife: {
+        icon: "dagger", color: "#c8c8d8",
+        target: () => ({ range: CardOps.spd(PL()), radius: 0, taps: 1, verb: "던지기", color: "#c8c8d8" }),
+        use(ctx) {
+            const foe = CardOps.pickFoe(ctx, CardOps.spd(ctx.user));
+            return foe ? CardOps.shoot(ctx, foe, 2) : null;
+        },
+        short: () => `2 피해 · ${CK.spd(CardOps.spd(PL()))}칸`
+    },
+
     larry: {
         icon: "skull", color: "#e8e8d0",
         target: () => ({ range: 1, radius: 0, taps: 1, verb: "소환", color: "#7cd47c", tiles: (w) => CardOps.adjacentFree(w, PL()) }),
@@ -612,11 +629,13 @@ const CARDS = {
             if (!foe) return null;
             const data = ctx.card.ensureData();
             const used = data.zoom ?? 0;
-            const steps = Combat.strike(ctx.user, foe, ctx.world, CardOps.atk(ctx.user, 50 * (1 + used)), ctx.card.name);
+            let dmg = CardOps.atk(ctx.user, 50 * (1 + used));
+            if (Status.get(foe, "stun") > 0) dmg *= 2; // 기절한 적에게는 2배
+            const steps = Combat.strike(ctx.user, foe, ctx.world, dmg, ctx.card.name);
             data.zoom = used + 1;
             return [steps];
         },
-        short: (c) => `${CK.atk(CardOps.atk(PL(), 50 * (1 + (c.data?.zoom ?? 0))))} 피해 · 쓸 때마다 공격력 50%씩 증가 (${c.data?.zoom ?? 0}번 씀)`
+        short: (c) => `${CK.atk(CardOps.atk(PL(), 50 * (1 + (c.data?.zoom ?? 0))))} 피해 · 쓸 때마다 공격력 50%씩 증가 (${c.data?.zoom ?? 0}번 씀) · 기절한 적에게 2배`
     },
 
     totem: {
@@ -626,15 +645,16 @@ const CARDS = {
             const u = ctx.user;
             const t = ctx.target;
             if (!t || !CardOps.adjacentFree(ctx.world, u).includes(`${t.x},${t.y}`)) return CardOps.say("옆 빈칸을 골라야 한다");
+            const life = CardOps.totemLife(ctx.card.def, u);
             const a = ctx.world.spawn(new Ally(t.x, t.y, "totem", {
-                hp: CardOps.def(u, 200), attack: ctx.card.def.explode ? CardOps.atk(u, 100) : 0, life: 3, explode: !!ctx.card.def.explode
+                hp: CardOps.def(u, 200), attack: ctx.card.def.explode ? CardOps.atk(u, 100) : 0, life, explode: !!ctx.card.def.explode
             }));
-            MessageLog.add(`${josa(a.displayName, "을를")} 세웠다 (체력 ${a.stats.maxHp}, 3턴)`, "#a0d0a0");
+            MessageLog.add(`${josa(a.displayName, "을를")} 세웠다 (체력 ${a.stats.maxHp}, ${life}턴)`, "#a0d0a0");
             const anims = [new PopupAnim(a, "!", "#7cd47c")];
             anims.push(...a.ai.taunt(ctx.world));
             return [anims];
         },
-        short: (c) => `토템 (체력 ${CK.def(CardOps.def(PL(), 200))} · 3턴) · ${CK.st("taunt", "도발")} 3칸${c.def.explode ? " · 끝나면 폭발" : ""}`
+        short: (c) => `토템 (체력 ${CK.def(CardOps.def(PL(), 200))} · ${CardOps.totemLife(c.def, PL())}턴) · ${CK.st("taunt", "도발")} 3칸${c.def.explode ? " · 끝나면 폭발" : ""}`
     }
 };
 

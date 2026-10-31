@@ -63,6 +63,7 @@ class ActionCards {
             anims.push([new MoveAnim(u, new Vector(fx * size, fy * size), new Vector(u.x * size, u.y * size))]);
         }
         if (!anims.length) return null;
+        if (u instanceof Player) Equip.moved(u); // 나이프 홀스터
         return anims;
     }
 
