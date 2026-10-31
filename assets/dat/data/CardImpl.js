@@ -44,7 +44,7 @@ class CardOps {
     // x, y에 있는 적 (살아 있고 적대인 것)
     static foeAt(ctx, x, y) {
         const e = ctx.world.entityAt(x, y);
-        return e && e !== ctx.user && e.alive && !e.invulnerable && e.attitude === "hostile" && ctx.user.isHostileTo(e) && !Status.charmedBy(ctx.user, e) ? e : null;
+        return e && e !== ctx.user && e.alive && !e.invulnerable && e.attitude === "hostile" && ctx.user.isHostileTo(e) ? e : null;
     }
 
     // 중심 (cx, cy) 정사각형 반경 r 안의 모든 적
