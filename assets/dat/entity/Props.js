@@ -63,9 +63,9 @@ class Exit extends Prop {
 
 // 모닥불 (휴식처): 한 번만 쉴 수 있다 (RestDialog)
 class Campfire extends Prop {
-    constructor(x, y) {
+    constructor(x, y, data = {}) {
         super(x, y, "campfire", { type: "campfire", name: "모닥불" });
-        this.used = false;
+        this.used = !!data.used;
     }
 
     interact(ctx) {
@@ -80,9 +80,9 @@ class Campfire extends Prop {
 
 // 보물 상자: 열면 돈과 장비·젬·물약 중 하나 (RewardDialog)
 class TreasureChest extends Prop {
-    constructor(x, y) {
+    constructor(x, y, data = {}) {
         super(x, y, "chest", { type: "treasure", name: "보물 상자" });
-        this.opened = false;
+        this.opened = !!data.opened;
     }
 
     interact(ctx) {
@@ -98,5 +98,5 @@ class TreasureChest extends Prop {
 
 EntityTypes.register("entrance", (x, y) => new Entrance(x, y));
 EntityTypes.register("exit", (x, y) => new Exit(x, y));
-EntityTypes.register("campfire", (x, y) => new Campfire(x, y));
-EntityTypes.register("treasure", (x, y) => new TreasureChest(x, y));
+EntityTypes.register("campfire", (x, y, d) => new Campfire(x, y, d));
+EntityTypes.register("treasure", (x, y, d) => new TreasureChest(x, y, d));

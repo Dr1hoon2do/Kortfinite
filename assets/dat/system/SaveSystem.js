@@ -4,7 +4,7 @@
 // localStorage를 못 쓰는 환경(사생활 보호 모드 등)이면 메모리에만 두고, 새로고침하면 사라진다.
 class RunStore {
     static KEY = "kortfinite.run";
-    static VERSION = 7; // 로그라이크 런 = 4, 지도 4~5칸 그물망 = 5, 엇갈림 적은 지도·시드 섞기 = 6, 공방 데이터 카드·적으로 교체 = 7
+    static VERSION = 8; // 아이작식 층 지도 = 8, 로그라이크 런 = 4, 지도 4~5칸 그물망 = 5, 엇갈림 적은 지도·시드 섞기 = 6, 공방 데이터 카드·적으로 교체 = 7
     static persistent = true;
     static _memory = null;
 

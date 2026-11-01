@@ -243,32 +243,27 @@ DebugConsole.register("killall", {
 });
 
 DebugConsole.register("room", {
-    args: "<battle|elite|shop|rest|treasure|boss> [층]", aliases: ["go"],
-    help: "지금 바로 그 종류의 방으로 간다 (지도에서 고른 것처럼. 층을 주면 그 층의 칸)",
-    run(ctx, [type, floor]) {
+    args: "<start|battle|elite|shop|rest|treasure|boss>", aliases: ["go"],
+    help: "이 층의 그 종류의 방으로 바로 간다 (지도에서 고른 것처럼)",
+    run(ctx, [type]) {
         const run = ctx.run;
         if (!RunMap.TYPES[type]) return `종류: ${Object.keys(RunMap.TYPES).join(", ")}`;
-        const nodes = [...run.map.nodes.values()].filter((n) => n.type === type && (floor === undefined || n.row === DebugConsole.int(floor, 1) - 1));
-        const node = nodes[0];
-        if (!node) return `그런 칸이 지도에 없다`;
+        const node = [...run.map.nodes.values()].find((n) => n.type === type);
+        if (!node) return `그런 방이 이 층에 없다`;
         ctx.console.close();
         run.state = "map";
         run.enter(node.id, true);
-        return `${node.row + 1}층 ${RunMap.TYPES[type].name}`;
+        return `${run.floorNo}층 ${RunMap.TYPES[type].name}`;
     }
 });
 
 DebugConsole.register("floor", {
-    args: "<n>", help: "지도에서 n층을 고를 차례로 (n-1층을 지나온 것으로)",
+    args: "<n>", help: "n층(1~3)의 시작 방으로 간다 (그 층은 처음부터)",
     run(ctx, [n]) {
         const run = ctx.run;
-        const row = Math.max(1, Math.min(RunMap.ROWS + 1, DebugConsole.int(n, 1))) - 2;
-        run.current = row >= 0 ? run.map.row(row)[0].id : null;
-        run.pending = null;
         ctx.console.close();
-        run.state = "map";
-        run.showMap();
-        return `${row + 2}층을 고른다`;
+        run.gotoFloor(DebugConsole.int(n, 1));
+        return `${run.floorNo}층 시작 방`;
     }
 });
 
@@ -336,7 +331,7 @@ DebugConsole.register("pos", {
         const p = ctx.player;
         const tile = TileDef.get(ctx.world.getTile(p.x, p.y));
         const node = ctx.run.node;
-        return `(${p.x}, ${p.y}) · ${node ? `${node.row + 1}층 ${RunMap.TYPES[node.type].name}` : "지도"} · ${tile ? tile.name : "?"}`;
+        return `(${p.x}, ${p.y}) · ${node ? `${ctx.run.floorNo}층 ${RunMap.TYPES[node.type].name}` : "지도"} · ${tile ? tile.name : "?"}`;
     }
 });
 

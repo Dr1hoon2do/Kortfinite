@@ -1,6 +1,6 @@
 # assets/dat — 게임 스크립트
 
-Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 지도(그물망)에서 방을 골라 15층을 내려가 우두머리를 쓰러뜨린다.
+Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자로 이어진 방들이다(아이작식). 시작 방에서 출발해 지도에서 갈 방을 고르며 탐색하고, 우두머리 방을 찾아 쓰러뜨리면 다음 층으로 내려간다(남은 방을 더 둘러봐도 된다). 던전은 3층이고 마지막 층 우두머리를 쓰러뜨리면 이긴다.
 방은 입구 → 공간 → 출구이고, 방 안에서 **카드로** 움직이고 싸운다. 플레이어의 모든 행동은 카드다.
 
 모든 클래스는 전역이다. 불러오는 순서는 `assets/main.js`의 `Load.Scripts` 목록이 정한다. 새 파일을 만들면 그 목록에 경로를 추가한다.
@@ -29,7 +29,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 지도(그물망)�
 | --- | --- | --- |
 | `system/` | 도우미, 게임 이벤트 이름, 저장, 설정, 시작 화면, 디버그 명령 | Text(조사 `josa`), GameEvents, SaveSystem(`RunStore`), Settings, TitleScreen, DebugConsole |
 | `data/` | 공방 데이터와 그 동작 | GameData, CardImpl(`CardOps`·`CARDS`·`VARIANTS`·`GameContent`), EquipImpl(`EQUIP`·`Equip`·`EquipContent`), EnemyImpl(`EnemyMoves.SPECS`) |
-| `run/` | 런: 지도·방·보상 | RunMap(그물망 지도, `Rng`), RoomGen(`RoomPlan` 방 설계도, `Rewards`), Run(방 들어가기·나가기·정리·저장·카메라) |
+| `run/` | 런: 지도·방·보상 | RunMap(층 지도: 격자 방 이어 붙이기, `Rng`), RoomGen(`RoomPlan` 방 설계도, `Rewards`), Run(방 들어가기·나가기·정리·저장·카메라) |
 | `world/` | 방의 타일·청크, 그리기, 길찾기 | TileDef, Chunk, ChunkManager, ChunkRenderer, Pathfinder |
 | `entity/` | 방 안에 있는 것 | Entity, Stats, AI, EnemyAI(적 의도·`EnemyMoves`·`IntentOverlay`), EntityOverlay, Props(입구·출구·모닥불·상자), Monster, Allies(소환수·설치물), Merchant |
 | `player/` | 플레이어 | Player |
@@ -59,7 +59,8 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 지도(그물망)�
 | 카드 동작·강화 동작 | `data/CardImpl.js` — `CARDS[id]`, `VARIANTS[id][key]`. 보조 함수는 `CardOps` |
 | 적 행동 | `data/EnemyImpl.js` — `EnemyMoves.SPECS[id]`(`rotations`+`actions` 또는 `brain`). 새 의도 종류는 `entity/EnemyAI.js` |
 | 상태 이상 종류·수치 | `rules/Status.js`의 `Status.DEFS`, 피해 보정 `Status.modify` |
-| 지도 모양·방 비율 | `run/RunMap.js` (`ROWS`, `WIDTH`, `BRANCH`, `FIXED`, `FAIR`, `TYPES`) |
+| 층 수·방 수·방 종류 | `run/RunMap.js` (`FLOORS`, `ROOMS`, `STEPS`, `TYPES`, `build`) |
+| 다녀간 방 기록(정리·상점·휴식·상자) | `run/Run.js` (`rooms`, `captureRoom`), `run/RoomGen.js` (`RoomPlan` state) |
 | 방 크기·층별 무리·정예·우두머리 | `run/RoomGen.js` (`RoomPlan.STYLE`, `BUDGET`, `MAX_ENEMIES`) |
 | 보상·상점 값 | `run/RoomGen.js`의 `Rewards`, `run/Run.js`의 `REMOVE_BASE` |
 | 시작 덱·패 크기 | `GameContent.load`가 `basic` 카드로 정함, 패 크기 `CardSystem.ACTION_HAND`·`INV_HAND` |

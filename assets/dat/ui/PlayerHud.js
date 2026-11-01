@@ -344,7 +344,7 @@ class PlayerHud extends Component {
         this.moneyText.setText(`${this.player.money} G`);
         if (this.run) {
             const node = this.run.node;
-            this.levelText.setText(this.run.state === "room" && node ? `${node.row + 1}층 · ${RunMap.TYPES[node.type].name}` : `${this.run.floor}층 · 지도`);
+            this.levelText.setText(this.run.state === "room" && node ? `${this.run.floorNo}층 · ${RunMap.TYPES[node.type].name}` : `${this.run.floorNo}층 · 지도`);
         }
     }
 }

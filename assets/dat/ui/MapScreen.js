@@ -1,9 +1,10 @@
-// 지도 화면: 1막 그물망 지도. 아래(1층)에서 위(우두머리)로. 화면을 가득 덮는다.
-//   고르기 모드 (방을 나왔을 때): 갈 수 있는 칸이 금색으로 깜빡이고, 누르면 그 방으로 들어간다.
-//   보기 모드 (방 안에서 지도 버튼·M): 지나온 길과 앞으로의 길을 본다. [닫기]
-// 칸 그림은 map_icons.png (전투·정예·상점·휴식·보물·우두머리), 칸 사이 선은 MapLines가 그린다.
+// 지도 화면: 이 층의 방 지도 (아이작식 격자). 가 본 방과 그 옆 방만 보인다. 화면을 가득 덮는다.
+//   고르기 모드 (방을 나왔을 때): 보이는 방(지금 방 빼고)이 금색으로 깜빡이고, 누르면 그 방으로 들어간다.
+//     우두머리를 쓰러뜨렸으면 아래 버튼이 [다음 층으로]가 된다 (남은 방을 더 둘러봐도 된다).
+//   보기 모드 (방 안에서 지도 버튼·M): 지도를 본다. [닫기]
+// 칸 그림은 map_icons.png (전투·정예·상점·휴식·보물·우두머리·시작), 칸 사이 선은 MapLines가 그린다.
 class MapScreen extends Component {
-    static ROW_H = 58;
+    static SPACING = 56;
     static NODE = 34;
 
     // options: { engine, run, deckView }
@@ -15,6 +16,7 @@ class MapScreen extends Component {
         this.equipDialog = options.equipDialog ?? null;
         this.mode = null; // "choose" | "view"
         this.nodes = new Map(); // id → { go, rt, ring, node }
+        this.built = null;      // 칸을 만들어 둔 RunMap (층이 바뀌면 다시)
     }
 
     get isOpen() {
@@ -38,9 +40,9 @@ class MapScreen extends Component {
         this.legend = UIKit.place(legend, 14, 54, null, 18);
         Object.entries(RunMap.TYPES).forEach(([type, info], i) => {
             const icon = this.legend.createChild("icon");
-            UIKit.place(icon, i * 58, 0, 16, 16);
+            UIKit.place(icon, i * 52, 0, 16, 16);
             icon.addComponent(new UIImage(Resource.image("map_icons"), { region: { x: info.icon * 16, y: 0, width: 16, height: 16 } }));
-            UIKit.label(this.legend, "name", info.name, i * 58 + 18, 1, 40, 16, { fontSize: 10, color: info.color });
+            UIKit.label(this.legend, "name", info.name, i * 52 + 18, 1, 34, 16, { fontSize: 9, color: info.color });
         });
 
         const list = rrt.createChild("list");
@@ -57,8 +59,29 @@ class MapScreen extends Component {
         bar.addComponent(new UIRect({ color: "rgba(232, 217, 184, 0.45)" }));
         this.scroll = list.addComponent(new UIScrollView({ content: this.content, bar: bar.getComponent(RectTransform) }));
 
-        // 칸들
+        this.buildNodes();
+
+        // 아래 버튼
+        this.deckButton = UIKit.button(rrt, "deck", "덱 보기", () => this.deckView && this.deckView.open(), { fontSize: 12 });
+        this.deckButton.rt.setAnchor(0, 1, 1 / 3, 1);
+        this.deckButton.rt.setOffsets(12, -46, 3, 10);
+        // 지도 화면은 아래 패를 가려서, 장비는 여기서 입고 벗는다
+        this.equipButton = UIKit.button(rrt, "equip", "장비", () => this.equipDialog && this.equipDialog.open(), { fontSize: 12 });
+        this.equipButton.rt.setAnchor(1 / 3, 1, 2 / 3, 1);
+        this.equipButton.rt.setOffsets(3, -46, 3, 10);
+        this.closeButton = UIKit.button(rrt, "close", "닫기", () => this.onThird(), { fontSize: 12 });
+        this.closeButton.rt.setAnchor(2 / 3, 1, 1, 1);
+        this.closeButton.rt.setOffsets(3, -46, 12, 10);
+
+        this.root.setActive(false);
+    }
+
+    // 이 층 지도의 칸들을 만든다 (층이 바뀌면 다시)
+    buildNodes() {
+        for (const n of this.nodes.values()) n.go.destroy();
+        this.nodes.clear();
         const map = this.run.map;
+        this.built = map;
         for (const node of map.nodes.values()) {
             const info = RunMap.TYPES[node.type];
             const go = this.content.createChild("node " + node.id);
@@ -73,31 +96,27 @@ class MapScreen extends Component {
             icon.getComponent(RectTransform).setOffsets(3, 3, 3, 3);
             icon.addComponent(new UIImage(Resource.image("map_icons"), { region: { x: info.icon * 16, y: 0, width: 16, height: 16 } }));
             go.addComponent(new UIButton({ onTap: () => this.tapNode(node) }));
+            go.setActive(false);
             this.nodes.set(node.id, { go, rt, ring, ringRect, back, node });
         }
+        this._width = null;
+    }
 
-        // 아래 버튼
-        this.deckButton = UIKit.button(rrt, "deck", "덱 보기", () => this.deckView && this.deckView.open(), { fontSize: 12 });
-        this.deckButton.rt.setAnchor(0, 1, 1 / 3, 1);
-        this.deckButton.rt.setOffsets(12, -46, 3, 10);
-        // 지도 화면은 아래 패를 가려서, 장비는 여기서 입고 벗는다
-        this.equipButton = UIKit.button(rrt, "equip", "장비", () => this.equipDialog && this.equipDialog.open(), { fontSize: 12 });
-        this.equipButton.rt.setAnchor(1 / 3, 1, 2 / 3, 1);
-        this.equipButton.rt.setOffsets(3, -46, 3, 10);
-        this.closeButton = UIKit.button(rrt, "close", "닫기", () => this.close(), { fontSize: 12 });
-        this.closeButton.rt.setAnchor(2 / 3, 1, 1, 1);
-        this.closeButton.rt.setOffsets(3, -46, 12, 10);
-
-        this.root.setActive(false);
+    // 아래 셋째 버튼: 고르는 중에는 [다음 층으로] (내려갈 수 있을 때), 보기 모드에서는 [닫기]
+    onThird() {
+        if (this.mode === "choose") {
+            if (this.run.canDescend) this.run.descend();
+            return;
+        }
+        this.close();
     }
 
     // choose: 고르기 모드 (방을 나와서), 아니면 보기 모드
     open(choose) {
         this.mode = choose ? "choose" : "view";
+        if (this.built !== this.run.map) this.buildNodes();
         if (!this.root.isActive) Modal.show(this.root, true);
         this._width = null;
-        this.closeButton.text.setText(choose ? "고르는 중" : "닫기");
-        UIKit.setEnabled(this.closeButton, !choose);
         this.refresh();
         this.scrollToCurrent();
     }
@@ -116,53 +135,68 @@ class MapScreen extends Component {
     tapNode(node) {
         if (this.mode !== "choose") return;
         if (!this.run.choices().some((n) => n.id === node.id)) {
-            MessageLog.add("거기로는 갈 수 없다 (이어진 칸만)", "#c8b890");
+            MessageLog.add("거기로는 갈 수 없다 (지도에 보이는 방만)", "#c8b890");
             return;
         }
         this.run.enter(node.id);
     }
 
-    // 칸 자리 (content 왼쪽 위 기준, UI 단위). 아래가 1층
+    // 칸 자리 (content 왼쪽 위 기준, UI 단위). 격자 가운데가 가로 가운데
     nodePos(node, width) {
-        const jitter = node.type === "boss" ? 0 : ((Rng.mix(this.run.seed, node.row * 31 + node.col) % 13) - 6);
-        const x = 32 + node.x * (width - 64) + jitter;
-        const y = 34 + (RunMap.ROWS - node.row) * MapScreen.ROW_H + (node.type === "boss" ? -8 : jitter * 0.6);
-        return { x, y };
+        const b = this.run.map.bounds();
+        const sp = MapScreen.SPACING;
+        const span = (b.maxY - b.minY) * sp;
+        const view = this.list && this.list.rect ? this.list.rect.height / this.list.uiRoot.scale : 0;
+        const top = Math.max(34, (view - span) / 2); // 화면이 남으면 가운데로
+        return { x: width / 2 + (node.x - (b.minX + b.maxX) / 2) * sp, y: top + (node.y - b.minY) * sp };
     }
 
     get contentHeight() {
-        return 34 * 2 + RunMap.ROWS * MapScreen.ROW_H + 10;
+        const b = this.run.map.bounds();
+        return 34 * 2 + (b.maxY - b.minY) * MapScreen.SPACING;
     }
 
     scrollToCurrent() {
         const run = this.run;
-        const row = run.current ? run.map.get(run.current).row + 1 : 0;
-        const y = 34 + (RunMap.ROWS - row) * MapScreen.ROW_H;
+        const node = run.map.get(run.pending ?? run.current ?? run.map.start.id);
+        const y = this.nodePos(node, this._width || 300).y;
         const view = this.scroll.viewportHeight || 400;
         this.scroll.contentHeight = this.contentHeight;
-        this.scroll.scrollTo(y - view * 0.6);
+        this.scroll.scrollTo(y - view * 0.5);
     }
 
     refresh() {
         const run = this.run;
         const choices = new Set(run.choices().map((n) => n.id));
         const visited = new Set(run.visited);
-        const floor = run.current ? run.map.get(run.current).row + 1 : 0;
-        this.title.setText(this.mode === "choose" ? `다음 방을 고른다 · ${floor + 1}층` : `지도 · 지금 ${run.floor}층`);
-        this.sub.setText(`체력 ${run.player.stats.hp}/${run.player.stats.maxHp} · ${run.player.money} G · 덱 ${run.player.cards.allActions.length}장 · 금색 칸 중에서 고른다`);
+        const shown = run.map.revealed(run.visited);
+        if (run.pending) shown.add(run.pending);
+        this.title.setText(this.mode === "choose" ? `다음 방을 고른다 · ${run.floorNo}층` : `${run.floorNo}층 지도`);
+        this.sub.setText(`체력 ${run.player.stats.hp}/${run.player.stats.maxHp} · ${run.player.money} G · 덱 ${run.player.cards.allActions.length}장 · ${run.bossCleared ? "우두머리를 쓰러뜨렸다" : "우두머리 방을 찾아라"}`);
         for (const [id, n] of this.nodes) {
+            n.go.setActive(shown.has(id));
             const on = this.mode === "choose" && choices.has(id);
-            n.ring.setActive(on || id === run.pending);
-            n.ringRect.borderColor = id === run.pending ? "#7cc4e8" : UIKit.COLORS.gold;
+            const here = id === run.pending || (!run.pending && this.mode === "choose" && id === run.current);
+            n.ring.setActive(on || here);
+            n.ringRect.borderColor = here ? "#7cc4e8" : UIKit.COLORS.gold;
             const done = visited.has(id);
             n.back.color = done ? "#4a3e32" : "#2a231e";
-            n.go.getComponent(RectTransform).alpha = on || done || id === run.pending ? 1 : 0.6;
+            n.go.getComponent(RectTransform).alpha = on || done || here ? 1 : 0.7;
         }
+        // 셋째 버튼
+        const choose = this.mode === "choose";
+        this.closeButton.text.setText(choose ? (run.canDescend ? "다음 층으로 ▼" : run.bossCleared ? "마지막 층" : "고르는 중") : "닫기");
+        UIKit.setEnabled(this.closeButton, !choose || run.canDescend);
+        this.closeButton.rect.borderColor = choose && run.canDescend ? UIKit.COLORS.gold : UIKit.COLORS.border;
     }
 
     update() {
         if (Input.getButtonDown("map")) this.toggleView();
         if (!this.mode) return;
+        if (this.built !== this.run.map) {
+            this.buildNodes();
+            this.refresh();
+        }
         if (this.mode === "view" && Input.getButtonDown("cancel") && !(this.equipDialog && this.equipDialog.isOpen)) return this.close();
         const screen = Math.round(this.engine.width / this.engine.uiRoot.scale);
         const side = Math.max(8, Math.floor((screen - 560) / 2));
@@ -175,7 +209,7 @@ class MapScreen extends Component {
             this._width = width;
             for (const n of this.nodes.values()) {
                 const p = this.nodePos(n.node, width);
-                const size = n.node.type === "boss" ? MapScreen.NODE + 14 : MapScreen.NODE;
+                const size = n.node.type === "boss" ? MapScreen.NODE + 6 : MapScreen.NODE;
                 n.rt.setAnchor(0, 0, 0, 0);
                 n.rt.setPivot(0.5, 0.5);
                 n.rt.setSizeAndPosition(size, size, p.x, p.y);
@@ -189,7 +223,7 @@ class MapScreen extends Component {
     }
 }
 
-// 지도 칸 사이 선. 지나온 길은 밝게, 갈 수 있는 길은 금색, 나머지는 점선처럼 흐리게
+// 지도 칸 사이 선 (문). 가 본 방끼리는 밝게, 아직 안 가 본 쪽은 점선으로 흐리게
 class MapLines extends Renderer {
     constructor(screen) {
         super();
@@ -210,21 +244,22 @@ class MapLines extends Renderer {
         if (!width) return;
         const run = s.run;
         const visited = new Set(run.visited);
-        const choices = new Set(run.choices().map((n) => n.id));
+        const shown = run.map.revealed(run.visited);
+        if (run.pending) shown.add(run.pending);
         const alpha = rt.worldAlpha;
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.lineCap = "round";
         for (const node of run.map.nodes.values()) {
+            if (!shown.has(node.id)) continue;
             const a = s.nodePos(node, width);
             for (const id of node.next) {
-                const next = run.map.get(id);
-                const b = s.nodePos(next, width);
-                const walked = visited.has(node.id) && (visited.has(id) || id === run.pending);
-                const open = node.id === run.current && choices.has(id);
-                ctx.strokeStyle = walked ? "#e8d9b8" : open ? "#e8b840" : "rgba(168, 152, 120, 0.35)";
-                ctx.lineWidth = (walked || open ? 3 : 2) * scale;
-                ctx.setLineDash(walked || open ? [] : [4 * scale, 4 * scale]);
+                if (id < node.id || !shown.has(id)) continue; // 한 번씩만
+                const b = s.nodePos(run.map.get(id), width);
+                const walked = visited.has(node.id) && visited.has(id);
+                ctx.strokeStyle = walked ? "#e8d9b8" : "rgba(168, 152, 120, 0.55)";
+                ctx.lineWidth = (walked ? 3 : 2) * scale;
+                ctx.setLineDash(walked ? [] : [4 * scale, 4 * scale]);
                 ctx.beginPath();
                 ctx.moveTo(r.x + a.x * scale, r.y + a.y * scale);
                 ctx.lineTo(r.x + b.x * scale, r.y + b.y * scale);

@@ -6,6 +6,7 @@
 class RoomPlan {
     // 방 종류별 크기·바닥
     static STYLE = {
+        start: { w: 9, h: 6, floor: TileDef.FLOOR, wall: TileDef.WALL, pillars: [0, 0] },
         battle: { w: 11, h: 7, floor: TileDef.FLOOR, wall: TileDef.WALL, pillars: [0, 3] },
         elite: { w: 13, h: 8, floor: TileDef.CAVE_FLOOR, wall: TileDef.CAVE_WALL, pillars: [1, 4] },
         boss: { w: 13, h: 9, floor: TileDef.CAVE_FLOOR, wall: TileDef.CAVE_WALL, pillars: [2, 4] },
@@ -38,9 +39,10 @@ class RoomPlan {
         return [weakest ? weakest.id : "rat"];
     }
 
-    // node: RunMap 칸, seed: 방 시드
-    constructor(node, seed) {
+    // node: RunMap 칸, seed: 방 시드, state: 이미 다녀간 방의 기록 { cleared, used, sold:[…] } (없으면 처음 들어가는 방)
+    constructor(node, seed, state = null) {
         this.node = node;
+        this.state = state ?? {};
         this.type = node.type;
         this.rng = Rng.make(seed);
         const st = RoomPlan.STYLE[this.type];
@@ -51,7 +53,7 @@ class RoomPlan {
         this.entrance = { x: 1, y: mid };
         this.start = { x: 2, y: mid };
         this.exit = { x: this.w, y: mid };
-        this.lv = 1 + Math.floor(node.row / 6) + (this.type === "boss" ? 1 : 0);
+        this.lv = 1 + Math.floor(node.row / 5) + (this.type === "boss" ? 1 : 0);
         this.walls = new Set(); // 기둥 "x,y"
         this.spawns = [];       // [{ type, x, y, data }]
         this.layout();
@@ -100,7 +102,10 @@ class RoomPlan {
         this.spawns.push({ type: "entrance", ...this.entrance }, { type: "exit", ...this.exit });
         const lv = this.lv;
         const floor = this.node.row + 1;
-        if (this.type === "battle") {
+        const done = !!this.state.cleared; // 이미 정리한 방은 적이 없다
+        if (done && this.combat) {
+            // 적 없음
+        } else if (this.type === "battle") {
             const [base, per] = RoomPlan.BUDGET.battle;
             for (const kind of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row)) this.spawns.push({ type: kind, ...right.pop(), data: { lv } });
         } else if (this.type === "elite") {
@@ -115,11 +120,13 @@ class RoomPlan {
             this.spawns.push({ type: lead.id, x: this.w - 2, y: center.y, data: { lv, rank: "boss" } });
             for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === this.w - 2 && p.y === center.y)).pop(), data: { lv } });
         } else if (this.type === "shop") {
-            this.spawns.push({ type: "merchant", x: center.x, y: this.h, data: { name: Rng.pick(rng, Merchant.NAMES), stock: RoomPlan.rollStock(rng, this.node.row), money: Rng.int(rng, 40, 90) } });
+            const stock = RoomPlan.rollStock(rng, this.node.row);
+            stock.forEach((offer, i) => { offer.sold = !!(this.state.sold && this.state.sold.includes(i)); }); // 이미 산 물건
+            this.spawns.push({ type: "merchant", x: center.x, y: this.h, data: { name: Rng.pick(rng, Merchant.NAMES), stock, money: Rng.int(rng, 40, 90) } });
         } else if (this.type === "rest") {
-            this.spawns.push({ type: "campfire", x: center.x, y: center.y });
+            this.spawns.push({ type: "campfire", x: center.x, y: center.y, data: { used: !!this.state.used } });
         } else if (this.type === "treasure") {
-            this.spawns.push({ type: "treasure", x: center.x, y: center.y });
+            this.spawns.push({ type: "treasure", x: center.x, y: center.y, data: { opened: !!this.state.used } });
         }
     }
 

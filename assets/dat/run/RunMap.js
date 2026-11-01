@@ -46,251 +46,150 @@ class Rng {
     }
 }
 
-// 1막 지도: 아래(1층)에서 위(15층)로 올라가는 그물망. 맨 위에 보스 방 하나.
-// 칸(노드)마다 방 종류가 있고, 이어진 다음 칸(next) 중 하나를 골라 올라간다.
-//   battle 전투 · elite 정예 · shop 상점 · rest 휴식 · treasure 보물 · boss 우두머리
-// 층마다 칸이 WIDTH(4~5)개. 갈래길 수는 칸마다 따로 굴리지 않고 지도 전체에서 정확히 1개 20% · 2개 40% · 3개 40%로 나눠 준다.
-// 갈래는 늘 다음 층에서 가로 위치가 가장 가까운 칸부터 잇는다. 아무도 안 오는 칸은 가장 가까운 칸의 먼 갈래를 그쪽으로 옮긴다.
-// 갈래는 늘 다음 층의 가까운 칸부터, 선이 거의 엇갈리지 않게 잇는다 (link). 엇갈림을 줄이느라 갈래 수가 ±1 될 수 있어서
-// 실제 비율은 대략 1개 25% · 2개 60% · 3개 15%가 된다.
-// 방 종류를 굴린 뒤 지도 전체를 보고 운이 너무 나쁜 길이 없게 고친다 (FAIR): 상점·휴식·정예가 하나도 없는 길에는 전투 칸 하나를 바꿔 넣고,
-// 너무 많은 길에서는 하나를 전투로 바꾼다.
+// 층 지도 (아이작식): 한 층은 격자 위에 이어 붙인 방들이다. 시작 방에서 출발해 옆 방으로 탐색해 나가고, 막다른 방들 중
+// 가장 먼 곳이 우두머리 방이다. 우두머리를 쓰러뜨리면 다음 층으로 내려갈 수 있고, 남은 방을 더 둘러봐도 된다.
+//   start 시작(비어 있다) · battle 전투 · elite 정예 · shop 상점 · rest 휴식 · treasure 보물 · boss 우두머리
+// 격자에서 붙어 있는 방끼리는 문으로 이어진다. 지도에는 가 본 방과 그 옆 방(종류가 보인다)만 나타난다.
+// 특수 방(상점·보물·휴식·정예)은 막다른 방에 놓이고, 우두머리는 시작에서 가장 먼 막다른 방이다.
+// 난이도(row)는 층과 시작에서의 거리로 정해진다: 층마다 5단계 (시작에서 멀수록 세다).
 class RunMap {
-    static ROWS = 15;
-    static WIDTH = [4, 5];                       // 한 층의 칸 수 (최소, 최대)
-    static BRANCH = [[1, 20], [2, 40], [3, 40]]; // 갈래길 수와 비율 (지도 전체 기준)
+    static FLOORS = 3;
+    static ROOMS = [9, 11, 13];   // 층마다 방 수 (시작·우두머리·특수 방 포함)
+    static STEPS = 5;             // 층마다 난이도 단계
+    static DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     static TYPES = {
         battle: { name: "전투", icon: 0, color: "#c8b890" },
         elite: { name: "정예", icon: 1, color: "#e06050" },
         shop: { name: "상점", icon: 2, color: "#e8c860" },
         rest: { name: "휴식", icon: 3, color: "#f0a050" },
         treasure: { name: "보물", icon: 4, color: "#e8b840" },
-        boss: { name: "우두머리", icon: 5, color: "#ff6040" }
+        boss: { name: "우두머리", icon: 5, color: "#ff6040" },
+        start: { name: "시작", icon: 6, color: "#a0d0f0" }
     };
 
-    // 정해진 층: 1층은 늘 전투, 9층은 보물, 15층(보스 바로 앞)은 휴식
-    static FIXED = { 0: "battle", 8: "treasure", 14: "rest" };
-
-    // 어느 길로 가도 (1~14층에서) 상점 1번 이상, 휴식 1번 이상, 정예 1~4번, 같은 종류 특수 방이 연달아 3번은 없게
-    static FAIR = { shop: [1, 4], rest: [1, 4], elite: [1, 4] };
-
-    constructor(seed) {
+    // seed: 런 시드, floor: 1부터
+    constructor(seed, floor = 1) {
         this.seed = seed;
-        this.nodes = new Map(); // id "row,col" → { id, row, col, x(0~1 가로 위치), type, next: [id] }
+        this.floor = floor;
+        this.nodes = new Map(); // id "x,y" → { id, x, y(격자), row(난이도), col(번호), dist, type, next: [이웃 id] }
         this.generate();
     }
 
-    static id(row, col) {
-        return row + "," + col;
+    static id(x, y) {
+        return x + "," + y;
+    }
+
+    static get lastFloor() {
+        return RunMap.FLOORS;
     }
 
     get(id) {
         return this.nodes.get(id);
     }
 
-    // 층(row)의 칸들 (왼쪽부터)
-    row(r) {
-        return [...this.nodes.values()].filter((n) => n.row === r).sort((a, b) => a.col - b.col);
+    get start() {
+        return this.nodes.get(RunMap.id(0, 0));
     }
 
     get boss() {
-        return this.nodes.get(RunMap.id(RunMap.ROWS, 0));
+        return [...this.nodes.values()].find((n) => n.type === "boss");
     }
 
     generate() {
-        const rng = Rng.make(this.seed);
-        for (let tries = 0; tries < 20; tries++) {
-            const rows = this.build(rng);
-            this.assignTypes(rng, rows);
-            if (this.repair(rng)) return;
+        for (let tries = 0; tries < 400; tries++) {
+            if (this.build(Rng.make(Rng.mix(this.seed, this.floor * 1000 + tries)))) return;
         }
+        throw new Error("층 지도를 만들지 못했다");
     }
 
-    // 칸과 갈래길
+    // 방들을 이어 붙인다 (붙는 칸은 이웃이 하나뿐인 빈 칸만 → 고리 없이 가지 뻗기). 조건이 안 맞으면 false
     build(rng) {
-        this.nodes.clear();
-        const R = RunMap.ROWS;
-        const rows = [];
-        for (let r = 0; r < R; r++) {
-            const n = Rng.int(rng, RunMap.WIDTH[0], RunMap.WIDTH[1]);
-            const list = [];
-            for (let c = 0; c < n; c++) {
-                const node = { id: RunMap.id(r, c), row: r, col: c, x: (c + 0.5) / n, type: null, next: [] };
-                this.nodes.set(node.id, node);
-                list.push(node);
+        const count = RunMap.ROOMS[this.floor - 1] ?? RunMap.ROOMS[RunMap.ROOMS.length - 1];
+        const cells = new Map();
+        const add = (x, y) => cells.set(RunMap.id(x, y), { id: RunMap.id(x, y), x, y, type: "battle", next: [] });
+        const degree = (x, y) => RunMap.DIRS.filter(([dx, dy]) => cells.has(RunMap.id(x + dx, y + dy))).length;
+        add(0, 0);
+        let queue = [[0, 0]];
+        for (let guard = 0; cells.size < count && guard < 400; guard++) {
+            if (!queue.length) queue = [...cells.values()].map((c) => [c.x, c.y]);
+            const [cx, cy] = queue.shift();
+            for (const [dx, dy] of Rng.shuffle(rng, RunMap.DIRS.slice())) {
+                const nx = cx + dx;
+                const ny = cy + dy;
+                if (cells.size >= count) break;
+                if (cells.has(RunMap.id(nx, ny)) || Math.abs(nx) > 4 || Math.abs(ny) > 4) continue;
+                if (degree(nx, ny) !== 1 || rng() < 0.5) continue;
+                add(nx, ny);
+                queue.push([nx, ny]);
             }
-            rows.push(list);
         }
-        // 갈래 수: 맨 위 층을 뺀 모든 칸에 비율대로 정확히 나눠 주고 섞는다
-        const src = rows.slice(0, R - 1).flat();
-        const total = RunMap.BRANCH.reduce((s, [, w]) => s + w, 0);
-        const bag = [];
-        for (const [k, w] of RunMap.BRANCH) for (let i = 0; i < Math.floor(src.length * w / total); i++) bag.push(k);
-        while (bag.length < src.length) bag.push(2);
-        bag.length = src.length;
-        Rng.shuffle(rng, bag);
-        src.forEach((n, i) => (n.want = bag[i]));
-
-        for (let r = 0; r < R - 1; r++) this.link(rows[r], rows[r + 1]);
-        for (const n of src) delete n.want;
-        // 보스: 맨 위 줄 모든 칸에서 이어진다
-        const boss = { id: RunMap.id(R, 0), row: R, col: 0, x: 0.5, type: "boss", next: [] };
-        this.nodes.set(boss.id, boss);
-        for (const n of rows[R - 1]) n.next = [boss.id];
-        for (const n of this.nodes.values()) n.next.sort((a, b) => this.get(a).col - this.get(b).col);
-        return rows;
-    }
-
-    // 두 층 잇기. 아래 칸마다 위 층의 붙어 있는 칸 묶음(창)을 잇는다: 왼쪽 칸의 창이 오른쪽 칸의 창보다 왼쪽에 있게 해서
-    // 선이 거의 엇갈리지 않는다 (옆 칸끼리 창이 두 칸 이상 겹칠 때만 X자 하나). 위 층의 모든 칸에 누군가 온다.
-    // 갈래 수(want)는 되도록 지키되, 모든 칸을 잇거나 엇갈림을 줄이려면 ±1 할 수 있다 (가장 싼 것을 동적 계획법으로 고른다)
-    link(down, up) {
-        const m = up.length;
-        const ux = up.map((u) => u.x);
-        const states = []; // states[i] = Map key "s,k" → { cost, prev }
-        const opts = (n) => {
-            const out = [];
-            for (const k of [n.want, n.want - 1, n.want + 1]) if (k >= 1 && k <= Math.min(3, m) && !out.includes(k)) out.push(k);
-            return out;
-        };
-        const winCost = (n, s, k) => {
-            let c = 0;
-            for (let j = s; j < s + k; j++) c += Math.abs(ux[j] - n.x);
-            return c * 4 + (k !== n.want ? 5 : 0);
-        };
-        down.forEach((n, i) => {
-            const map = new Map();
-            for (const k of opts(n)) for (let s = 0; s + k <= m; s++) {
-                const own = winCost(n, s, k);
-                if (i === 0) {
-                    if (s === 0) map.set(s + "," + k, { cost: own, prev: null, s, k });
-                    continue;
+        if (cells.size < count) return false;
+        for (const c of cells.values()) for (const [dx, dy] of RunMap.DIRS) {
+            const id = RunMap.id(c.x + dx, c.y + dy);
+            if (cells.has(id)) c.next.push(id);
+        }
+        // 막다른 방 (시작 제외) 중 우두머리·상점·보물·휴식이 들어갈 자리가 모자라면 다시
+        const leaves = [...cells.values()].filter((c) => c.next.length === 1 && c.id !== "0,0");
+        if (leaves.length < 5) return false;
+        // 시작에서의 거리
+        cells.get("0,0").dist = 0;
+        const queue2 = [cells.get("0,0")];
+        while (queue2.length) {
+            const c = queue2.shift();
+            for (const id of c.next) {
+                const n = cells.get(id);
+                if (n.dist === undefined) {
+                    n.dist = c.dist + 1;
+                    queue2.push(n);
                 }
-                let best = null;
-                for (const [key, st] of states[i - 1]) {
-                    const e0 = st.s + st.k - 1;
-                    if (s < st.s || s + k - 1 < e0 || s > e0 + 1) continue; // 왼쪽→오른쪽, 빈칸 없이
-                    const o = Math.max(0, e0 - s + 1);
-                    const c = st.cost + own + (o * (o - 1) / 2) * 4;
-                    if (!best || c < best.cost) best = { cost: c, prev: key, s, k };
-                }
-                if (best) map.set(s + "," + k, best);
             }
-            states.push(map);
-        });
-        let end = null;
-        for (const [key, st] of states[down.length - 1]) if (st.s + st.k - 1 === m - 1 && (!end || st.cost < end[1].cost)) end = [key, st];
-        // 이론상 늘 답이 있지만, 혹시 없으면 가까운 칸 하나씩
-        if (!end) {
-            for (const n of down) n.next = [[...up].sort((a, b) => Math.abs(a.x - n.x) - Math.abs(b.x - n.x))[0].id];
-            for (const u of up) if (!down.some((n) => n.next.includes(u.id))) [...down].sort((a, b) => Math.abs(a.x - u.x) - Math.abs(b.x - u.x))[0].next.push(u.id);
-            return;
         }
-        let key = end[0];
-        for (let i = down.length - 1; i >= 0; i--) {
-            const st = states[i].get(key);
-            down[i].next = up.slice(st.s, st.s + st.k).map((u) => u.id);
-            key = st.prev;
+        const far = Math.max(...leaves.map((c) => c.dist));
+        if (far < 3) return false; // 우두머리는 시작에서 3칸 이상
+        const boss = Rng.pick(rng, leaves.filter((c) => c.dist === far));
+        const rest = Rng.shuffle(rng, leaves.filter((c) => c !== boss));
+        cells.get("0,0").type = "start";
+        boss.type = "boss";
+        rest[0].type = "shop";
+        rest[1].type = "treasure";
+        rest[2].type = "rest";
+        // 정예: 남은 막다른 방 먼저, 모자라면 시작에서 3칸 이상 떨어진 방. 층이 깊을수록 하나 더
+        const eliteWant = this.floor >= 3 ? 2 : 1;
+        const spots = [...rest.slice(3), ...Rng.shuffle(rng, [...cells.values()].filter((c) => c.type === "battle" && c.dist >= 3 && !rest.slice(3).includes(c)))];
+        for (const c of spots.slice(0, eliteWant)) c.type = "elite";
+        // 난이도·번호
+        const base = (this.floor - 1) * RunMap.STEPS;
+        let i = 0;
+        for (const c of [...cells.values()].sort((a, b) => a.dist - b.dist || a.id.localeCompare(b.id))) {
+            c.row = c.type === "boss" ? base + RunMap.STEPS - 1 : base + Math.max(0, Math.min(RunMap.STEPS - 1, c.dist - 1));
+            c.col = i++;
         }
-    }
-
-    assignTypes(rng, rows) {
-        const parents = new Map();
-        for (const n of this.nodes.values()) for (const id of n.next) {
-            if (!parents.has(id)) parents.set(id, []);
-            parents.get(id).push(n);
-        }
-        for (const list of rows) for (const n of list) n.type = null;
-        for (let r = 0; r < rows.length; r++) {
-            for (const n of rows[r]) n.type = RunMap.FIXED[r] ?? this.rollType(rng, r, parents.get(n.id) ?? []);
-        }
-    }
-
-    // 그 종류를 놓을 수 있는 층 (rollType 표와 같다)
-    static allowed(type, row) {
-        if (RunMap.FIXED[row]) return false;
-        if (type === "shop") return row >= 2;
-        if (type === "rest") return row >= 5 && row !== 13;
-        if (type === "elite") return row >= 5;
+        this.nodes = cells;
         return true;
     }
 
-    // 1층 아무 칸에서 14층까지 가는 길 중 key 방이 가장 적은(most면 가장 많은) 길. { count, path: [노드] }
-    extreme(key, most) {
-        const R = RunMap.ROWS;
-        const memo = new Map();
-        const walk = (id) => {
-            if (memo.has(id)) return memo.get(id);
+    // 지도에 보이는 방 id들: 가 본 방과 그 옆 방
+    revealed(visited) {
+        const out = new Set();
+        for (const id of visited) {
             const n = this.get(id);
-            const own = n.type === key && n.row < R - 1 ? 1 : 0;
-            const kids = n.next.filter((c) => this.get(c).row < R);
-            let best = null;
-            for (const c of kids) {
-                const sub = walk(c);
-                if (!best || (most ? sub.count > best.count : sub.count < best.count)) best = sub;
-            }
-            const res = { count: own + (best ? best.count : 0), path: [n, ...(best ? best.path : [])] };
-            memo.set(id, res);
-            return res;
-        };
-        let best = null;
-        for (const s of this.row(0)) {
-            const r = walk(s.id);
-            if (!best || (most ? r.count > best.count : r.count < best.count)) best = r;
+            if (!n) continue;
+            out.add(id);
+            for (const c of n.next) out.add(c);
         }
-        return best;
+        return out;
     }
 
-    // 이웃 칸(앞뒤)에 같은 종류가 있으면 안 놓는다
-    lonely(n, type) {
-        if (this.row(n.row - 1).some((p) => p.next.includes(n.id) && p.type === type)) return false;
-        return !n.next.some((id) => this.get(id).type === type);
+    // 지금 고를 수 있는 방: 지도에 보이는 방 전부 (방금 나온 방도 다시 들어갈 수 있다). 아직 한 곳도 안 갔으면 시작 방
+    choices(currentId, visited) {
+        if (!currentId && !visited.length) return [this.start];
+        return [...this.revealed(visited)].map((id) => this.get(id));
     }
 
-    // FAIR 맞추기. 다 맞으면 true
-    repair(rng) {
-        for (let step = 0; step < 60; step++) {
-            let changed = false;
-            for (const [key, [lo, hi]] of Object.entries(RunMap.FAIR)) {
-                const low = this.extreme(key, false);
-                if (low.count < lo) {
-                    const cands = low.path.filter((n) => n.type === "battle" && RunMap.allowed(key, n.row) && this.lonely(n, key));
-                    if (!cands.length) return false;
-                    Rng.pick(rng, cands).type = key;
-                    changed = true;
-                    continue;
-                }
-                const high = this.extreme(key, true);
-                if (high.count > hi) {
-                    const cands = high.path.filter((n) => n.type === key && !RunMap.FIXED[n.row]);
-                    if (!cands.length) return false;
-                    Rng.pick(rng, cands).type = "battle";
-                    changed = true;
-                }
-            }
-            if (!changed) return true;
-        }
-        return false;
-    }
-
-    fair() {
-        return Object.entries(RunMap.FAIR).every(([k, [lo, hi]]) => this.extreme(k, false).count >= lo && this.extreme(k, true).count <= hi);
-    }
-
-    // 층에 맞는 방 종류. 정예·휴식·상점은 바로 앞 칸과 같은 종류가 이어지지 않는다
-    rollType(rng, row, parents) {
-        const table = [["battle", 50], ["shop", row >= 2 ? 11 : 0], ["rest", row >= 5 && row !== 13 ? 12 : 0], ["elite", row >= 5 ? 14 : 0], ["treasure", row >= 3 && row !== 7 && row !== 9 ? 4 : 0]];
-        for (let i = 0; i < 6; i++) {
-            const t = Rng.weighted(rng, table);
-            if (t === "battle" || !parents.some((p) => p.type === t)) return t;
-        }
-        return "battle";
-    }
-
-    // 지금 고를 수 있는 칸: 아직 시작 전이면 1층 전부, 아니면 지금 칸의 next
-    choices(currentId) {
-        if (!currentId) return this.row(0);
-        const cur = this.get(currentId);
-        return cur ? cur.next.map((id) => this.get(id)) : [];
+    // 지도 전체가 차지하는 격자 범위 { minX, maxX, minY, maxY }
+    bounds() {
+        const xs = [...this.nodes.values()].map((n) => n.x);
+        const ys = [...this.nodes.values()].map((n) => n.y);
+        return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
     }
 }

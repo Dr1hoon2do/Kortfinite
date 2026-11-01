@@ -22,7 +22,7 @@ class EndScreen extends Component {
         this.title.color = won ? UIKit.COLORS.gold : "#f06060";
         this.title.setText(won ? "승리!" : "쓰러졌다");
         this.text.setText([
-            won ? "우두머리를 쓰러뜨리고 1막을 마쳤다." : `${run.floor}층에서 쓰러졌다. 런이 끝났다.`,
+            won ? "마지막 우두머리를 쓰러뜨리고 던전을 클리어했다." : `${run.floor}층에서 쓰러졌다. 런이 끝났다.`,
             `지나온 방 ${run.visited.length}개 · 처치 ${p.kills}`,
             `덱 ${p.cards.allActions.length}장 · 돈 ${p.money} G`,
             "처음 화면에서 새 런을 시작할 수 있다."
