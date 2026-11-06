@@ -168,7 +168,7 @@ class Hazard extends Entity {
 
     start() {
         super.start();
-        if ((this.kind === "field" || this.kind === "coin") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
+        if ((this.kind === "field" || this.kind === "coin" || this.kind === "pickup") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
         if (this.sr) this.sr.orderInLayer = this.kind === "barrier" ? 2 : 1;
     }
 
@@ -241,6 +241,43 @@ class HazardOverlay extends Renderer {
         ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
         const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
         for (const h of room.hazards ?? []) {
+            if (h.kind === "pickup" && h.world) {
+                // 떨어진 것: 받침 + 아이콘 + 이름·값. 월드는 y가 위로 자라서 칸마다 뒤집어서(y 아래로 +) 그린다
+                const it = h.item;
+                const bob = Math.sin(performance.now() / 400 + h.x * 1.7) * 0.8;
+                ctx.save();
+                ctx.translate(h.x * t, h.y * t);
+                ctx.scale(1, -1);
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "rgba(20, 14, 10, 0.75)";
+                ctx.fillRect(-7, 3, 14, 4);
+                ctx.fillStyle = it.price ? "#c8a050" : "#8a7a60";
+                ctx.fillRect(-6, 3, 12, 3);
+                if (it.kind === "gold") ctx.drawImage(Resource.image("cards"), 17 * 16, 0, 16, 16, -8, -8 + bob, 16, 16);
+                else {
+                    const d = it.card.def;
+                    ctx.drawImage(Resource.image(d.sprite), d.frame * 16, 0, 16, 16, -8, -8 + bob, 16, 16);
+                }
+                ctx.font = "bold 5px monospace";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                const name = it.kind === "gold" ? `${it.gold}G` : it.card.name;
+                const nw = Math.ceil(ctx.measureText(name).width) + 3;
+                ctx.fillStyle = "rgba(20, 14, 10, 0.8)";
+                ctx.fillRect(-nw / 2, 7.5, nw, 6);
+                ctx.fillStyle = "#f0e6cc";
+                ctx.fillText(name, 0, 8);
+                if (it.price) {
+                    const price = `${it.price}G`;
+                    const pw = Math.ceil(ctx.measureText(price).width) + 3;
+                    ctx.fillStyle = "rgba(20, 14, 10, 0.85)";
+                    ctx.fillRect(-pw / 2, -15, pw, 6);
+                    ctx.fillStyle = "#f0d060";
+                    ctx.fillText(price, 0, -14.5);
+                }
+                ctx.restore();
+                continue;
+            }
             if (h.kind === "coin" && h.world) {
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = "#6a4a10";

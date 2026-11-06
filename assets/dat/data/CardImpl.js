@@ -137,6 +137,7 @@ class CardOps {
         u.y = t.y;
         w.addEntity(u);
         Equip.stepped(u, w);
+        Pickups.stepped(u, w);
         Equip.moved(u);
         if (t.x !== fx) u.flipX = t.x < fx;
         u.applyFlip();

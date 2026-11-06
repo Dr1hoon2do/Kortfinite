@@ -126,9 +126,9 @@ class ShopDialog extends Component {
         this._key = null; // 다음 update에서 다시 그린다 (쪽이 범위를 넘으면 rebuild가 바로잡는다)
     }
 
-    // 목록의 모든 줄: 물건들 + 맨 아래 [카드 빼기]
+    // 목록의 줄: [카드 빼기]만 있다 (물건은 진열대에 바닥에 놓여 있고 밟으면 산다: Run.shopItems)
     entries() {
-        return [...this.npc.stock.map((offer) => ({ offer })), { remove: true }];
+        return [{ remove: true }];
     }
 
     rebuild() {

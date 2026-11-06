@@ -284,7 +284,10 @@ class ChunkManager extends Component {
         entity.x = nx;
         entity.y = ny;
         this._cellAdd(to, entity);
-        if (entity instanceof Player) Equip.stepped(entity, this); // 구부러진 동전 줍기
+        if (entity instanceof Player) {
+            Equip.stepped(entity, this); // 구부러진 동전 줍기
+            Pickups.stepped(entity, this); // 바닥에 떨어진 것 줍기·사기
+        }
         return true;
     }
 

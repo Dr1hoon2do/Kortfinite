@@ -125,9 +125,8 @@ class RoomPlan {
             this.spawns.push({ type: "merchant", x: center.x, y: this.h, data: { name: Rng.pick(rng, Merchant.NAMES), stock, money: Rng.int(rng, 40, 90) } });
         } else if (this.type === "rest") {
             this.spawns.push({ type: "campfire", x: center.x, y: center.y, data: { used: !!this.state.used } });
-        } else if (this.type === "treasure") {
-            this.spawns.push({ type: "treasure", x: center.x, y: center.y, data: { opened: !!this.state.used } });
         }
+        // (보물 방의 물건은 방을 만든 뒤 Run이 바닥에 놓는다: Run.spawnPickups)
     }
 
     // 입구 옆 시작 칸에서 모든 바닥 칸에 갈 수 있는가

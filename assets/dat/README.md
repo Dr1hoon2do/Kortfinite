@@ -60,6 +60,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 | 적 행동 | `data/EnemyImpl.js` — `EnemyMoves.SPECS[id]`(`rotations`+`actions` 또는 `brain`). 새 의도 종류는 `entity/EnemyAI.js` |
 | 상태 이상 종류·수치 | `rules/Status.js`의 `Status.DEFS`, 피해 보정 `Status.modify` |
 | 캐릭터(스탯·시작 덱·장비·능력) | 공방 '캐릭터' 탭 → `data/GameData.js`, 능력 동작은 `data/CharImpl.js`의 `CHARS` (장비와 같은 훅) |
+| 바닥에 떨어진 보상·상점 진열대·보물 방 물건 | `entity/Pickups.js` (`Pickup`·`Pickups`), 놓는 곳 `run/Run.js` (`rewardItems`·`shopItems`·`spawnPickups`), 그림 `entity/Allies.js` HazardOverlay |
 | 층 수·방 수·방 종류 | `run/RunMap.js` (`FLOORS`, `ROOMS`, `STEPS`, `TYPES`, `build`) |
 | 다녀간 방 기록(정리·상점·휴식·상자) | `run/Run.js` (`rooms`, `captureRoom`), `run/RoomGen.js` (`RoomPlan` state) |
 | 방 크기·층별 무리·정예·우두머리 | `run/RoomGen.js` (`RoomPlan.STYLE`, `BUDGET`, `MAX_ENEMIES`) |

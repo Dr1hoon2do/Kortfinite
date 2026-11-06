@@ -22,7 +22,9 @@ class Run extends Component {
         this.debug = !!options.meta.debug;
         this.floorNo = 1;      // 지금 층 (1~RunMap.FLOORS)
         this.map = new RunMap(this.seed, 1);
-        this.rooms = {};       // 이 층에서 다녀간 방의 기록 id → { cleared, used, sold:[…] }
+        this.rooms = {};       // 이 층에서 다녀간 방의 기록 id → { cleared, used, sold:[…], taken:[…], left }
+        this.taken = new Set(); // 지금 방에서 이미 가진 바닥의 것들 (Pickup key)
+        Pickups.run = this;
         this.current = null;   // 마지막으로 들어간(끝낸) 칸 id
         this.visited = [];     // 이 층에서 가 본 칸 id들
         this.pending = null;   // 고르고 아직 못 끝낸 칸 (방 안에서 저장하고 껐을 때 다시 들어간다)
@@ -117,6 +119,7 @@ class Run extends Component {
         }
         const salt = this.salt(node);
         const known = this.rooms[id] ?? null;
+        this.taken = new Set(known && known.taken ? known.taken : []);
         const plan = new RoomPlan(node, Rng.mix(this.seed, salt), known);
         this.plan = plan;
         const room = new ChunkManager({ chunkSize: 16, tileSize: 16, renderDistance: 48, generator: plan });
@@ -146,6 +149,7 @@ class Run extends Component {
             this.cleared = true;
             if (this.exit) this.exit.setOpen(true);
             MessageLog.add("이미 정리한 방이다", "#a0d0a0");
+            this.spawnPickups(this.rewardItems(), true); // 못 가진 보상이 남아 있으면 그대로 바닥에
         } else if (plan.combat) {
             player.mana = Math.min(player.maxMana, player.mana + Run.ROOM_MANA);
             player.cards.resetForRoom(Run.OPENING_HAND);
@@ -156,10 +160,11 @@ class Run extends Component {
             if (this.exit) this.exit.setOpen(true);
             MessageLog.add({ shop: "상인이 있다. 말을 걸어 보자 (탭하면 걸어간다)", rest: "모닥불이 있다. 한 번 쉴 수 있다", treasure: "보물 상자가 있다!", start: "던전의 시작이다. 출구로 나가 지도에서 갈 방을 고르자" }[node.type] ?? "", "#a0d0f0");
         }
+        if (node.type === "treasure") this.spawnPickups(this.rewardItems(), true); // 보물 방: 물건이 바닥에 놓여 있다
+        if (node.type === "shop") this.spawnPickups(this.shopItems(), false);    // 상점: 진열대
         EnemyMoves.planAll(room, player, 0); // 적의 첫 의도
         this.fitCamera(true);
         Events.emit(GameEvent.ROOM_ENTERED, { node, room });
-        if (known && known.reward && this.ui.reward) this.ui.reward.restore(known.reward);
         return true;
     }
 
@@ -187,10 +192,10 @@ class Run extends Component {
                 st.shopLeft = e.stock.some((o) => !o.sold); // 아직 안 산 물건이 있다
             }
         }
-        // 못 받은 보상은 남겨 둔다 (그 방에 다시 가면 받을 수 있다)
-        const rw = this.ui.reward;
-        if (rw && rw.unclaimed && this.cleared) st.reward = { title: rw.reward.title, picked: rw.reward.picked, cards: rw.reward.cards.map((c) => c.defId), items: rw.reward.items.map((c) => c.defId) };
-        else delete st.reward;
+        // 바닥에 남은 것 (가진 건 taken). 남았으면 지도에 느낌표
+        st.taken = [...this.taken];
+        st.left = [...this.room.hazards].filter((h) => h instanceof Pickup).length;
+        delete st.reward;
         for (const s of this.plan.spawns) {
             if (s.type !== "campfire" && s.type !== "treasure") continue;
             for (const e of this.room.entitiesAt(s.x, s.y)) if ((e instanceof Campfire && e.used) || (e instanceof TreasureChest && e.opened)) st.used = true;
@@ -202,11 +207,8 @@ class Run extends Component {
     roomPending(id) {
         const st = this.rooms[id];
         if (!st) return false;
-        if (st.reward) return true;
-        const type = this.map.get(id).type;
-        if (type === "treasure" || type === "rest") return !st.used;
-        if (type === "shop") return st.shopLeft !== false;
-        return false;
+        if (st.left > 0) return true;
+        return this.map.get(id).type === "rest" && !st.used;
     }
 
     // 그 층의 시작 방으로 (디버그: 우두머리를 안 잡아도, 층을 건너뛰어도 된다)
@@ -240,10 +242,65 @@ class Run extends Component {
         return this.player.cards.hand.filter((c) => c.def.gear).map((c) => c.defId);
     }
 
-    // 보물 상자를 열었다
-    openTreasure(chest) {
-        const r = Rewards.treasure(Rng.make(Rng.mix(this.seed, 7000 + this.salt(this.node))), this.node.row, this.ownedGear());
-        this.ui.reward.open({ title: "보물 상자", ...r });
+    // ---------- 바닥에 떨어진 것들 (아이작식) ----------
+    // 이 방의 보상 물건들 (시드로 굴려서 다시 들어와도 같다). 보물 방은 처음부터, 전투방은 정리했을 때
+    rewardItems() {
+        const node = this.node;
+        const salt = this.salt(node);
+        const own = this.ownedGear();
+        let r;
+        if (node.type === "treasure") r = Rewards.treasure(Rng.make(Rng.mix(this.seed, 7000 + salt)), node.row, own);
+        else if (node.type === "boss") r = Rewards.boss(Rng.make(Rng.mix(this.seed, 5000 + salt)), node.row, own);
+        else r = Rewards.battle(Rng.make(Rng.mix(this.seed, 5000 + salt)), node.type, node.row, own);
+        const items = [];
+        if (r.gold) items.push({ key: "gold", kind: "gold", gold: r.gold });
+        r.cards.forEach((c, i) => items.push({ key: "c" + i, kind: "card", card: c, group: "cards" })); // 카드 3장 중 하나
+        r.items.forEach((c, i) => items.push({ key: "g" + i, kind: "gear", card: c }));
+        return items;
+    }
+
+    // 상점 진열대: 안 팔린 물건마다 값표
+    shopItems() {
+        const m = [...this.room.actors].find((e) => e instanceof Merchant);
+        if (!m) return [];
+        return m.stock.map((o, i) => ({ key: "s" + i, kind: "card", card: o.card, price: o.price, offer: o })).filter((it) => !it.offer.sold);
+    }
+
+    // 정리한 방의 바닥에 보상을 떨어뜨린다
+    dropRewards() {
+        this.spawnPickups(this.rewardItems(), true);
+        MessageLog.add("보상이 바닥에 떨어졌다. 밟아서 가져가자 (카드는 하나만)", "#f0d878");
+    }
+
+    // 놓을 자리: scatter면 방 가운데 근처에 흩어 놓고 (출구로 가는 가운데 줄은 되도록 피한다), 아니면 상점 진열대 두 줄
+    pickupSpots(n, scatter) {
+        const plan = this.plan;
+        const room = this.room;
+        const mid = plan.entrance.y;
+        const bad = new Set([plan.entrance, plan.start, plan.exit, { x: plan.exit.x - 1, y: plan.exit.y }].map((p) => p.x + "," + p.y));
+        const free = (x, y) => !plan.isWall(x, y) && !bad.has(x + "," + y) && room.entitiesAt(x, y).length === 0;
+        const out = [];
+        if (!scatter) {
+            for (const y of [mid - 1, mid + 1]) for (let x = 2; x <= plan.w - 1; x += 2) if (free(x, y)) out.push({ x, y });
+            return out.slice(0, n);
+        }
+        const cx = (plan.w + 1) / 2;
+        const cy = (plan.h + 1) / 2;
+        const tiles = [];
+        for (let y = 1; y <= plan.h; y++) for (let x = 1; x <= plan.w; x++) if (free(x, y)) tiles.push({ x, y, d: Math.abs(x - cx) + Math.abs(y - cy) + (y === mid ? 3 : 0) });
+        tiles.sort((a, b) => a.d - b.d || a.x - b.x || a.y - b.y);
+        for (const t of tiles) if (out.length < n && out.every((o) => Math.abs(o.x - t.x) + Math.abs(o.y - t.y) >= 2)) out.push(t); // 서로 한 칸 이상 띄운다
+        for (const t of tiles) if (out.length < n && !out.includes(t)) out.push(t);
+        return out;
+    }
+
+    // items를 바닥에 놓는다 (이미 가진 key는 빼고, 한 묶음에서 이미 가졌으면 그 묶음 전체를 뺀다)
+    spawnPickups(items, scatter) {
+        const left = items.filter((it) => !this.taken.has(it.key) && !(it.group && items.some((o) => o.group === it.group && this.taken.has(o.key))));
+        const spots = this.pickupSpots(left.length, scatter);
+        left.forEach((it, i) => {
+            if (spots[i]) this.room.spawn(new Pickup(spots[i].x, spots[i].y, { item: it }));
+        });
     }
 
     // 런 끝 (won: 우두머리를 쓰러뜨렸다)
@@ -278,12 +335,11 @@ class Run extends Component {
                 const last = this.floorNo >= RunMap.FLOORS;
                 MessageLog.add(last ? "우두머리를 쓰러뜨렸다! 출구로 나가면 던전을 클리어한다" : "우두머리를 쓰러뜨렸다! 남은 방을 둘러봐도 되고, 지도에서 다음 층으로 내려갈 수 있다", "#f0d878");
                 this.rooms[this.node.id] = this.captureRoom(); // 우두머리 처치를 바로 기록 (지도에서 내려갈 수 있게)
-                this.ui.reward.open({ title: "우두머리 처치 보상", ...Rewards.boss(Rng.make(Rng.mix(this.seed, 5000 + this.salt(this.node))), this.node.row, this.ownedGear()) });
+                this.dropRewards();
                 return;
             }
             MessageLog.add("방을 정리했다. 출구가 열렸다", "#a0d0a0");
-            const r = Rewards.battle(Rng.make(Rng.mix(this.seed, 5000 + this.salt(this.node))), this.node.type, this.node.row, this.ownedGear());
-            this.ui.reward.open({ title: this.node.type === "elite" ? "정예 처치 보상" : "전투 보상", ...r });
+            this.dropRewards();
         }
     }
 
