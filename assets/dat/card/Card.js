@@ -75,7 +75,7 @@ class Card {
         if (this.def.spell) return Spell.describe(this);
         if (this.def.gem) return Gem.describe(this);
         const lines = [];
-        if (this.def.slot) lines.push(`(부위: ${CardDef.slotName(this.def.slot)})`, ...Gear.lines(this));
+        if (this.def.slot) lines.push(...Gear.lines(this));
         const text = typeof this.def.text === "function" ? this.def.text(this) : this.def.description;
         if (text) lines.push(text);
         if (this.isToken) lines.push(`(장비 카드: ${this.def.from ?? "장비"}를 해제하면 덱에서 빠진다)`);
@@ -158,7 +158,7 @@ class Card {
 // - 아이템은 줍기로 들어오고, 버리면 바닥에 떨어지고, 소모품은 쓰면 사라진다.
 // - 행동 카드는 덱 → 패 → 묘지를 돈다. 덱이 비면 묘지를 섞어 덱으로 되돌린다 (순환).
 // - 뽑기는 플레이어의 "뽑기" 행동(1턴)이나 카드 효과(통찰)로만 일어난다.
-// - 장착: 부위(slot)가 있는 아이템은 패(인벤토리 패)에 있는 채로 부위마다 한 장 장착된다. 장착해도 패 한 자리를 차지한다.
+// - 장착: 장비(def.slot은 장비라는 표시일 뿐 부위는 없다)는 패(인벤토리 패)에 있는 채로 몇 개든 겹쳐 장착된다. 장착해도 패 한 자리를 차지한다.
 //   장착한 장비의 능력치(행동 패·인벤토리 패 크기 포함)가 오르고, 장비 카드(grants)가 덱에 들어온다 (Gear.js).
 //   장착·해제·빼기 뒤 패가 넘치게 되면 막는다. 장착한 카드를 패에서 빼면(버리기, 팔기, 상자) 저절로 해제된다.
 // 바뀔 때마다 version이 올라서 UI가 다시 그릴 때를 안다.
@@ -170,7 +170,7 @@ class CardSystem {
         this.baseAction = options.actionHand ?? CardSystem.ACTION_HAND;
         this.baseInv = options.invHand ?? CardSystem.INV_HAND;
         this.hand = [];
-        this.equipped = {};   // 부위 → 장착한 장비 카드 (패 안의 카드)
+        this.equipped = [];   // 장착한 장비 카드들 (패 안의 카드). 부위 없이 몇 개든 겹쳐 입는다
         this.deck = [];       // 맨 뒤가 맨 위 (pop으로 뽑는다)
         this.graveyard = [];  // 맨 뒤가 가장 최근
         this.exhausted = [];  // 소멸: 이번 방에서 다시 안 나온다 (다음 방에 들어가면 덱으로 돌아온다)
@@ -246,40 +246,33 @@ class CardSystem {
 
     // ---------- 장착 ----------
     isEquipped(card) {
-        return !!card.def.slot && this.equipped[card.def.slot] === card;
+        return this.equipped.includes(card);
     }
 
     get equippedCards() {
-        return Object.values(this.equipped);
+        return [...this.equipped];
     }
 
-    // 이 부위의 장비가 card로 바뀌면(null이면 비면) 패 최대가 어떻게 되는가 { a: 행동 패, i: 인벤토리 패 }
-    _limitsWith(slot, card) {
-        const old = this.equipped[slot];
-        const st = (c, k) => (c && c.def.stats ? c.def.stats[k] ?? 0 : 0);
-        return {
-            a: this.actionLimit - st(old, "actionHand") + st(card, "actionHand"),
-            i: this.invLimit - st(old, "invHand") + st(card, "invHand")
-        };
+    // card를 입으면(on) / 벗으면 패 최대가 어떻게 되는가 { a: 행동 패, i: 인벤토리 패 }
+    _limitsWith(card, on) {
+        const st = (k) => (card.def.stats ? card.def.stats[k] ?? 0 : 0);
+        const d = on ? 1 : -1;
+        return { a: this.actionLimit + d * st("actionHand"), i: this.invLimit + d * st("invHand") };
     }
 
-    // 장착 (패의 장비를 그 부위에. 같은 부위의 다른 장비는 풀린다). 성공하면 true
+    // 장착 (패의 장비. 부위 없이 몇 개든 겹쳐 입는다). 성공하면 true
     equip(card) {
-        const slot = card.def.slot;
-        if (!slot || !this.hand.includes(card)) return false;
+        if (!card.def.slot || !this.hand.includes(card)) return false;
         if (this.isEquipped(card)) return true;
-        const old = this.equipped[slot] ?? null;
-        const lim = this._limitsWith(slot, card);
-        const tokens = old ? this.tokensInHand(old) : 0;
+        const lim = this._limitsWith(card, true);
         const { a, i } = this.counts();
-        if (!CardSystem.fits(a - tokens, i, lim.a, lim.i)) {
+        if (!CardSystem.fits(a, i, lim.a, lim.i)) {
             MessageLog.add(`패가 넘쳐서 ${josa(card.name, "을를")} 장착할 수 없다`, "#c8b890");
             return false;
         }
-        if (old) this._pullTokens(old);
-        this.equipped[slot] = card;
+        this.equipped.push(card);
         this._pushTokens(card);
-        MessageLog.add(`${josa(card.name, "을를")} ${CardDef.slotName(slot)}에 장착했다${old ? ` (${old.name} 해제)` : ""}`, "#e8c860");
+        MessageLog.add(`${josa(card.name, "을를")} 장착했다`, "#e8c860");
         this._changed();
         return true;
     }
@@ -288,7 +281,7 @@ class CardSystem {
     unequip(card, force = false) {
         if (!this.isEquipped(card)) return false;
         if (!force && !this.canUnequip(card, true)) return false;
-        delete this.equipped[card.def.slot];
+        this.equipped = this.equipped.filter((c) => c !== card);
         const pulled = this._pullTokens(card);
         if (!force) MessageLog.add(`${josa(card.name, "을를")} 해제했다${pulled ? ` (장비 카드 ${pulled}장이 빠졌다)` : ""}`, "#c8b890");
         this._changed();
@@ -297,7 +290,7 @@ class CardSystem {
 
     // 이 장비를 풀어도(stays: 패에 남는다 / 아니면 패에서도 빠진다) 패가 넘치지 않는가
     canUnequip(card, stays) {
-        const lim = this._limitsWith(card.def.slot, null);
+        const lim = this._limitsWith(card, false);
         const { a, i } = this.counts();
         const ok = CardSystem.fits(a - this.tokensInHand(card), i - (stays ? 0 : 1), lim.a, lim.i);
         if (!ok) MessageLog.add(`패가 넘쳐서 ${josa(card.name, "을를")} ${stays ? "해제할" : "뺄"} 수 없다 (먼저 카드를 줄이자)`, "#c8b890");
@@ -360,9 +353,9 @@ class CardSystem {
 
     _changed() {
         // 패에서 빠진 장비는 장착도 풀린다 (장비 카드도 빠진다)
-        for (const [slot, card] of Object.entries(this.equipped)) {
+        for (const card of [...this.equipped]) {
             if (this.hand.includes(card)) continue;
-            delete this.equipped[slot];
+            this.equipped = this.equipped.filter((c) => c !== card);
             this._pullTokens(card);
         }
         this.version++;
@@ -375,8 +368,8 @@ class CardSystem {
         card._drawn = ++this.drawSeq;
         this.hand.push(card);
         this._changed();
-        // 공방 장비는 패에 들어오면 자동으로 입는다 (그 부위가 비어 있을 때. 이미 입은 게 있으면 그대로 두고, 직접 바꿔 입는다)
-        if (card.def.gear && !this.equipped[card.def.slot]) this.equip(card);
+        // 공방 장비는 패에 들어오면 자동으로 입는다 (자리가 있으면. 패가 넘치면 못 입고 직접 입어야 한다)
+        if (card.def.gear && !this.isEquipped(card)) this.equip(card);
         return true;
     }
 
@@ -617,11 +610,10 @@ class CardSystem {
         this._changed();
     }
 
-    // 저장/불러오기. 장착은 부위 → 패 자리
+    // 저장/불러오기. 장착은 패 자리 목록
     save() {
         const list = (cards) => cards.map((c) => c.save());
-        const eq = {};
-        for (const [slot, card] of Object.entries(this.equipped)) eq[slot] = this.hand.indexOf(card);
+        const eq = this.equipped.map((card) => this.hand.indexOf(card)).filter((i) => i >= 0);
         const keep = (cards) => cards.filter((c) => !c.isTemp);
         return { act: this.baseAction, inv: this.baseInv, eq, hand: list(keep(this.hand)), deck: list(keep([...this.deck, ...this.exhausted])), graveyard: list(keep(this.graveyard)) };
     }
@@ -632,8 +624,8 @@ class CardSystem {
         this.hand = Card.loadAll(data.hand);
         this.deck = Card.loadAll(data.deck);
         this.graveyard = Card.loadAll(data.graveyard);
-        this.equipped = {};
-        for (const [slot, i] of Object.entries(data.eq ?? {})) if (this.hand[i]?.def.slot === slot) this.equipped[slot] = this.hand[i];
+        this.equipped = [];
+        for (const i of Object.values(data.eq ?? {})) if (this.hand[i]?.def.slot && !this.equipped.includes(this.hand[i])) this.equipped.push(this.hand[i]); // (예전 저장본은 부위 → 자리)
         this.drawSeq = 0;
         for (const card of this.hand) card._drawn = ++this.drawSeq;
         this._changed();

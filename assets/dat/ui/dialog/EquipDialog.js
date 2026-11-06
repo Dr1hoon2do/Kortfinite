@@ -1,7 +1,7 @@
 // 장비 창: 소지품 패에 있는 장비를 장착·해제한다 (턴을 쓰지 않는다).
 //   전투 중에는 아래 패에서 장비 카드를 눌러 [장착]/[해제] 하면 되고, 지도 화면(HandBar가 가려진 곳)에서는 이 창을 쓴다.
-//   장비는 장착해도 패에 그대로 남는다. 착용 중인 것은 위에, 그 아래에 안 입은 것. 같은 부위는 한 장만 입을 수 있다
-//   (다른 것을 입으면 입고 있던 것이 풀린다). 패가 넘치게 되는 장착·해제는 막힌다 (Card.js CardSystem).
+//   장비는 장착해도 패에 그대로 남는다. 착용 중인 것은 위에, 그 아래에 안 입은 것. 부위 없이 몇 개든 겹쳐 입을 수 있다
+//   패가 넘치게 되는 장착·해제는 막힌다 (Card.js CardSystem).
 class EquipDialog extends Component {
     static ROW = 56;
 
@@ -112,7 +112,7 @@ class EquipDialog extends Component {
         brt.setOffsets(48, 0, 80, 0);
         box.addComponent(new UIMask());
         UIKit.label(brt, "name", card.name, 0, 5, null, 15, { fontSize: 12, fontWeight: "bold" });
-        UIKit.label(brt, "info", `${CardDef.slotName(card.def.slot)} · ${card.summary.split("\n")[0]}`, 0, 21, null, 26, { fontSize: 10, color: "#c8b890", rich: true, wrap: true, lineHeight: 1.3 });
+        UIKit.label(brt, "info", card.summary.split("\n")[0], 0, 21, null, 26, { fontSize: 10, color: "#c8b890", rich: true, wrap: true, lineHeight: 1.3 });
         const b = UIKit.button(rt, "toggle", worn ? "해제" : "장착", () => this.toggle(card), { fontSize: 11 });
         b.rt.setAnchor(1, 0, 1, 0);
         b.rt.setOffsets(-70, (h - 30) / 2, 6, -((h - 30) / 2 + 30));

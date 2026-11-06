@@ -1,7 +1,7 @@
 // 장비 체계: 장착하면 능력치가 오르고, 장비의 행동 카드(grants)가 덱에 들어온다.
 //
 // 장비 카드 정의 (CardDef):
-//   slot:   부위 ("hand" 손, "waist" 허리, "back" 등). 부위마다 한 장만 장착된다
+//   slot:   장비라는 표시 ("gear"). 부위는 없고 몇 개든 겹쳐 장착된다
 //   stats:  { attack, defense, defensePct(방어력 %), speed, actionHand, invHand } — 장착하는 동안 오르는 능력치·패 크기
 //   grants: [{ id, n }] — 장착하면 덱에 섞여 들어오는 행동 카드 (장비 카드, def.token)
 //

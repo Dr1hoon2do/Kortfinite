@@ -21,7 +21,7 @@ class StatusPanel extends SidePanel {
             ["층", () => (this.run ? `${this.run.floor}층 · 지나온 방 ${this.run.visited.length}` : "")],
             ["행동 패", (p) => `${p.cards.counts().a} / ${p.cards.actionLimit}`],
             ["소지품 패", (p) => `${p.cards.counts().i} / ${p.cards.invLimit}${p.cards.overflow ? ` (행동 패 ${p.cards.overflow}칸 차지)` : ""}`],
-            ["장착", (p) => p.cards.equippedCards.map((c) => `${CardDef.slotName(c.def.slot)}: ${c.name}`).join(", ") || "없음"],
+            ["장착", (p) => p.cards.equippedCards.map((c) => c.name).join(", ") || "없음"],
             ["덱 / 묘지", (p) => `${p.cards.deck.length} / ${p.cards.graveyard.length} (전체 ${p.cards.allActions.length})`],
             ["턴", () => this.turns.turn],
             ["카드 빼기 값", () => (this.run ? `${this.run.removeCost} G` : "")]

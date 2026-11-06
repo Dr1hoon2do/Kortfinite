@@ -82,8 +82,7 @@ class CardDef {
         if (def.spell) return "주문";
         if (def.type === "skill") return def.token ? "장비 카드" : "행동";
         if (def.gem) return "젬";
-        if (def.slot === "hand") return "도구 · 손";
-        if (def.slot) return `장비 · ${CardDef.slotName(def.slot)}`;
+        if (def.slot) return "장비";
         return def.consumable ? "소모품" : "물건";
     }
 }
