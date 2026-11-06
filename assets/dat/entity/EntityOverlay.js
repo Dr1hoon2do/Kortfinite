@@ -208,6 +208,23 @@ class Intent {
 
     // 엔티티 중심 원점, y 아래로 +. 체력바(-12) 위에 그린다. 숫자가 뜨는 중이면 살짝 옆으로
     static draw(ctx, intent, shifted) {
+        Intent.drawBox(ctx, intent, shifted);
+        if (intent.double) {
+            // 한 턴에 두 번 움직인다: 위에 작은 "x2" 딱지
+            ctx.font = "bold 6px monospace";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            const x = shifted ? 5 : 0;
+            ctx.fillStyle = "rgba(20, 8, 6, 0.9)";
+            ctx.fillRect(x - 8, -30, 16, 8);
+            ctx.fillStyle = "#f0a020";
+            ctx.fillRect(x - 7, -29, 14, 6);
+            ctx.fillStyle = "#140c08";
+            ctx.fillText("x2", x - 5, -29);
+        }
+    }
+
+    static drawBox(ctx, intent, shifted) {
         const y = -21;
         const x0 = shifted ? 5 : 0;
         ctx.font = "bold 6px monospace";

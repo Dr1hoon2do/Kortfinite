@@ -47,6 +47,8 @@ class EnemyAI extends HostileAI {
         if (this.spec.rotations) intent = EnemyMoves.rotate(this, this.spec, ctx, e, foe);
         else if (this.spec.brain) intent = this.spec.brain(this, ctx, e, foe);
         this.intent = intent ?? { kind: "approach", pct: 100, stat: "atk" };
+        // 우두머리는 세 턴에 한 번 한 턴에 두 번 움직인다 (둘째 행동은 첫째가 끝난 뒤 다시 정한다)
+        if (e.rank === "boss" && !this._second) this.intent = { ...this.intent, double: (this.step + 1) % Monster.BOSS_DOUBLE_EVERY === 0 };
         return this.intent;
     }
 
@@ -61,7 +63,21 @@ class EnemyAI extends HostileAI {
         this.step++;
         let r = { anims: [], hitPlayer: false };
         if (Status.get(e, "stun")) r.anims.push(new PopupAnim(e, "기절", Status.DEFS.stun.color));
-        else if (intent) r = EnemyMoves.run(this, ctx, turns, intent);
+        else if (intent) {
+            r = EnemyMoves.run(this, ctx, turns, intent);
+            if (intent.double && e.alive && ctx.player.alive) {
+                // 한 턴에 두 번: 지금 상황에서 다음 행동을 정해 바로 한다
+                this._second = true;
+                const next = this.plan(ctx);
+                this._second = false;
+                this.intent = null;
+                if (next && next.kind !== "stunned") {
+                    MessageLog.add(`${josa(e.displayName, "이가")} 연달아 움직인다!`, "#f0a060");
+                    const r2 = EnemyMoves.run(this, ctx, turns, next);
+                    r = { anims: [new SeqAnim([r.anims, r2.anims])], hitPlayer: r.hitPlayer || r2.hitPlayer };
+                }
+            }
+        }
         if (e.alive) r.anims.push(...Status.tickPoison(e, ctx.world));
         Status.tickTurns(e);
         r.anims.unshift(...pre);
@@ -594,8 +610,14 @@ class EnemyMoves {
         return { path, hit: null, rush: false };
     }
 
-    // 머리 위 표시 { kind: 아이콘, v: 숫자 }
+    // 머리 위 표시 { kind: 아이콘, v: 숫자, double: 한 턴에 두 번 }
     static view(ai, p) {
+        const v = EnemyMoves._view(ai, p);
+        if (v && ai.intent && ai.intent.double) v.double = true;
+        return v;
+    }
+
+    static _view(ai, p) {
         const e = ai.entity;
         let it = ai.intent;
         if (it === undefined && e.world) it = ai.plan({ world: e.world, player: p, turn: 0 });
@@ -652,7 +674,7 @@ class EnemyMoves {
             idle: () => "쉰다: 이번 턴은 아무것도 안 한다",
             stunned: () => "기절: 이번 턴은 아무것도 못 한다"
         }[it.kind];
-        return `${head} · ${text ? text() : ""}`;
+        return `${head} · ${it.double ? "[이번 턴 두 번 움직인다] " : ""}${text ? text() : ""}`;
     }
 }
 

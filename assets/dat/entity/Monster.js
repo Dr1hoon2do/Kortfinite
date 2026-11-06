@@ -12,8 +12,9 @@ class Monster extends Entity {
     static RANKS = {
         normal: { title: "", hp: 1, attack: 0 },
         elite: { title: "정예", hp: 1.8, attack: 2 },
-        boss: { title: "우두머리", hp: 3.5, attack: 3 }
+        boss: { title: "우두머리", hp: 2, attack: 4 } // 체력은 낮추고 공격력·패턴(세 턴에 한 번 연속 행동)으로 어렵게
     };
+    static BOSS_DOUBLE_EVERY = 3; // 우두머리는 이 턴마다 한 번 한 턴에 두 번 움직인다
 
     // data: { lv, rank }
     constructor(x, y, kind, data = {}) {

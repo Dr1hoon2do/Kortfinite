@@ -67,6 +67,13 @@ class RewardDialog extends Component {
         this.show();
     }
 
+    // 다른 방에 갔다가 돌아왔을 때: 못 받은 보상을 되살린다 (돈은 이미 받았다). 창은 안 띄우고 [보상 받기] 버튼만
+    restore(saved) {
+        this.reward = { title: saved.title, gold: 0, picked: !!saved.picked, cards: (saved.cards ?? []).map((id) => new Card(id)), items: (saved.items ?? []).map((id) => new Card(id)) };
+        this.reopen.setActive(this.unclaimed);
+        if (this.unclaimed) MessageLog.add("받지 않은 보상이 남아 있다 ([보상 받기])", "#f0d878");
+    }
+
     show() {
         if (!this.reward) return;
         const r = this.reward;

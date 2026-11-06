@@ -159,6 +159,7 @@ class Run extends Component {
         EnemyMoves.planAll(room, player, 0); // 적의 첫 의도
         this.fitCamera(true);
         Events.emit(GameEvent.ROOM_ENTERED, { node, room });
+        if (known && known.reward && this.ui.reward) this.ui.reward.restore(known.reward);
         return true;
     }
 
@@ -181,13 +182,31 @@ class Run extends Component {
         const st = { ...(this.rooms[this.node.id] ?? {}) };
         if (this.plan.combat && this.cleared) st.cleared = true;
         for (const e of this.room.actors) {
-            if (e instanceof Merchant) st.sold = e.stock.map((o, i) => (o.sold ? i : -1)).filter((i) => i >= 0);
+            if (e instanceof Merchant) {
+                st.sold = e.stock.map((o, i) => (o.sold ? i : -1)).filter((i) => i >= 0);
+                st.shopLeft = e.stock.some((o) => !o.sold); // 아직 안 산 물건이 있다
+            }
         }
+        // 못 받은 보상은 남겨 둔다 (그 방에 다시 가면 받을 수 있다)
+        const rw = this.ui.reward;
+        if (rw && rw.unclaimed && this.cleared) st.reward = { title: rw.reward.title, picked: rw.reward.picked, cards: rw.reward.cards.map((c) => c.defId), items: rw.reward.items.map((c) => c.defId) };
+        else delete st.reward;
         for (const s of this.plan.spawns) {
             if (s.type !== "campfire" && s.type !== "treasure") continue;
             for (const e of this.room.entitiesAt(s.x, s.y)) if ((e instanceof Campfire && e.used) || (e instanceof TreasureChest && e.opened)) st.used = true;
         }
         return st;
+    }
+
+    // 지도에 "아직 뭔가 있다" 표시를 할 방인가: 못 받은 보상, 안 연 상자, 안 쓴 모닥불, 안 산 물건이 남은 상점 (가 본 방만)
+    roomPending(id) {
+        const st = this.rooms[id];
+        if (!st) return false;
+        if (st.reward) return true;
+        const type = this.map.get(id).type;
+        if (type === "treasure" || type === "rest") return !st.used;
+        if (type === "shop") return st.shopLeft !== false;
+        return false;
     }
 
     // 그 층의 시작 방으로 (디버그: 우두머리를 안 잡아도, 층을 건너뛰어도 된다)

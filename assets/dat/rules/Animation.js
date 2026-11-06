@@ -19,6 +19,35 @@ class Anim {
     onUpdate(t) {}
 }
 
+// 연출 묶음을 차례로 재생하는 연출 하나 (한 턴에 두 번 움직이는 우두머리: 첫 행동 연출 → 둘째 행동 연출)
+class SeqAnim extends Anim {
+    constructor(groups) {
+        const gs = groups.filter((g) => g.length).map((g) => ({ anims: g, dur: Math.max(0.001, ...g.map((a) => a.duration)) }));
+        super(gs.reduce((s, g) => s + g.dur, 0.001));
+        this.groups = gs;
+        this.gi = 0;
+        this.gt = 0;
+    }
+
+    update(dt) {
+        let left = dt;
+        while (left > 0 && this.gi < this.groups.length) {
+            const g = this.groups[this.gi];
+            const use = Math.min(left, g.dur - this.gt);
+            for (const a of g.anims) if (!a.finished) a.update(Math.min(use, a.remaining + 1e-9));
+            this.gt += use;
+            left -= use;
+            if (this.gt >= g.dur - 1e-9) {
+                for (const a of g.anims) if (!a.finished) a.update(a.remaining + 1e-9);
+                this.gi++;
+                this.gt = 0;
+            }
+        }
+        this.elapsed += dt;
+        this.finished = this.gi >= this.groups.length;
+    }
+}
+
 // 연출 순서 중간에 할 일 (걸어가서 도착한 뒤 상호작용 등). 처음 재생될 때 한 번 부른다
 class CallbackAnim extends Anim {
     constructor(fn) {

@@ -96,8 +96,14 @@ class MapScreen extends Component {
             icon.getComponent(RectTransform).setOffsets(3, 3, 3, 3);
             icon.addComponent(new UIImage(Resource.image("map_icons"), { region: { x: info.icon * 16, y: 0, width: 16, height: 16 } }));
             go.addComponent(new UIButton({ onTap: () => this.tapNode(node) }));
+            // 아직 뭔가 남은 방 표시 (못 받은 보상 · 안 연 상자 · 안 쓴 모닥불 · 안 산 물건): 오른쪽 위 노란 느낌표
+            const badge = rt.createChild("badge");
+            UIKit.place(badge, MapScreen.NODE - 9, -7, 16, 16);
+            badge.addComponent(new UIRect({ color: "#f0c030", borderColor: "#140c08", borderWidth: 1 }));
+            UIKit.label(badge.getComponent(RectTransform), "!", "!", 0, 0, 16, 16, { fontSize: 12, fontWeight: "bold", color: "#140c08", align: "center", verticalAlign: "middle" });
+            badge.setActive(false);
             go.setActive(false);
-            this.nodes.set(node.id, { go, rt, ring, ringRect, back, node });
+            this.nodes.set(node.id, { go, rt, ring, ringRect, back, node, badge });
         }
         this._width = null;
     }
@@ -175,7 +181,10 @@ class MapScreen extends Component {
         this.sub.setText(`체력 ${run.player.stats.hp}/${run.player.stats.maxHp} · ${run.player.money} G · 덱 ${run.player.cards.allActions.length}장 · ${run.bossCleared ? "우두머리를 쓰러뜨렸다" : "우두머리 방을 찾아라"}`);
         for (const [id, n] of this.nodes) {
             n.go.setActive(shown.has(id));
-            const on = this.mode === "choose" && choices.has(id);
+            const pending = run.roomPending(id);
+            n.badge.setActive(pending && id !== run.pending);
+            // 금색 테두리: 아직 안 가 본 방이거나 뭔가 남은 방만 (다 끝낸 방은 안 띄운다)
+            const on = this.mode === "choose" && choices.has(id) && (!visited.has(id) || pending);
             const here = id === run.pending || (!run.pending && this.mode === "choose" && id === run.current);
             n.ring.setActive(on || here);
             n.ringRect.borderColor = here ? "#7cc4e8" : UIKit.COLORS.gold;
