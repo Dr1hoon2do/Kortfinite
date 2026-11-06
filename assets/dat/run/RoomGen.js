@@ -176,7 +176,7 @@ class RoomPlan {
     // 행동 카드 6장 (보상 풀에서). 값은 카드마다 정해진 값 ±10%
     static rollStock(rng, row) {
         const stock = [];
-        for (const card of Rewards.cards(rng, 6)) stock.push({ card, price: Math.max(1, Math.floor(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
+        for (const card of Rewards.cards(rng, 6, "shop")) stock.push({ card, price: Math.max(1, Math.floor(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
         for (const card of Rewards.gear(rng, 2, "shop")) stock.push({ card, price: Math.max(1, Math.floor(Rewards.cardPrice(card) * (0.9 + rng() * 0.2))) });
         return stock;
     }
@@ -189,10 +189,29 @@ class Rewards {
         return [...CardDef.defs.values()].filter((d) => d.kind === "reward" && d.type === "skill" && !d.upgradeKey).map((d) => d.id);
     }
 
-    // 서로 다른 카드 n장
-    static cards(rng, n) {
-        const ids = Rng.shuffle(rng, Rewards.pool()).slice(0, n);
-        return ids.map((id) => Card.create(id, rng));
+    // 카드 희귀도 무게 (카드가 나오는 곳마다 다르다): 전투 보상은 흔한 카드가 많고, 정예·보물은 귀한 카드 비중이 높다
+    static CARD_WEIGHTS = {
+        battle: { common: 60, uncommon: 30, rare: 10 },
+        elite: { common: 40, uncommon: 40, rare: 20 },
+        shop: { common: 55, uncommon: 33, rare: 12 },
+        treasure: { common: 30, uncommon: 45, rare: 25 }
+    };
+
+    // 서로 다른 카드 n장 (희귀도 무게대로 뽑는다)
+    static cards(rng, n, where = "battle") {
+        const w = Rewards.CARD_WEIGHTS[where] ?? Rewards.CARD_WEIGHTS.battle;
+        const pool = Rewards.pool().map((id) => ({ id, w: w[CardDef.get(id).rarity] ?? w.common }));
+        const out = [];
+        for (let k = 0; k < n && pool.length; k++) {
+            let roll = rng() * pool.reduce((s, c) => s + c.w, 0);
+            let i = 0;
+            for (; i < pool.length - 1; i++) {
+                roll -= pool[i].w;
+                if (roll < 0) break;
+            }
+            out.push(pool.splice(i, 1)[0].id);
+        }
+        return out.map((id) => Card.create(id, rng));
     }
 
     // 장비 희귀도 무게 (장비가 나오는 곳마다 다르다)
@@ -229,13 +248,13 @@ class Rewards {
     static battle(rng, type, row, owned = []) {
         const elite = type === "elite";
         const gold = elite ? Rng.int(rng, 28, 40) : Rng.int(rng, 12, 20);
-        return { gold, cards: Rewards.cards(rng, 3), items: elite ? Rewards.gear(rng, 1, "elite", owned) : [] };
+        return { gold, cards: Rewards.cards(rng, 3, elite ? "elite" : "battle"), items: elite ? Rewards.gear(rng, 1, "elite", owned) : [] };
     }
 
     // 보물 상자: 돈 + 카드 3장 중 하나 + 장비 하나
     static treasure(rng, row, owned = []) {
         const gold = Rng.int(rng, 30, 50);
-        return { gold, cards: Rewards.cards(rng, 3), items: Rewards.gear(rng, 1, "treasure", owned) };
+        return { gold, cards: Rewards.cards(rng, 3, "treasure"), items: Rewards.gear(rng, 1, "treasure", owned) };
     }
 
     // 우두머리: 돈 + 장비 하나

@@ -814,7 +814,7 @@ class GameContent {
                 continue;
             }
             GameContent.cards.set(c.id, c);
-            GameContent.register(c.id, c, impl, { base: c.id, upgradeKey: null, kind: c.kind, rarity: c.kind === "reward" ? "common" : undefined, starter: c.kind === "basic" });
+            GameContent.register(c.id, c, impl, { base: c.id, upgradeKey: null, kind: c.kind, rarity: c.kind === "reward" ? (c.rarity ?? "common") : undefined, starter: c.kind === "basic" });
             for (const u of c.upgrades ?? []) {
                 const over = VARIANTS[c.id]?.[u.key] ?? {};
                 const color = VC[u.key] ?? impl.color;

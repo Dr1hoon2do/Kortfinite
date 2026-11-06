@@ -16,9 +16,10 @@ def cell(s): return str(s or "").replace("|", "\\|").replace("\n", "<br>")
 o = ["# Kortfinite 데이터 표", "",
      "`assets/dat/data/GameData.js`(카드 공방 내보내기)에서 뽑은 표다. 직접 고치지 말고 공방에서 고친 뒤 `tools/import_data.py`로 갈아 끼우고, 이 표는 `python3 tools/gen_data_md.py`로 다시 만든다.",
      "수치 규칙: 피해·방어도 %는 공격력·방어력 기준(모든 % 계산은 버림, 0이 되면 0), 이동속도 비례 값(칸·장수)도 버림.", ""]
-o += ["## 1. 카드 (%d장)" % len(D["cards"]), "", "한 카드에 비용 경우가 여럿이면 `/`로 구분한다. 경우마다 따로 한 장씩 나온다.", "", "| id | 이름 | 분류 | 비용 | 효과 | 태그 | 강화 |", "|---|---|---|---|---|---|---|"]
+o += ["## 1. 카드 (%d장)" % len(D["cards"]), "", "한 카드에 비용 경우가 여럿이면 `/`로 구분한다. 경우마다 따로 한 장씩 나온다.", "", "| id | 이름 | 분류 | 희귀도 | 비용 | 효과 | 태그 | 강화 |", "|---|---|---|---|---|---|---|---|"]
+RARC = {"common": "흔함", "uncommon": "드묾", "rare": "희귀"}
 for c in D["cards"]:
-    o.append("| %s | %s | %s | %s | %s | %s | %s |" % (c["id"], c["name"], KIND.get(c.get("kind"), c.get("kind")), cost(c.get("costs")), cell(c.get("effect")), tags(c.get("tags")), ", ".join(u["key"] for u in c.get("upgrades", [])) or "-"))
+    o.append("| %s | %s | %s | %s | %s | %s | %s | %s |" % (c["id"], c["name"], KIND.get(c.get("kind"), c.get("kind")), RARC.get(c.get("rarity"), "-"), cost(c.get("costs")), cell(c.get("effect")), tags(c.get("tags")), ", ".join(u["key"] for u in c.get("upgrades", [])) or "-"))
 o += ["", "### 강화(변형)", "", "| 카드 | 강화 | 이름 | 강화 전 | 비용 | 효과 | 재료 | 태그 |", "|---|---|---|---|---|---|---|---|"]
 for c in D["cards"]:
     for u in c.get("upgrades", []):
@@ -26,12 +27,11 @@ for c in D["cards"]:
 o += ["", "## 2. 적 (%d종)" % len(D["enemies"]), "", "| id | 이름 | 층 | 체력 | 공격 | 방어 | 이동 | 드랍 | 패턴 |", "|---|---|---|---|---|---|---|---|---|"]
 for e in D["enemies"]:
     o.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], e.get("floors", ""), e.get("hp"), e.get("atk"), e.get("def"), e.get("speed"), ", ".join("%s×%s(%s%%)" % (mat.get(d["id"], d["id"]), d.get("count", 1), d.get("chance", 100)) for d in e.get("drops", [])) or "-", cell(e.get("pattern"))))
-SLOT = {"hand": "손", "head": "머리", "body": "몸", "waist": "허리", "back": "등", "feet": "발", "trinket": "장신구"}
 RAR = {"common": "흔함", "uncommon": "드묾", "rare": "희귀", "boss": "우두머리"}
 eq = D.get("equipment", [])
 o += ["", "## 2-1. 장비 (%d개)" % len(eq), "", "소지품 패에서 장착해야 효과가 나는 유물형 장비 (공방 '장비' 탭). 동작은 `data/EquipImpl.js`의 `EQUIP`.", "",
-      "| id | 이름 | 부위 | 희귀도 | 값 | 효과 | 태그 |", "|---|---|---|---|---|---|---|"]
-for e in eq: o.append("| %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], SLOT.get(e.get("slot"), "-"), RAR.get(e.get("rarity"), "-"), e.get("price", "-"), cell(e.get("effect")), tags(e.get("tags"))))
+      "| id | 이름 | 희귀도 | 값 | 효과 | 태그 |", "|---|---|---|---|---|---|"]
+for e in eq: o.append("| %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], RAR.get(e.get("rarity"), "-"), e.get("price", "-"), cell(e.get("effect")), tags(e.get("tags"))))
 o += ["", "## 3. 재료 (%d개)" % len(D["materials"]), "", "| id | 이름 | 얻는 곳 | 비고 |", "|---|---|---|---|"]
 for m in D["materials"]: o.append("| %s | %s | %s | %s |" % (m["id"], m["name"], cell(m.get("source")), cell(m.get("note"))))
 o += ["", "## 4. 태그 (%d개)" % len(D["tags"]), "", "| id | 이름 | 설명 | 소속 |", "|---|---|---|---|"]

@@ -150,7 +150,8 @@ class EquipContent {
             const frame = CardKit.list.length;
             CardDef.register(e.id, {
                 type: "item", sprite: "kicons", frame, kit: true, icon: impl.icon ?? "star", color: impl.color ?? "#e8d9b8",
-                name: e.name, slot: "gear", // 부위는 없다 (장비라는 표시일 뿐). 몇 개든 겹쳐 입는다 rarity: e.rarity, price: e.price ?? 50, tags: e.tags ?? [],
+                // slot "gear"는 장비라는 표시일 뿐 부위가 아니다 (몇 개든 겹쳐 입는다)
+                name: e.name, slot: "gear", rarity: e.rarity, price: e.price ?? 50, tags: e.tags ?? [],
                 stats: impl.stats ?? null, gear: true, noLines: true, // 설명은 공방 글 그대로 (능력치 줄을 따로 안 붙인다)
                 effect: e.effect ?? "",
                 text: () => GameContent.render(e.effect),

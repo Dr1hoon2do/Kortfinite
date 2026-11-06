@@ -22,7 +22,8 @@ const GAME_DATA = {
      "mana": 1
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "blast",
@@ -89,7 +90,8 @@ const GAME_DATA = {
     {
      "mana": 3
     }
-   ]
+   ],
+   "rarity": "rare"
   },
   {
    "id": "blink",
@@ -124,7 +126,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "rare"
   },
   {
    "id": "card_absorbing",
@@ -138,7 +141,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "card_shield",
@@ -156,7 +160,8 @@ const GAME_DATA = {
      "energy": 1
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "charge",
@@ -173,7 +178,8 @@ const GAME_DATA = {
     "energy"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "chocolate",
@@ -188,7 +194,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "club",
@@ -207,7 +214,8 @@ const GAME_DATA = {
     "sturn"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "concentration",
@@ -227,7 +235,8 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "dash",
@@ -240,7 +249,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "first_aid",
@@ -257,7 +267,8 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "food",
@@ -270,7 +281,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "frost",
@@ -291,7 +303,8 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "guard",
@@ -351,7 +364,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "common"
   },
   {
    "id": "harden",
@@ -368,7 +382,8 @@ const GAME_DATA = {
     "hardening"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "heavy",
@@ -457,7 +472,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "uncommon"
   },
   {
    "id": "ignite",
@@ -478,7 +494,8 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "insight",
@@ -498,7 +515,8 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "rare"
   },
   {
    "id": "larry",
@@ -517,7 +535,8 @@ const GAME_DATA = {
     "taunt"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "rare"
   },
   {
    "id": "lightning_bolt",
@@ -539,7 +558,8 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "rare"
   },
   {
    "id": "overload",
@@ -553,7 +573,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "pray",
@@ -570,7 +591,8 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "reload",
@@ -588,7 +610,8 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "rest",
@@ -631,7 +654,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "common"
   },
   {
    "id": "roll",
@@ -674,7 +698,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "common"
   },
   {
    "id": "shield",
@@ -694,7 +719,8 @@ const GAME_DATA = {
     "defense"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "shield_fix",
@@ -714,7 +740,8 @@ const GAME_DATA = {
      "mana": 1
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   },
   {
    "id": "sprint",
@@ -735,7 +762,8 @@ const GAME_DATA = {
      "mana": 3
     }
    ],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "rare"
   },
   {
    "id": "step",
@@ -770,7 +798,8 @@ const GAME_DATA = {
     {
      "energy": 1
     }
-   ]
+   ],
+   "rarity": "common"
   },
   {
    "id": "strike",
@@ -804,7 +833,8 @@ const GAME_DATA = {
     {
      "energy": 1
     }
-   ]
+   ],
+   "rarity": "common"
   },
   {
    "id": "throwing_knife",
@@ -818,7 +848,8 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "common"
   },
   {
    "id": "totem",
@@ -861,7 +892,8 @@ const GAME_DATA = {
      "materials": []
     }
    ],
-   "memo": []
+   "memo": [],
+   "rarity": "rare"
   },
   {
    "id": "zoom_punch",
@@ -881,7 +913,8 @@ const GAME_DATA = {
     "attack"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [],
+   "rarity": "uncommon"
   }
  ],
  "equipment": [
@@ -892,7 +925,6 @@ const GAME_DATA = {
    "note": "",
    "price": 50,
    "rarity": "common",
-   "slot": "back",
    "source": "상점, 보물상자",
    "memo": [],
    "tags": []
@@ -904,7 +936,6 @@ const GAME_DATA = {
    "note": "",
    "price": 50,
    "rarity": "common",
-   "slot": "trinket",
    "source": "상점, 보물상자",
    "tags": [
     "gold"
@@ -918,7 +949,6 @@ const GAME_DATA = {
    "note": "",
    "price": 50,
    "rarity": "common",
-   "slot": "hand",
    "source": "상점, 보물상자",
    "tags": [
     "defense"
@@ -932,7 +962,6 @@ const GAME_DATA = {
    "note": "",
    "price": 100,
    "rarity": "uncommon",
-   "slot": "",
    "source": "상점, 보물상자",
    "memo": [],
    "tags": []
@@ -944,7 +973,6 @@ const GAME_DATA = {
    "note": "",
    "price": 50,
    "rarity": "common",
-   "slot": "hand",
    "source": "상점, 보물상자",
    "tags": [
     "attack"
@@ -958,7 +986,6 @@ const GAME_DATA = {
    "note": "",
    "price": 50,
    "rarity": "common",
-   "slot": "waist",
    "source": "상점, 보물상자",
    "memo": [],
    "tags": []
