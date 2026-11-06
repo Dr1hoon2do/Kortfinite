@@ -53,7 +53,7 @@ async function main() {
                       "card/CardText.js", "card/CardDef.js", "card/CardEffects.js", "card/defs/ActionCards.js", "card/Card.js", "card/CardKit.js",
                       "card/Gear.js", "card/Spell.js", "card/Gem.js", "card/DrawRule.js",
                       // data: 카드 공방에서 내보낸 카드·적 (GameData) + 그 동작 (CardImpl · EnemyImpl)
-                      "data/GameData.js", "data/CardImpl.js", "data/EquipImpl.js", "data/EnemyImpl.js",
+                      "data/GameData.js", "data/CardImpl.js", "data/EquipImpl.js", "data/CharImpl.js", "data/EnemyImpl.js",
                       // run: 지도 · 방 · 런
                       "run/RunMap.js", "run/RoomGen.js", "run/Run.js",
                       // ui
@@ -68,6 +68,7 @@ async function main() {
   console.log("Scripts Loaded");
   GameContent.load(); // 공방 카드 등록
   EquipContent.load();  // 공방 장비 등록 (아이콘 시트에 같이 들어간다)
+  Chars.load();         // 공방 캐릭터 (스탯·시작 덱·능력)
   EnemyData.load();   // 공방 적 등록
   CardKit.buildIcons(); // 카드 아이콘 시트 "kicons"
   Debug.opacity = Settings.get("debugAlpha"); // 시작 화면부터 설정대로 (기본 0%: 숨김)
@@ -102,8 +103,13 @@ function startGame(App, meta) {
   MessageLog.lines = [];
 
   // 행동 패 4장 · 인벤토리 패 4장 (장비로 늘어난다). 새 런은 시작 덱(기본이동 3, 기본공격 3)을 덱에 든다
-  const player = new Player(0, 0, { cards: { rules: [] } });
-  if (!meta.save) player.cards.giveStarter();
+  // 캐릭터: 새 런은 고른 캐릭터(meta.character), 이어하기는 저장본의 캐릭터. 스탯·마나·기력·패 크기·시작 골드는 캐릭터가 정한다
+  const ch = Chars.get(meta.character ?? (meta.save && meta.save.player ? meta.save.player.char : null));
+  const player = new Player(0, 0, { character: ch, cards: { rules: [], actionHand: ch.actionHand, invHand: ch.invHand } });
+  if (!meta.save) {
+    player.cards.giveStarter(Chars.deckOf(ch));
+    for (const m of ch.equipment) player.cards.addToHand(new Card(m.id)); // 시작 장비 (자동으로 장착)
+  }
   const playerObject = new GameObject("player");
   playerObject.addComponent(player);
   App.add(playerObject);

@@ -8,22 +8,26 @@ class Player extends Entity {
     static current = null;     // 카드 설명(피해 수치 등)이 보는 플레이어
 
     // options.cards: CardSystem 옵션 { actionHand, invHand, rules }
+    // options.character: 캐릭터 (Chars.get) — 기본 능력치·마나·기력을 정한다
     constructor(x, y, options = {}) {
+        const ch = options.character ?? Chars.get(null);
         super(x, y, "player", {
             type: "player", name: "당신",
-            stats: { maxHp: Player.BASE_HP, attack: Player.BASE_ATTACK, defense: Player.BASE_DEFENSE },
+            stats: { maxHp: ch.hp, attack: ch.atk, defense: ch.def },
             tags: ["creature", "human", "player"]
         });
         Player.current = this;
+        this.char = ch;           // 캐릭터 (공방 데이터)
+        this.charId = ch.id;
         this.kills = 0;
-        this.money = options.money ?? 50;
+        this.money = options.money ?? ch.gold;
         // 마나: 주문 비용. 저절로 차지 않는다 — 방에 들어갈 때 조금, 마나 물약, 명상, 모닥불로 찬다
-        this.maxMana = Player.MAX_MANA;
+        this.maxMana = ch.mana;
         this.mana = this.maxMana;
         // 기력: 행동 카드 비용. 턴이 지날 때마다 가득 찬다
-        this.maxEnergy = Player.MAX_ENERGY;
+        this.maxEnergy = ch.energy;
         this.energy = this.maxEnergy;
-        this.speed = Player.BASE_SPEED;
+        this.speed = ch.speed;
         // 방어도: [{ v: 남은 양, t: 남은 턴 }]. 따로 세고, 곧 끝나는 것부터 깎인다
         this.blocks = [];
         // 쉼: 남은 턴 동안 카드를 뽑지 못한다 (주문 비용 "쉼 n")
@@ -66,7 +70,7 @@ class Player extends Entity {
     // 영구히 능력치 올리기
     addPerm(key, n) {
         this.perm[key] = (this.perm[key] ?? 0) + n;
-        if (key === "maxMana") this.maxMana = Player.MAX_MANA + this.perm.maxMana;
+        if (key === "maxMana") this.maxMana = this.char.mana + this.perm.maxMana;
         if (key === "maxHp") this.stats.hp += n;
         this.statsChanged();
     }
@@ -179,10 +183,10 @@ class Player extends Entity {
         if (this._gearVersion === key) return;
         this._gearVersion = key;
         const pm = this.perm ?? {};
-        this.stats.attack = Player.BASE_ATTACK + this.gear("attack") + (pm.attack ?? 0) + Status.get(this, "str");
-        const def = Player.BASE_DEFENSE + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
+        this.stats.attack = this.char.atk + this.gear("attack") + (pm.attack ?? 0) + Status.get(this, "str");
+        const def = this.char.def + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
         this.stats.defense = Math.floor(def * (100 + this.gear("defensePct")) / 100 + 1e-9); // 방어력 % 증가는 버림
-        this.speed = Player.BASE_SPEED + this.gear("speed") + (pm.speed ?? 0); // 둔화는 Status.speed가 따로 반영한다
+        this.speed = this.char.speed + this.gear("speed") + (pm.speed ?? 0); // 둔화는 Status.speed가 따로 반영한다
         const max = this.baseMaxHp + this.gear("maxHp") + (pm.maxHp ?? 0) + Status.get(this, "growth");
         if (max !== this.stats.maxHp) {
             this.stats.maxHp = max;
@@ -192,7 +196,7 @@ class Player extends Entity {
 
     // 최대 체력 (모닥불·보상으로 오른다. 장비 보너스는 빼고)
     get baseMaxHp() {
-        return this._baseMaxHp ?? Player.BASE_HP;
+        return this._baseMaxHp ?? this.char.hp;
     }
 
     set baseMaxHp(v) {
@@ -312,7 +316,7 @@ class Player extends Entity {
 
     save() {
         return {
-            hp: this.stats.hp, maxHp: this.baseMaxHp, money: this.money, kills: this.kills, mana: this.mana, perm: this.perm,
+            char: this.charId, hp: this.stats.hp, maxHp: this.baseMaxHp, money: this.money, kills: this.kills, mana: this.mana, perm: this.perm,
             cards: this.cards.save(), mats: this.mats
         };
     }
@@ -324,8 +328,8 @@ class Player extends Entity {
         this.cards.load(data.cards);
         this.mats = data.mats ?? {};
         this.perm = data.perm ?? {};
-        this.maxMana = Player.MAX_MANA + (this.perm.maxMana ?? 0);
-        this.baseMaxHp = data.maxHp ?? Player.BASE_HP;
+        this.maxMana = this.char.mana + (this.perm.maxMana ?? 0);
+        this.baseMaxHp = data.maxHp ?? this.char.hp;
         this.stats.hp = Math.min(data.hp, this.stats.maxHp);
     }
 }

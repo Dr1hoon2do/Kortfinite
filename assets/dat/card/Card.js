@@ -603,9 +603,10 @@ class CardSystem {
         return false;
     }
 
-    // 시작 덱 넣기 (새 런)
-    giveStarter() {
-        for (const card of CardSystem.starterDeck()) this.deck.push(card);
+    // 시작 덱 넣기 (새 런). list: [[카드 id, 장수]] (없으면 기본 시작 덱)
+    giveStarter(list = null) {
+        if (list) for (const [id, n] of list) for (let i = 0; i < n; i++) this.deck.push(new Card(id));
+        else for (const card of CardSystem.starterDeck()) this.deck.push(card);
         this.shuffle(this.deck);
         this._changed();
     }

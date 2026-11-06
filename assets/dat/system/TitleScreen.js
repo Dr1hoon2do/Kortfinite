@@ -99,7 +99,7 @@ class TitleScreen extends Component {
         const srt = sub.getComponent(RectTransform);
         srt.setAnchor(0, 0, 1, 0);
         srt.setOffsets(0, 80, 0, -100);
-        sub.addComponent(new UIText("카드로 싸우며 15층을 내려가 우두머리를 쓰러뜨려라", { fontSize: 12, color: UIKit.COLORS.dim }));
+        sub.addComponent(new UIText("카드로 싸우며 던전을 탐색해 층마다 우두머리를 쓰러뜨려라", { fontSize: 12, color: UIKit.COLORS.dim }));
 
         this.box = bgrt.createChild("menu");
         const box = this.box.getComponent(RectTransform);
@@ -113,8 +113,8 @@ class TitleScreen extends Component {
         this.inspector = this.gameObject.addComponent(new CardInspector({ engine: this.engine }));
         this.codex = this.gameObject.addComponent(new Codex({ engine: this.engine }));
         this.help = UIKit.label(box, "help", [
-            "· 지도에서 다음 방(전투·정예·상점·휴식·보물)을 골라 내려간다",
-            "· 방은 입구 → 공간 → 출구. 적을 모두 쓰러뜨리면 출구가 열린다",
+            "· 층은 방들의 지도. 시작 방에서 출발해 갈 방(전투·정예·상점·휴식·보물)을 골라 탐색한다",
+            "· 우두머리 방을 찾아 쓰러뜨리면 다음 층으로 내려간다 (남은 방을 더 둘러봐도 된다)",
             "· 모든 행동은 카드로 한다. 카드 쓰기는 턴이 안 들고 기력을 쓴다",
             "· [드로우]·[대기]만 턴이 지나고, 그때 적이 움직인다",
             "· 이기면 카드 3장 중 하나를 덱에 넣는다. 쓰러지면 런이 끝난다"
@@ -134,8 +134,7 @@ class TitleScreen extends Component {
 
     savedFloor() {
         const s = this.saved;
-        if (s.pending) return Number(s.pending.split(",")[0]) + 1; // 들어갔다가 못 끝낸 방
-        return s.current ? Number(s.current.split(",")[0]) + 2 : 1; // 다음에 고를 층
+        return s.floorNo ?? 1;
     }
 
     ui(name) {
@@ -145,19 +144,37 @@ class TitleScreen extends Component {
     }
 
     buildCreateDialog() {
-        const { root, box } = Modal.create(this.engine, "newRun", 320, 236, () => Modal.show(this.createDialog, false));
+        // 캐릭터 고르기 (공방 데이터의 캐릭터들) → 시드 → 디버그
+        const chars = Chars.list;
+        const perRow = 3;
+        const rows = Math.ceil(chars.length / perRow);
+        const pickH = rows * 32;
+        const dy = pickH + 126; // 캐릭터 고르는 칸과 설명이 차지하는 높이
+        const { root, box } = Modal.create(this.engine, "newRun", 320, 236 + dy, () => Modal.show(this.createDialog, false));
         this.objects.push(root);
         this.createDialog = root;
         UIKit.label(box, "title", "새 런", 14, 12, null, 18, { fontSize: 14, fontWeight: "bold", color: UIKit.COLORS.gold });
         this.warn = UIKit.label(box, "warn", "", 14, 32, null, 14, { fontSize: 10, color: "#f0a070" });
-        UIKit.label(box, "seedLabel", "시드 (비우면 무작위, 숫자나 글자)", 14, 52, null, 14, { fontSize: 11, color: "#c8b890" });
+        UIKit.label(box, "charLabel", "캐릭터", 14, 50, null, 14, { fontSize: 11, color: "#c8b890" });
+        this.charId = chars[0].id;
+        this.charButtons = chars.map((c, i) => {
+            const b = UIKit.button(box, "char " + c.id, c.name, () => this.pickChar(c.id), { fontSize: 12 });
+            const col = i % perRow;
+            b.rt.setAnchor(col / perRow, 0, (col + 1) / perRow, 0);
+            b.rt.setOffsets(col === 0 ? 14 : 3, 66 + Math.floor(i / perRow) * 32, col === perRow - 1 || i === chars.length - 1 ? 14 : 3, -(66 + Math.floor(i / perRow) * 32 + 28));
+            b.charId = c.id;
+            return b;
+        });
+        this.charInfo = UIKit.label(box, "charInfo", "", 14, 70 + pickH, null, 110, { fontSize: 11, color: "#d8c8a0", wrap: true, lineHeight: 1.35 });
+        UIKit.label(box, "seedLabel", "시드 (비우면 무작위, 숫자나 글자)", 14, 52 + dy, null, 14, { fontSize: 11, color: "#c8b890" });
         const seed = box.createChild("seed");
-        UIKit.place(seed, 14, 68, null, 32);
+        UIKit.place(seed, 14, 68 + dy, null, 32);
         this.seedField = seed.addComponent(new TextField({ engine: this.engine, placeholder: "무작위", maxLength: 24 }));
-        UIKit.label(box, "debugLabel", "디버그 명령 (/give, /summon, /floor …)", 14, 112, null, 14, { fontSize: 11, color: "#c8b890" });
+        UIKit.label(box, "debugLabel", "디버그 명령 (/give, /summon, /floor …)", 14, 112 + dy, null, 14, { fontSize: 11, color: "#c8b890" });
         this.debugOn = false;
         this.debugButton = UIKit.button(box, "debug", "끔", () => this.setDebug(!this.debugOn), { fontSize: 12 });
-        UIKit.place(this.debugButton.go, 14, 128, 80, 28);
+        UIKit.place(this.debugButton.go, 14, 128 + dy, 80, 28);
+        this.pickChar(this.charId);
 
         const ok = UIKit.button(box, "ok", "시작", () => this.create(), { fontSize: 13 });
         ok.rt.setAnchor(0, 1, 0.5, 1);
@@ -165,6 +182,22 @@ class TitleScreen extends Component {
         const cancel = UIKit.button(box, "cancel", "취소", () => Modal.show(this.createDialog, false), { fontSize: 13 });
         cancel.rt.setAnchor(0.5, 1, 1, 1);
         cancel.rt.setOffsets(3, -50, 14, 14);
+    }
+
+    // 캐릭터를 고르면 설명(특징·스탯·능력·시작 덱·장비)을 보여 준다
+    pickChar(id) {
+        this.charId = id;
+        const c = Chars.get(id);
+        for (const b of this.charButtons) b.rect.color = b.charId === id ? UIKit.COLORS.buttonOn : UIKit.COLORS.button;
+        const deck = Chars.deckOf(c).reduce((n, [, k]) => n + k, 0);
+        const gear = c.equipment.map((m) => CardDef.get(m.id).name).join(", ");
+        this.charInfo.setText([
+            c.trait,
+            `체력 ${c.hp} · 공격 ${c.atk} · 방어 ${c.def} · 이동 ${c.speed}`,
+            `마나 ${c.mana} · 기력 ${c.energy} · 패 ${c.actionHand}/${c.invHand} · ${c.gold} G`,
+            c.ability ? `능력: ${c.ability}` : "",
+            `시작 덱 ${deck}장${gear ? " · 장비 " + gear : ""}`
+        ].filter(Boolean).join("\n"));
     }
 
     setDebug(on) {
@@ -176,6 +209,7 @@ class TitleScreen extends Component {
     showCreate() {
         this.seedField.value = "";
         this.setDebug(false);
+        this.pickChar(this.charId);
         this.warn.setText(this.saved ? "이어 하던 런은 지워진다" : "");
         Modal.show(this.createDialog, true);
     }
@@ -183,7 +217,7 @@ class TitleScreen extends Component {
     create() {
         const seed = RunStore.seedFrom(this.seedField.value);
         RunStore.clear();
-        this.finish({ seed, debug: this.debugOn, save: null });
+        this.finish({ seed, debug: this.debugOn, save: null, character: this.charId });
     }
 
     resume() {

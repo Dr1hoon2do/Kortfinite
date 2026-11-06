@@ -3,7 +3,7 @@
 쓰는 법: python3 tools/import_data.py 내보낸파일.json [변환한파일.json]
 비용은 costs 목록(비용의 경우들)으로 맞춘다. 옛 형식 cost {energy:1, mana:1}은 자원마다 한 경우로 쪼갠다 (기력 1짜리 · 마나 1짜리).
 두 번째 인자를 주면 변환한 JSON도 따로 저장한다 (카드 공방 가져오기용).
-새 카드·적 id가 생기면 알려 준다 (그 id의 동작은 data/CardImpl.js / data/EnemyImpl.js에 짜 넣어야 한다)."""
+새 카드·적·장비·캐릭터 능력 id가 생기면 (캐릭터는 능력 글이 있을 때) 알려 준다 (그 id의 동작은 data/CardImpl.js / data/EnemyImpl.js에 짜 넣어야 한다)."""
 import json, re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 src = pathlib.Path(sys.argv[1])
@@ -19,12 +19,13 @@ for c in d.get("cards", []):
 if len(sys.argv) > 2: pathlib.Path(sys.argv[2]).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for k in ("cards", "materials", "enemies", "tags"):
     assert k in d, "없는 항목: " + k
+d.setdefault("characters", [])  # 공방의 캐릭터 탭 (없으면 게임이 기본 캐릭터로 시작)
 head = "// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적·재료가 바뀐다.\n// 갈아 끼우는 법: python3 tools/import_data.py 내보낸파일.json\n"
 (root / "assets/dat/data/GameData.js").write_text(head + "const GAME_DATA = " + json.dumps(d, ensure_ascii=False, indent=1) + ";\n", encoding="utf-8")
-impl = "".join((root / "assets/dat/data" / f).read_text(encoding="utf-8") for f in ("CardImpl.js", "EquipImpl.js", "EnemyImpl.js"))
+impl = "".join((root / "assets/dat/data" / f).read_text(encoding="utf-8") for f in ("CardImpl.js", "EquipImpl.js", "CharImpl.js", "EnemyImpl.js"))
 def known(kind, i): return re.search(r'\b' + re.escape(i) + r'\b', impl) is not None
-missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("장비", q["id"]) for q in d.get("equipment", []) if not known("equip", q["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])]
-print("카드 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
+missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("장비", q["id"]) for q in d.get("equipment", []) if not known("equip", q["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])] + [("캐릭터 능력", c["id"]) for c in d["characters"] if (c.get("ability") or "").strip() and not known("char", c["id"])]
+print("카드 %d · 캐릭터 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d["characters"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
 if missing:
     print("동작이 아직 없는 것 (CardImpl.js / EquipImpl.js / EnemyImpl.js에 추가 필요):")
     for k, i in missing: print("  -", k, i)
