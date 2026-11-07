@@ -24,12 +24,6 @@ o += ["", "### 강화(변형)", "", "| 카드 | 강화 | 이름 | 강화 전 | �
 for c in D["cards"]:
     for u in c.get("upgrades", []):
         o.append("| %s | %s | %s | %s | %s | %s | %s | %s |" % (c["id"], u["key"], u["name"], u.get("from", "default"), cost(u.get("costs")), cell(u.get("effect")), ", ".join("%s×%s" % (mat.get(m["id"], m["id"]), m.get("count", 1)) for m in u.get("materials", [])) or "-", tags(u.get("tags"))))
-chars = D.get("characters", [])
-o += ["", "### 캐릭터 (%d명)" % len(chars), "", "새 런을 시작할 때 고른다 (공방 '캐릭터' 탭). 능력의 동작은 `data/CharImpl.js`의 `CHARS`.", "",
-      "| id | 이름 | 체력 | 공격 | 방어 | 이동 | 마나 | 기력 | 패 | 골드 | 시작 덱 | 시작 장비 | 능력 |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-for c in chars:
-    o.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s/%s | %s | %s | %s | %s |" % (c["id"], c["name"], c.get("hp"), c.get("atk"), c.get("def"), c.get("speed"), c.get("mana"), c.get("energy"), c.get("actionHand"), c.get("invHand"), c.get("gold"),
-        ", ".join("%s×%s" % (m["id"], m.get("count", 1)) for m in c.get("deck", [])) or "기본 덱", ", ".join(m["id"] for m in c.get("equipment", [])) or "-", cell(c.get("ability"))))
 o += ["", "## 2. 적 (%d종)" % len(D["enemies"]), "", "| id | 이름 | 층 | 체력 | 공격 | 방어 | 이동 | 드랍 | 패턴 |", "|---|---|---|---|---|---|---|---|---|"]
 for e in D["enemies"]:
     o.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], e.get("floors", ""), e.get("hp"), e.get("atk"), e.get("def"), e.get("speed"), ", ".join("%s×%s(%s%%)" % (mat.get(d["id"], d["id"]), d.get("count", 1), d.get("chance", 100)) for d in e.get("drops", [])) or "-", cell(e.get("pattern"))))

@@ -5,29 +5,27 @@ class Player extends Entity {
     static BASE_SPEED = 3;     // 이동속도: [기본이동] 한 장으로 걷는 칸 수
     static MAX_ENERGY = 3;     // 기력: 행동 카드 비용. 턴이 지날 때마다 가득 찬다
     static MAX_MANA = 20;
+    // 기본 능력치 (캐릭터는 하나뿐)
+    static BASE = { hp: 40, atk: 5, def: 5, speed: 3, mana: 20, energy: 3, gold: 50 };
     static current = null;     // 카드 설명(피해 수치 등)이 보는 플레이어
 
     // options.cards: CardSystem 옵션 { actionHand, invHand, rules }
-    // options.character: 캐릭터 (Chars.get) — 기본 능력치·마나·기력을 정한다
     constructor(x, y, options = {}) {
-        const ch = options.character ?? Chars.get(null);
         super(x, y, "player", {
             type: "player", name: "당신",
-            stats: { maxHp: ch.hp, attack: ch.atk, defense: ch.def },
+            stats: { maxHp: Player.BASE.hp, attack: Player.BASE.atk, defense: Player.BASE.def },
             tags: ["creature", "human", "player"]
         });
         Player.current = this;
-        this.char = ch;           // 캐릭터 (공방 데이터)
-        this.charId = ch.id;
         this.kills = 0;
-        this.money = options.money ?? ch.gold;
+        this.money = options.money ?? Player.BASE.gold;
         // 마나: 주문 비용. 저절로 차지 않는다 — 방에 들어갈 때 조금, 마나 물약, 명상, 모닥불로 찬다
-        this.maxMana = ch.mana;
+        this.maxMana = Player.BASE.mana;
         this.mana = this.maxMana;
         // 기력: 행동 카드 비용. 턴이 지날 때마다 가득 찬다
-        this.maxEnergy = ch.energy;
+        this.maxEnergy = Player.BASE.energy;
         this.energy = this.maxEnergy;
-        this.speed = ch.speed;
+        this.speed = Player.BASE.speed;
         // 방어도: [{ v: 남은 양, t: 남은 턴 }]. 따로 세고, 곧 끝나는 것부터 깎인다
         this.blocks = [];
         // 쉼: 남은 턴 동안 카드를 뽑지 못한다 (주문 비용 "쉼 n")
@@ -70,7 +68,7 @@ class Player extends Entity {
     // 영구히 능력치 올리기
     addPerm(key, n) {
         this.perm[key] = (this.perm[key] ?? 0) + n;
-        if (key === "maxMana") this.maxMana = this.char.mana + this.perm.maxMana;
+        if (key === "maxMana") this.maxMana = Player.BASE.mana + this.perm.maxMana;
         if (key === "maxHp") this.stats.hp += n;
         this.statsChanged();
     }
@@ -183,10 +181,10 @@ class Player extends Entity {
         if (this._gearVersion === key) return;
         this._gearVersion = key;
         const pm = this.perm ?? {};
-        this.stats.attack = this.char.atk + this.gear("attack") + (pm.attack ?? 0) + Status.get(this, "str");
-        const def = this.char.def + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
+        this.stats.attack = Player.BASE.atk + this.gear("attack") + (pm.attack ?? 0) + Status.get(this, "str");
+        const def = Player.BASE.def + this.gear("defense") + (pm.defense ?? 0) + Status.get(this, "harden");
         this.stats.defense = Math.floor(def * (100 + this.gear("defensePct")) / 100 + 1e-9); // 방어력 % 증가는 버림
-        this.speed = this.char.speed + this.gear("speed") + (pm.speed ?? 0); // 둔화는 Status.speed가 따로 반영한다
+        this.speed = Player.BASE.speed + this.gear("speed") + (pm.speed ?? 0); // 둔화는 Status.speed가 따로 반영한다
         const max = this.baseMaxHp + this.gear("maxHp") + (pm.maxHp ?? 0) + Status.get(this, "growth");
         if (max !== this.stats.maxHp) {
             this.stats.maxHp = max;
@@ -196,7 +194,7 @@ class Player extends Entity {
 
     // 최대 체력 (모닥불·보상으로 오른다. 장비 보너스는 빼고)
     get baseMaxHp() {
-        return this._baseMaxHp ?? this.char.hp;
+        return this._baseMaxHp ?? Player.BASE.hp;
     }
 
     set baseMaxHp(v) {
@@ -316,7 +314,7 @@ class Player extends Entity {
 
     save() {
         return {
-            char: this.charId, hp: this.stats.hp, maxHp: this.baseMaxHp, money: this.money, kills: this.kills, mana: this.mana, perm: this.perm,
+            hp: this.stats.hp, maxHp: this.baseMaxHp, money: this.money, kills: this.kills, mana: this.mana, perm: this.perm,
             cards: this.cards.save(), mats: this.mats
         };
     }
@@ -328,8 +326,8 @@ class Player extends Entity {
         this.cards.load(data.cards);
         this.mats = data.mats ?? {};
         this.perm = data.perm ?? {};
-        this.maxMana = this.char.mana + (this.perm.maxMana ?? 0);
-        this.baseMaxHp = data.maxHp ?? this.char.hp;
+        this.maxMana = Player.BASE.mana + (this.perm.maxMana ?? 0);
+        this.baseMaxHp = data.maxHp ?? Player.BASE.hp;
         this.stats.hp = Math.min(data.hp, this.stats.maxHp);
     }
 }

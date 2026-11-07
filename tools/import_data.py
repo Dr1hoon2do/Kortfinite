@@ -19,13 +19,13 @@ for c in d.get("cards", []):
 if len(sys.argv) > 2: pathlib.Path(sys.argv[2]).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for k in ("cards", "materials", "enemies", "tags"):
     assert k in d, "없는 항목: " + k
-d.setdefault("characters", [])  # 공방의 캐릭터 탭 (없으면 게임이 기본 캐릭터로 시작)
+d.pop("characters", None)  # 캐릭터 시스템은 없다 (옛 내보내기 파일에 있으면 버린다)
 head = "// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적·재료가 바뀐다.\n// 갈아 끼우는 법: python3 tools/import_data.py 내보낸파일.json\n"
 (root / "assets/dat/data/GameData.js").write_text(head + "const GAME_DATA = " + json.dumps(d, ensure_ascii=False, indent=1) + ";\n", encoding="utf-8")
-impl = "".join((root / "assets/dat/data" / f).read_text(encoding="utf-8") for f in ("CardImpl.js", "EquipImpl.js", "CharImpl.js", "EnemyImpl.js"))
+impl = "".join((root / "assets/dat/data" / f).read_text(encoding="utf-8") for f in ("CardImpl.js", "EquipImpl.js", "EnemyImpl.js"))
 def known(kind, i): return re.search(r'\b' + re.escape(i) + r'\b', impl) is not None
-missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("장비", q["id"]) for q in d.get("equipment", []) if not known("equip", q["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])] + [("캐릭터 능력", c["id"]) for c in d["characters"] if (c.get("ability") or "").strip() and not known("char", c["id"])]
-print("카드 %d · 캐릭터 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d["characters"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
+missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("장비", q["id"]) for q in d.get("equipment", []) if not known("equip", q["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])]
+print("카드 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
 if missing:
     print("동작이 아직 없는 것 (CardImpl.js / EquipImpl.js / EnemyImpl.js에 추가 필요):")
     for k, i in missing: print("  -", k, i)

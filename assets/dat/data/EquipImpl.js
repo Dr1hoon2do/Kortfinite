@@ -58,8 +58,7 @@ class Equip {
     static active(player) {
         const p = player ?? Player.current;
         if (!p || !p.cards) return [];
-        const own = CHARS[p.charId]; // 캐릭터 능력은 늘 켜져 있다 (data/CharImpl.js)
-        return [...(own ? [own] : []), ...p.cards.equippedCards.map((c) => EQUIP[c.defId]).filter(Boolean)];
+        return [...p.cards.equippedCards.map((c) => EQUIP[c.defId]).filter(Boolean)];
     }
 
     // 내 주변 3x3 칸 중 빈 칸 하나에 동전을 떨어뜨린다 (구부러진 동전)
