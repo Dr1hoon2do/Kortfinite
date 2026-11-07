@@ -237,8 +237,8 @@ class TitleScreen extends Component {
     // 화면 크기에 맞춰 배치
     update() {
         const scale = this.engine.uiRoot.scale;
-        const w = Math.min(360, this.engine.width / scale - 24);
-        const h = this.engine.height / scale;
+        const w = Math.min(360, this.engine.canvas.width / scale - 24);
+        const h = this.engine.canvas.height / scale;
         if (w === this._w && h === this._h) return;
         this._w = w;
         this._h = h;

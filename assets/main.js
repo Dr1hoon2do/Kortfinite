@@ -73,7 +73,10 @@ async function main() {
   CardKit.buildIcons(); // 카드 아이콘 시트 "kicons"
   Debug.opacity = Settings.get("debugAlpha"); // 시작 화면부터 설정대로 (기본 0%: 숨김)
 
-  const App = new Engine({ canvas: "#game" });
+  // 화면 배율(devicePixelRatio)만큼 해상도를 높여서 그린다: CSS 픽셀 크기로 그리고 브라우저가 소수 배로 늘리면(폰은 2.625배 같은 값)
+  // 도트 크기가 들쭉날쭉 깨진다. 기기 픽셀 그대로 그리고 카메라 배율을 정수로 맞춘다 (Run.fitCamera)
+  const pr = Math.min(window.devicePixelRatio || 1, 3);
+  const App = new Engine({ canvas: "#game", pixelRatio: pr, uiScale: pr }); // UI 1단위 = CSS 픽셀 1개 (기기 픽셀 pr개)
   App.camera.zoom = 1;
   App.start();
   window.App = App;

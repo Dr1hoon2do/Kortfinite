@@ -9,7 +9,7 @@ class SidePanel extends Component {
 
     // 좁은 화면(세로 폰)이면 버튼 5개가 체력바와 겹친다: 다섯 번째(slot 4)는 둘째 줄로 내리고 패널은 그만큼 아래에서 시작
     static twoRows(engine) {
-        const w = engine.width / engine.uiRoot.scale;
+        const w = engine.canvas.width / engine.uiRoot.scale;
         return w < 16 + SidePanel.SLOTS * (SidePanel.BUTTON + 8) + 110 + 24;
     }
 

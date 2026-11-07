@@ -207,7 +207,7 @@ class MapScreen extends Component {
             this.refresh();
         }
         if (this.mode === "view" && Input.getButtonDown("cancel") && !(this.equipDialog && this.equipDialog.isOpen)) return this.close();
-        const screen = Math.round(this.engine.width / this.engine.uiRoot.scale);
+        const screen = Math.round(this.engine.canvas.width / this.engine.uiRoot.scale);
         const side = Math.max(8, Math.floor((screen - 560) / 2));
         if (side !== this._side) {
             this._side = side;

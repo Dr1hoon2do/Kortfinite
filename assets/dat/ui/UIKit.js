@@ -150,8 +150,8 @@ class Modal {
     // 상자 크기를 화면에 맞춘다 (UI 단위)
     static fit(engine, boxRT, width, height, margin = 12) {
         const scale = engine.uiRoot.scale;
-        const w = Math.min(width, engine.width / scale - margin * 2);
-        const h = Math.min(height, engine.height / scale - margin * 2);
+        const w = Math.min(width, engine.canvas.width / scale - margin * 2);
+        const h = Math.min(height, engine.canvas.height / scale - margin * 2);
         boxRT.setSizeAndPosition(w, h, 0, 0);
         return { width: w, height: h };
     }

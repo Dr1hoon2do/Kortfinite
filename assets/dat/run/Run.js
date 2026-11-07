@@ -360,7 +360,11 @@ class Run extends Component {
         const roomW = (this.plan.w + 2) * t;
         const roomH = (this.plan.h + 2) * t;
         const avail = Math.max(H * 0.35, H - top - bottom);
-        const z = Math.max(0.5, Math.min(W / roomW, avail / roomH) * 0.96);
+        // 도트가 깨지지 않게 배율은 정수(화면 픽셀 기준)로 내린다. 방이 한 배에도 안 들어가는 아주 작은 화면만 소수 배율
+        const fit = Math.min(W / roomW, avail / roomH);
+        const whole = Math.floor(fit);
+        // (정수로 내리면 방이 70%도 안 차는 낮은 해상도 화면은 어쩔 수 없이 소수 배율)
+        const z = whole >= 1 && whole / fit >= 0.7 ? whole : Math.max(0.5, fit * 0.96);
         Camera.main.setPixelZoom(z);
         const cx = (this.plan.w + 1) * t / 2;
         const cy = (this.plan.h + 1) * t / 2;

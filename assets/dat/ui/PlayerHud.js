@@ -47,7 +47,7 @@ class PlayerHud extends Component {
     }
 
     get logWidth() {
-        const screen = this.engine.width / this.engine.uiRoot.scale;
+        const screen = this.engine.canvas.width / this.engine.uiRoot.scale;
         // 버튼이 두 줄인 좁은 화면은 둘째 줄 버튼(의뢰) 자리를 비운다
         // 오른쪽 위 버튼 줄과 같은 높이에 있으면 버튼 왼쪽까지만, 버튼 줄 아래로 내려갔으면 화면 끝까지
         const beside = this.logY < SidePanel.BUTTON + 16 + 4;
@@ -259,7 +259,7 @@ class PlayerHud extends Component {
 
     // 한 줄에 놓을 수 있는 아이콘 수
     chipCap() {
-        const screen = this.engine.width / this.engine.uiRoot.scale;
+        const screen = this.engine.canvas.width / this.engine.uiRoot.scale;
         return Math.max(4, Math.min(PlayerHud.CHIPS, Math.floor((screen - 24 + 3) / (PlayerHud.CHIP_W + 3))));
     }
 
@@ -275,7 +275,7 @@ class PlayerHud extends Component {
     //   버튼은 오른쪽 끝에서 4개(48 + 틈 8) 높이 16~64. 그 왼쪽 빈 폭(leftZone) 안에 돈·층을 한 줄로 놓을 수 있으면 한 줄,
     //   모자라면 돈 아래에 층을 놓는다. 메시지는 빈 폭이 넉넉하면 버튼 옆(위쪽), 아니면 버튼 줄 아래로 내려간다.
     fitWidth() {
-        const screen = this.engine.width / this.engine.uiRoot.scale;
+        const screen = this.engine.canvas.width / this.engine.uiRoot.scale;
         const n = SidePanel.twoRows(this.engine) ? 4 : SidePanel.SLOTS;
         const buttons = 16 + n * SidePanel.BUTTON + (n - 1) * 8;
         const zone = Math.max(60, Math.floor(screen - buttons - 8 - 16)); // x=16 부터 쓸 수 있는 폭

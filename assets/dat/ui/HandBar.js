@@ -209,7 +209,7 @@ class HandBar extends Component {
         this.refreshTabs();
         if (this.targeting.active && this.targeting.card && this.targeting.card !== this.selected) this.selected = this.targeting.card;
 
-        const width = Math.round(this.engine.width / this.engine.uiRoot.scale);
+        const width = Math.round(this.engine.canvas.width / this.engine.uiRoot.scale);
         const key = c.version + ":" + width + ":" + this.mode;
         if (key !== this._key) {
             this._key = key;
@@ -310,7 +310,7 @@ class HandBar extends Component {
 
     // 카드 자리: 가운데 정렬, 폭이 모자라면 겹친다
     layout() {
-        const width = this.engine.width / this.engine.uiRoot.scale - HandBar.TAB_W;
+        const width = this.engine.canvas.width / this.engine.uiRoot.scale - HandBar.TAB_W;
         const n = this.views.length;
         if (!n) return;
         const w = HandBar.CARD_W;

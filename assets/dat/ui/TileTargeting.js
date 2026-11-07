@@ -92,8 +92,8 @@ class TileTargeting extends Component {
     // 기본 자리 (아래 패 위 가운데) + 끌어 옮긴 양. 화면 밖으로는 못 나가게
     placeBanner() {
         const scale = this.engine.uiRoot.scale;
-        const W = this.engine.width / scale;
-        const H = this.engine.height / scale;
+        const W = this.engine.canvas.width / scale;
+        const H = this.engine.canvas.height / scale;
         const w = this._bw, h = this._bh;
         const baseY = -(HandBar.HEIGHT + 4 + h / 2);
         const maxX = Math.max(0, (W - w) / 2);
@@ -120,7 +120,7 @@ class TileTargeting extends Component {
         // 카드면 설명과 [묘지로] 버튼
         const card = this.request.card;
         this.discardButton.go.setActive(!!card);
-        const width = this.engine.width / this.engine.uiRoot.scale;
+        const width = this.engine.canvas.width / this.engine.uiRoot.scale;
         const w = card ? Math.min(320, width - 24) : 260;
         let lines = 0;
         let termLines = 0;

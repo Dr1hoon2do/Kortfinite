@@ -128,8 +128,8 @@ class CardInspector extends Component {
         const card = want.card;
         const def = card.def;
         const scale = this.engine.uiRoot.scale;
-        const screenW = this.engine.width / scale;
-        const screenH = this.engine.height / scale;
+        const screenW = this.engine.canvas.width / scale;
+        const screenH = this.engine.canvas.height / scale;
         const W = Math.min(CardInspector.W, screenW - 16);
         const pad = 12;
         const text = card.text(want.verbose);

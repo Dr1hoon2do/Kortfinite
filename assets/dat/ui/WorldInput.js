@@ -108,7 +108,10 @@ class WorldInput extends Component {
     zoomBy(factor, screenPoint) {
         this._zoomTween?.stop();
         this._zoomTween = null;
-        this.zoomTo(Camera.main.effectiveZoom * factor, screenPoint);
+        // 배율은 정수로 맞춰 그리므로, 작은 휠 한 칸이 반올림에 먹히지 않게 실수 배율을 따로 이어 간다
+        const eff = Camera.main.effectiveZoom;
+        const base = this._zf !== undefined && Math.round(this._zf) === eff ? this._zf : eff;
+        this.zoomTo(base * factor, screenPoint);
     }
 
     // 키로 한 단계씩 줌: 0.15초 동안 부드럽게. 연달아 누르면 목표에서 이어서 곱한다
@@ -129,7 +132,10 @@ class WorldInput extends Component {
     // 배율을 바꾼다. 추적이 꺼져 있으면 screenPoint 아래 월드 지점이 그 자리에 남도록 카메라를 옮긴다.
     zoomTo(level, screenPoint) {
         const cam = Camera.main;
-        const next = Math.min(Math.max(level, this.minZoom), this.maxZoom);
+        const clamped = Math.min(Math.max(level, this.minZoom), this.maxZoom);
+        this._zf = clamped;
+        // 도트가 깨지지 않게 1배 이상은 정수 배율로만 (소수 배율이면 도트 크기가 들쭉날쭉해진다)
+        const next = clamped >= 1 ? Math.max(1, Math.round(clamped)) : clamped;
         if (next === cam.effectiveZoom) return;
 
         const anchor = cam.screenToWorld(screenPoint.x, screenPoint.y);
