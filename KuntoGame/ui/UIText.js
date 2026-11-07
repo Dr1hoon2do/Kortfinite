@@ -38,6 +38,31 @@ class UIText extends Renderer {
     return null;
   }
 
+  // 도트 글꼴(Galmuri 9·11·14)은 원래 크기의 정수 배일 때만 또렷하다. 원하는 크기(화면 픽셀)에 가장 가까운 정수 배 크기로 맞춘다
+  static FACES = [{ family: 'Galmuri11', n: 11 }, { family: 'Galmuri14', n: 14 }, { family: 'Galmuri9', n: 9 }];
+
+  static snap(px) {
+    if (!(px > 0)) return px;
+    let best = null;
+    for (const f of UIText.FACES) {
+      const k = Math.max(1, Math.round(px / f.n));
+      const size = f.n * k;
+      const err = Math.abs(size - px) / px;
+      if (!best || err < best.err - 1e-9) best = { size, err };
+    }
+    return best.size;
+  }
+
+  // 그 크기(snap 한 값)에 맞는 글꼴 이름: 그 크기를 정수 배로 갖는 도트 글꼴
+  static family(size) {
+    for (const f of UIText.FACES) if (size % f.n === 0) return f.family;
+    return UIText.FACES[0].family;
+  }
+
+  static font(size, weight = 'normal', fallback = 'monospace') {
+    return `${weight} ${size}px ${UIText.family(size)}, ${fallback}`;
+  }
+
   // 게임이 정하는 색 표 (키 → 색). 없으면 기본 글자색
   static colorOf = (key, palette) => null;
   static MARK = /\[\[(\w+):([^\]]*)\]\]/g;
@@ -66,10 +91,10 @@ class UIText extends Renderer {
 
     const r = rt.rect;
     const scale = rt.uiRoot ? rt.uiRoot.scale : 1;
-    const size = this.fontSize * scale;
+    const size = UIText.snap(this.fontSize * scale);
     if (size <= 0) return;
 
-    ctx.font = `${this.fontWeight} ${size}px ${this.fontFamily}`;
+    ctx.font = UIText.font(size, this.fontWeight, this.fontFamily);
     const lines = this.wrap ? this._wrapLines(ctx, r.width) : [this.text];
     const step = size * this.lineHeight;
     const blockHeight = step * (lines.length - 1);
@@ -148,8 +173,8 @@ class UIText extends Renderer {
   _richLines(ctx, size, maxWidth) {
     const key = this.text + '\u0000' + Math.round(maxWidth) + '\u0000' + size + '\u0000' + this.fontFamily + this.fontWeight + this.palette;
     if (key === this._wrapKey) return this._lines;
-    const normal = `${this.fontWeight} ${size}px ${this.fontFamily}`;
-    const bold = `bold ${size}px ${this.fontFamily}`;
+    const normal = UIText.font(size, this.fontWeight, this.fontFamily);
+    const bold = UIText.font(size, 'bold', this.fontFamily);
     const measure = (t, b) => {
       ctx.font = b ? bold : normal;
       return ctx.measureText(t).width;
@@ -213,7 +238,7 @@ class UIText extends Renderer {
     if (!rt) return;
     const r = rt.rect;
     const scale = rt.uiRoot ? rt.uiRoot.scale : 1;
-    const size = this.fontSize * scale;
+    const size = UIText.snap(this.fontSize * scale);
     if (size <= 0) return;
     const lines = this._richLines(ctx, size, r.width);
     const step = size * this.lineHeight;
@@ -234,7 +259,7 @@ class UIText extends Renderer {
       else if (this.align === 'right') x = r.x + r.width - lw;
       const ly = y + step * i;
       for (const q of line) {
-        ctx.font = `${q.bold ? 'bold' : this.fontWeight} ${size}px ${this.fontFamily}`;
+        ctx.font = UIText.font(size, q.bold ? 'bold' : this.fontWeight, this.fontFamily);
         ctx.fillStyle = q.color ?? this.color;
         ctx.fillText(q.text, this.pixelSnap ? Math.round(x) : x, this.pixelSnap ? Math.round(ly) : ly);
         x += q.w;
@@ -247,9 +272,9 @@ class UIText extends Renderer {
   measureLines(ctx, width) {
     const rt = this.getComponent(RectTransform);
     const scale = rt && rt.uiRoot ? rt.uiRoot.scale : 1;
-    const size = this.fontSize * scale;
+    const size = UIText.snap(this.fontSize * scale);
     if (this.rich) return this._richLines(ctx, size, width * scale).length;
-    ctx.font = `${this.fontWeight} ${size}px ${this.fontFamily}`;
+    ctx.font = UIText.font(size, this.fontWeight, this.fontFamily);
     const t = this.text;
     if (t.includes('[[')) this.text = UIText.strip(t);
     const n = this._wrapLines(ctx, width * scale).length;

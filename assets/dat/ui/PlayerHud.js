@@ -15,8 +15,7 @@ class PlayerHud extends Component {
     static wrap(text, width, scale = 1) {
         if (!PlayerHud._measure) PlayerHud._measure = document.createElement("canvas").getContext("2d");
         const g = PlayerHud._measure;
-        const family = typeof Config !== "undefined" && Config.fontFamily ? Config.fontFamily : "monospace";
-        g.font = `normal ${PlayerHud.LOG_FONT * scale}px ${family}`;
+        g.font = UIText.font(UIText.snap(PlayerHud.LOG_FONT * scale), "normal"); // 실제로 그려지는 도트 글꼴 크기와 같게
         width *= scale;
         const lines = [];
         let line = "";

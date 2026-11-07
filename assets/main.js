@@ -73,6 +73,11 @@ async function main() {
   CardKit.buildIcons(); // 카드 아이콘 시트 "kicons"
   Debug.opacity = Settings.get("debugAlpha"); // 시작 화면부터 설정대로 (기본 0%: 숨김)
 
+  // 도트 글꼴을 미리 불러 둔다 (안 불러진 채 그리면 기본 글꼴로 그려진다). 실패해도 기본 글꼴로 계속한다
+  try {
+    await Promise.all(["9px Galmuri9", "11px Galmuri11", "bold 11px Galmuri11", "14px Galmuri14"].map((f) => document.fonts.load(f, "가나다ABC123")));
+  } catch (e) { console.warn("글꼴을 못 불러왔다", e); }
+
   // 화면 배율(devicePixelRatio)만큼 해상도를 높여서 그린다: CSS 픽셀 크기로 그리고 브라우저가 소수 배로 늘리면(폰은 2.625배 같은 값)
   // 도트 크기가 들쭉날쭉 깨진다. 기기 픽셀 그대로 그리고 카메라 배율을 정수로 맞춘다 (Run.fitCamera)
   const pr = Math.min(window.devicePixelRatio || 1, 3);

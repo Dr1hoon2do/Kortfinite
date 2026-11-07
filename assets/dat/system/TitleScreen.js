@@ -22,7 +22,7 @@ class TextField extends Component {
         Object.assign(el.style, {
             position: "fixed", boxSizing: "border-box", margin: "0", padding: "0 8px",
             border: "1px solid #5a4a3a", borderRadius: "0", outline: "none",
-            background: "#2a231e", color: "#e8d9b8", font: "13px monospace",
+            background: "#2a231e", color: "#e8d9b8", font: "13px Galmuri11, monospace",
             display: "none", zIndex: "10", userSelect: "text", webkitUserSelect: "text"
         });
         el.addEventListener("focus", () => (el.style.borderColor = "#e8b840"));
