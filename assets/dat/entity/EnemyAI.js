@@ -711,13 +711,7 @@ class IntentOverlay extends Renderer {
             if (it === undefined) it = e.ai.plan({ world: room, player: p, turn: 0 });
             if (!it || !it.tiles) continue;
             const color = it.kind === "charge" ? IntentOverlay.RUSH : it.kind === "web" ? "#e8e8f0" : it.color ?? "#e04030";
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.18 + 0.17 * pulse;
-            for (const [x, y] of it.tiles) ctx.fillRect(x * t - t / 2, y * t - t / 2, t, t);
-            ctx.globalAlpha = 0.85;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = px * 2;
-            for (const [x, y] of it.tiles) ctx.strokeRect(x * t - t / 2 + 1, y * t - t / 2 + 1, t - 2, t - 2);
+            this.marks(ctx, e, it, color, t, px, pulse);
         }
         // 움직임 화살표는 칸 표시 위에
         for (const e of enemies) {
@@ -730,6 +724,68 @@ class IntentOverlay extends Renderer {
             this.arrow(ctx, pts, t, px, v.rush, !!v.hit, v.jump);
         }
         ctx.globalAlpha = 1;
+    }
+
+    // 맞는 칸 표시: 어두운 바깥선 + 밝은 선 + 빗금 + 피해 숫자, 던지는 공격은 던지는 선도 그린다 (바닥색과 비슷해도 눈에 띄게)
+    marks(ctx, e, it, color, t, px, pulse) {
+        const half = t / 2;
+        for (const [x, y] of it.tiles) {
+            const l = x * t - half, b = y * t - half;
+            ctx.globalAlpha = 0.28 + 0.22 * pulse;
+            ctx.fillStyle = color;
+            ctx.fillRect(l, b, t, t);
+            // 빗금
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(l, b, t, t);
+            ctx.clip();
+            ctx.globalAlpha = 0.55;
+            ctx.strokeStyle = "#140c08";
+            ctx.lineWidth = px * 2;
+            ctx.beginPath();
+            for (let k = -t; k < t * 2; k += t / 4) { ctx.moveTo(l + k, b); ctx.lineTo(l + k + t, b + t); }
+            ctx.stroke();
+            ctx.restore();
+            // 바깥선(어둡게) + 안쪽선(밝게)
+            ctx.globalAlpha = 0.95;
+            ctx.strokeStyle = "#140c08";
+            ctx.lineWidth = px * 4;
+            ctx.strokeRect(l + px * 2, b + px * 2, t - px * 4, t - px * 4);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = px * 2;
+            ctx.strokeRect(l + px * 2, b + px * 2, t - px * 4, t - px * 4);
+            if (it.kind !== "area") continue; // 돌진·도약 칸에는 숫자를 안 붙인다
+            // 피해 숫자 (없으면 느낌표)
+            const label = it.dmg ? String(it.dmg) : "!";
+            ctx.save();
+            ctx.translate(x * t, y * t);
+            ctx.scale(1, -1); // 월드 y는 위로 자란다
+            const fs = Math.max(t * 0.42, px * 9);
+            ctx.font = UIText.font(fs, "bold", "monospace");
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = px * 3;
+            ctx.strokeStyle = "#140c08";
+            ctx.strokeText(label, 0, 0);
+            ctx.fillStyle = "#fff4d8";
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        }
+        // 던지는 선: 적에서 맞는 칸들로
+        if (it.thrown) {
+            ctx.globalAlpha = 0.8;
+            ctx.setLineDash([px * 5, px * 4]);
+            ctx.lineWidth = px * 2;
+            ctx.strokeStyle = color;
+            for (const [x, y] of it.tiles) {
+                ctx.beginPath();
+                ctx.moveTo(e.x * t, e.y * t);
+                ctx.lineTo(x * t, y * t);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+        }
     }
 
     // pts: 월드 좌표 점들 (첫 점 = 적). 끝은 화살촉. hit면 끝 칸 가장자리에서 멈춘다
