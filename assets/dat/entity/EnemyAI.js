@@ -42,14 +42,20 @@ class EnemyAI extends HostileAI {
             this.intent = { kind: "stunned" };
             return this.intent;
         }
+        this.intent = this.choose(ctx);
+        // 우두머리는 세 턴에 한 번 한 턴에 두 번 움직인다. 둘째 행동도 미리 정해 같이 보여 준다 (그 턴에 그대로 한다)
+        if (e.rank === "boss" && (this.step + 1) % Monster.BOSS_DOUBLE_EVERY === 0) this.intent = { ...this.intent, double: true, next: this.choose(ctx) };
+        return this.intent;
+    }
+
+    // 행동 하나 고르기 (intent를 바꾸지 않는다)
+    choose(ctx) {
+        const e = this.entity;
         const foe = this.focus(ctx);
         let intent = null;
         if (this.spec.rotations) intent = EnemyMoves.rotate(this, this.spec, ctx, e, foe);
         else if (this.spec.brain) intent = this.spec.brain(this, ctx, e, foe);
-        this.intent = intent ?? { kind: "approach", pct: 100, stat: "atk" };
-        // 우두머리는 세 턴에 한 번 한 턴에 두 번 움직인다 (둘째 행동은 첫째가 끝난 뒤 다시 정한다)
-        if (e.rank === "boss" && !this._second) this.intent = { ...this.intent, double: (this.step + 1) % Monster.BOSS_DOUBLE_EVERY === 0 };
-        return this.intent;
+        return intent ?? { kind: "approach", pct: 100, stat: "atk" };
     }
 
     // 정해 둔 의도를 한다. { anims, hitPlayer }
@@ -66,10 +72,8 @@ class EnemyAI extends HostileAI {
         else if (intent) {
             r = EnemyMoves.run(this, ctx, turns, intent);
             if (intent.double && e.alive && ctx.player.alive) {
-                // 한 턴에 두 번: 지금 상황에서 다음 행동을 정해 바로 한다
-                this._second = true;
-                const next = this.plan(ctx);
-                this._second = false;
+                // 한 턴에 두 번: 미리 보여 준 둘째 행동을 바로 한다
+                const next = intent.next ?? this.choose(ctx);
                 this.intent = null;
                 if (next && next.kind !== "stunned") {
                     MessageLog.add(`${josa(e.displayName, "이가")} 연달아 움직인다!`, "#f0a060");
@@ -613,14 +617,17 @@ class EnemyMoves {
     // 머리 위 표시 { kind: 아이콘, v: 숫자, double: 한 턴에 두 번 }
     static view(ai, p) {
         const v = EnemyMoves._view(ai, p);
-        if (v && ai.intent && ai.intent.double) v.double = true;
+        if (v && ai.intent && ai.intent.double) {
+            v.double = true;
+            if (ai.intent.next) v.second = EnemyMoves._view(ai, p, ai.intent.next);
+        }
         return v;
     }
 
-    static _view(ai, p) {
+    static _view(ai, p, given = null) {
         const e = ai.entity;
-        let it = ai.intent;
-        if (it === undefined && e.world) it = ai.plan({ world: e.world, player: p, turn: 0 });
+        let it = given ?? ai.intent;
+        if (!given && it === undefined && e.world) it = ai.plan({ world: e.world, player: p, turn: 0 });
         if (!it) return null;
         switch (it.kind) {
             case "approach": {
@@ -674,7 +681,9 @@ class EnemyMoves {
             idle: () => "쉰다: 이번 턴은 아무것도 안 한다",
             stunned: () => "기절: 이번 턴은 아무것도 못 한다"
         }[it.kind];
-        return `${head} · ${it.double ? "[이번 턴 두 번 움직인다] " : ""}${text ? text() : ""}`;
+        let second = "";
+        if (it.double && it.next) { const sv = EnemyMoves._view(ai, p, it.next); second = sv ? ` → 이어서 ${sv.name ?? Intent.STYLE[sv.kind]?.label ?? ""}${sv.v !== undefined ? " " + sv.v : ""}` : ""; }
+        return `${head} · ${it.double ? "[이번 턴 두 번 움직인다] " : ""}${text ? text() : ""}${second}`;
     }
 }
 
@@ -712,6 +721,7 @@ class IntentOverlay extends Renderer {
             if (!it || !it.tiles) continue;
             const color = it.kind === "charge" ? IntentOverlay.RUSH : it.kind === "web" ? "#e8e8f0" : it.color ?? "#e04030";
             this.marks(ctx, e, it, color, t, px, pulse);
+            if (it.double && it.next && it.next.tiles) this.marks(ctx, e, it.next, it.next.color ?? "#e04030", t, px, pulse, "2");
         }
         // 움직임 화살표는 칸 표시 위에
         for (const e of enemies) {
@@ -723,11 +733,30 @@ class IntentOverlay extends Renderer {
             if (pts.length < 2) continue;
             this.arrow(ctx, pts, t, px, v.rush, !!v.hit, v.jump);
         }
+        // 둘째 행동이 돌진·도약이면 점선으로 길을 보여 준다 (칸 표시는 위에서 이미 그렸다)
+        for (const e of enemies) {
+            const n = e.ai.intent && e.ai.intent.double ? e.ai.intent.next : null;
+            if (!n) continue;
+            const pts = n.kind === "rush" ? n.pathTiles : n.kind === "charge" ? n.tiles : n.kind === "leap" && n.to ? [[n.to.x, n.to.y]] : null;
+            if (!pts || !pts.length) continue;
+            ctx.globalAlpha = 0.9;
+            ctx.strokeStyle = IntentOverlay.RUSH;
+            ctx.lineWidth = px * 2;
+            ctx.setLineDash([px * 5, px * 4]);
+            ctx.beginPath();
+            ctx.moveTo(e.x * t, e.y * t);
+            for (const [x, y] of pts) ctx.lineTo(x * t, y * t);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            const [lx, ly] = pts[pts.length - 1];
+            ctx.fillStyle = IntentOverlay.RUSH;
+            ctx.fillRect(lx * t - t * 0.15, ly * t - t * 0.15, t * 0.3, t * 0.3);
+        }
         ctx.globalAlpha = 1;
     }
 
     // 맞는 칸 표시: 어두운 바깥선 + 밝은 선 + 빗금 + 피해 숫자, 던지는 공격은 던지는 선도 그린다 (바닥색과 비슷해도 눈에 띄게)
-    marks(ctx, e, it, color, t, px, pulse) {
+    marks(ctx, e, it, color, t, px, pulse, tag = "") {
         const half = t / 2;
         for (const [x, y] of it.tiles) {
             const l = x * t - half, b = y * t - half;
@@ -756,7 +785,7 @@ class IntentOverlay extends Renderer {
             ctx.strokeRect(l + px * 2, b + px * 2, t - px * 4, t - px * 4);
             if (it.kind !== "area") continue; // 돌진·도약 칸에는 숫자를 안 붙인다
             // 피해 숫자 (없으면 느낌표)
-            const label = it.dmg ? String(it.dmg) : "!";
+            const label = (tag ? tag + "·" : "") + (it.dmg ? String(it.dmg) : "!");
             ctx.save();
             ctx.translate(x * t, y * t);
             ctx.scale(1, -1); // 월드 y는 위로 자란다
