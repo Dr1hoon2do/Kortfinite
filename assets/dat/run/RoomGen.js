@@ -155,9 +155,15 @@ class RoomPlan {
         } else if (this.type === "boss") {
             const lead = Rng.pick(rng, RoomPlan.leadPool(floor, ["boss", "large", "medium", "small"]));
             const bigBoss = ((Monster.KINDS[lead.id] && Monster.KINDS[lead.id].size) || 1) > 1;
-            const bossAt = bigBoss ? place(lead.id) : { x: this.w - 2, y: center.y };
+            const fixed = { x: this.w - 2, y: center.y };
+            // 우두머리는 오른쪽 가운데. 기둥이 있거나 큰 몸이면 비어 있는 자리를 찾는다
+            const bossAt = bigBoss || this.isWall(fixed.x, fixed.y) ? place(lead.id) : fixed;
             this.spawns.push({ type: lead.id, ...bossAt, data: { lv, rank: "boss" } });
-            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2, ["small"], 0)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === bossAt.x && p.y === bossAt.y)).pop(), data: { lv } });
+            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2, ["small"], 0)) {
+                // 곁의 적은 서로·우두머리와 겹치지 않는 자리에 (뽑은 자리는 목록에서 뺀다)
+                const i = right.findLastIndex((q) => !(q.x === bossAt.x && q.y === bossAt.y));
+                if (i >= 0) this.spawns.push({ type: m, ...right.splice(i, 1)[0], data: { lv } });
+            }
         } else if (this.type === "shop") {
             const stock = RoomPlan.rollStock(rng, this.node.row);
             stock.forEach((offer, i) => { offer.sold = !!(this.state.sold && this.state.sold.includes(i)); }); // 이미 산 물건

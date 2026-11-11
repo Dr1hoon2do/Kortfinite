@@ -67,9 +67,12 @@ class Entity extends Component {
 
     // 두 엔티티 사이 칸 거리 (맨해튼, 차지한 칸 가운데 가장 가까운 두 칸 사이). 붙어 있으면 1
     static gap(a, b) {
-        if (a.size === 1 && b.size === 1) return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        // 그냥 {x, y}인 것(칸 목록 등)은 한 칸짜리로 본다
+        const ta = a.tilesOf ? a.tilesOf() : [[a.x, a.y]];
+        const tb = b.tilesOf ? b.tilesOf() : [[b.x, b.y]];
+        if (ta.length === 1 && tb.length === 1) return Math.abs(ta[0][0] - tb[0][0]) + Math.abs(ta[0][1] - tb[0][1]);
         let best = Infinity;
-        for (const [ax, ay] of a.tilesOf()) for (const [bx, by] of b.tilesOf()) best = Math.min(best, Math.abs(ax - bx) + Math.abs(ay - by));
+        for (const [ax, ay] of ta) for (const [bx, by] of tb) best = Math.min(best, Math.abs(ax - bx) + Math.abs(ay - by));
         return best;
     }
 
