@@ -335,16 +335,3 @@ DebugConsole.register("pos", {
     }
 });
 
-DebugConsole.register("mat", {
-    args: "<재료> [수]", aliases: ["material"],
-    help: "재료 지급 (id나 이름). 인자가 없으면 가진 재료와 종류를 보여 준다",
-    run(ctx, [q, n]) {
-        const all = [...GameContent.materials.values()];
-        if (!q) return `가진 재료: ${Object.entries(ctx.player.mats).map(([id, c]) => `${GameContent.materials.get(id)?.name ?? id} ${c}`).join(", ") || "없음"}\n종류: ${all.map((m) => `${m.id}(${m.name})`).join(" ")}`;
-        const m = all.find((x) => x.id === q || x.name === q);
-        if (!m) return `그런 재료가 없다: ${q}`;
-        const count = Math.max(1, Math.min(99, DebugConsole.int(n, 1)));
-        ctx.player.addMat(m.id, count);
-        return `${m.name} ×${count} 지급`;
-    }
-});

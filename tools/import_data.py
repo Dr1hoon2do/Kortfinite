@@ -17,15 +17,19 @@ for c in d.get("cards", []):
     fix_costs(c)
     for u in c.get("upgrades", []): fix_costs(u)
 if len(sys.argv) > 2: pathlib.Path(sys.argv[2]).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-for k in ("cards", "materials", "enemies", "tags"):
+for k in ("cards", "enemies", "tags"):
     assert k in d, "없는 항목: " + k
+d.pop("materials", None)  # 재료는 없다 (옛 내보내기 파일에 있으면 버린다)
+for e in d["enemies"]: e.pop("drops", None)
+for c in d["cards"]:
+    for u in c.get("upgrades", []): u.pop("materials", None)
 d.pop("characters", None)  # 캐릭터 시스템은 없다 (옛 내보내기 파일에 있으면 버린다)
-head = "// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적·재료가 바뀐다.\n// 갈아 끼우는 법: python3 tools/import_data.py 내보낸파일.json\n"
+head = "// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적이 바뀐다.\n// 갈아 끼우는 법: python3 tools/import_data.py 내보낸파일.json\n"
 (root / "assets/dat/data/GameData.js").write_text(head + "const GAME_DATA = " + json.dumps(d, ensure_ascii=False, indent=1) + ";\n", encoding="utf-8")
 impl = "".join((root / "assets/dat/data" / f).read_text(encoding="utf-8") for f in ("CardImpl.js", "EquipImpl.js", "EnemyImpl.js"))
 def known(kind, i): return re.search(r'\b' + re.escape(i) + r'\b', impl) is not None
 missing = [("카드", c["id"]) for c in d["cards"] if not known("card", c["id"])] + [("장비", q["id"]) for q in d.get("equipment", []) if not known("equip", q["id"])] + [("적", e["id"]) for e in d["enemies"] if not known("enemy", e["id"])]
-print("카드 %d · 장비 %d · 재료 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d.get("equipment", [])), len(d["materials"]), len(d["enemies"]), len(d["tags"])))
+print("카드 %d · 장비 %d · 적 %d · 태그 %d" % (len(d["cards"]), len(d.get("equipment", [])), len(d["enemies"]), len(d["tags"])))
 if missing:
     print("동작이 아직 없는 것 (CardImpl.js / EquipImpl.js / EnemyImpl.js에 추가 필요):")
     for k, i in missing: print("  -", k, i)

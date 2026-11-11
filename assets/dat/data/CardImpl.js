@@ -441,6 +441,9 @@ const CARDS = {
         short: () => `${CK.spd(CardOps.spd(PL(), 50) + 3)}장 뽑기 (패 제한 무시)`
     },
 
+    // 점액: 상태이상 카드 (슬라임킹이 패에 끼워 넣는다). 쓸 수 없다 — 패 칸만 차지하고, 버리면 묘지로 간다
+    slime: { icon: "drop", color: "#7cd47c" },
+
     // 투척용 단검: 나이프 홀스터가 준다 (임시 카드 — 쓰거나 전투가 끝나면 사라진다)
     throwing_knife: {
         icon: "dagger", color: "#c8c8d8",
@@ -552,10 +555,10 @@ const CARDS = {
 
     roll: {
         icon: "swirl", color: "#7cc4e8",
-        // 이동속도 50% + 1 (초록은 +1 없음)
-        target: (c) => ({ range: CardOps.spd(PL(), 50) + (c?.def?.cleanse ? 0 : 1), radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
+        // 이동속도 50% + 1
+        target: (c) => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
         use(ctx) {
-            const steps = CardOps.walk(ctx, CardOps.spd(ctx.user, 50) + (ctx.card.def.cleanse ? 0 : 1));
+            const steps = CardOps.walk(ctx, CardOps.spd(ctx.user, 50) + 1);
             if (!steps) return null;
             steps.push([...CardOps.draw(ctx, 1 + CardOps.spd(ctx.user, 25))]);
             if (ctx.card.def.cleanse && Status.cleanse(ctx.user, 1)) {
@@ -564,7 +567,7 @@ const CARDS = {
             }
             return steps;
         },
-        short: (c) => `${CK.spd(CardOps.spd(PL(), 50) + (c.def.cleanse ? 0 : 1))}칸 이동 · ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
+        short: (c) => `${CK.spd(CardOps.spd(PL(), 50) + 1)}칸 이동 · ${CK.spd(1 + CardOps.spd(PL(), 25))}장 뽑기${c.def.cleanse ? " · 정화" : ""}`
     },
 
     shield: {
@@ -736,7 +739,6 @@ const VARIANTS = {
 // ---------- 데이터 → 카드 정의 ----------
 class GameContent {
     static cards = new Map();    // id → 데이터 카드
-    static materials = new Map();
     static tagNames = new Map();
     static starter = [];         // [[id, n]]
     static iconSeq = 0;
@@ -789,7 +791,7 @@ class GameContent {
             name: data.name, cost, costs, price: Math.floor(30 + 14 * total), tags: data.tags ?? [], effect: data.effect ?? "",
             exhaust: !!impl.exhaust, grudge: impl.grudge ?? null, picker: impl.picker ?? null,
             ...impl, ...extra,
-            text: () => GameContent.render(data.effect) + (extra.upgradeMats?.length ? `\n(강화 재료: ${GameContent.matsText(extra.upgradeMats)})` : ""),
+            text: () => GameContent.render(data.effect),
             short: (card) => (impl.short ? impl.short(card) : GameContent.render(data.effect).split("\n")[0]),
             target: impl.target ? (card) => impl.target.call(card.def, card) : null
         };
@@ -799,13 +801,8 @@ class GameContent {
         CardKit.list.push(CardDef.get(defId));
     }
 
-    static matsText(list) {
-        return list.map((m) => `${GameContent.materials.get(m.id)?.name ?? m.id} ×${m.count ?? 1}`).join(", ");
-    }
-
     static load() {
         const D = GAME_DATA;
-        for (const m of D.materials) GameContent.materials.set(m.id, m);
         for (const t of D.tags) GameContent.tagNames.set(t.id, t.name);
         CardDef.upgrades = new Map(); // 기본 카드 id → [변형 defId]
         for (const c of D.cards) {
@@ -820,7 +817,7 @@ class GameContent {
                 const over = VARIANTS[c.id]?.[u.key] ?? {};
                 const color = VC[u.key] ?? impl.color;
                 GameContent.register(`${c.id}__${u.key}`, u, { ...impl, ...over, icon: impl.icon }, {
-                    base: c.id, upgradeKey: u.key, upgradeFrom: u.from ?? "default", upgradeMats: u.materials ?? [], color, kind: "upgrade"
+                    base: c.id, upgradeKey: u.key, upgradeFrom: u.from ?? "default", color, kind: "upgrade"
                 });
                 if (!CardDef.upgrades.has(c.id)) CardDef.upgrades.set(c.id, []);
                 CardDef.upgrades.get(c.id).push(`${c.id}__${u.key}`);

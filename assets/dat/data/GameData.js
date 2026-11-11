@@ -1,4 +1,4 @@
-// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적·재료가 바뀐다.
+// 카드 공방에서 내보낸 데이터. 이 파일만 갈아 끼우면 카드·적이 바뀐다.
 // 갈아 끼우는 법: python3 tools/import_data.py 내보낸파일.json
 const GAME_DATA = {
  "version": 1,
@@ -7,6 +7,7 @@ const GAME_DATA = {
    "id": "arrow",
    "effect": "이동속도 거리 내 단일대상 공격력 60% 피해",
    "kind": "reward",
+   "rarity": "common",
    "name": "화살",
    "note": "",
    "tags": [
@@ -22,19 +23,28 @@ const GAME_DATA = {
      "mana": 1
     }
    ],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "blast",
    "effect": "이동속도 거리 내 선택 타일 3x3 영역 대상 공격력 300% 피해",
    "kind": "reward",
+   "rarity": "rare",
    "name": "폭발",
    "note": "",
    "tags": [
     "attack",
     "ranged",
     "area"
+   ],
+   "memo": [],
+   "costs": [
+    {
+     "energy": 3
+    },
+    {
+     "mana": 3
+    }
    ],
    "upgrades": [
     {
@@ -49,7 +59,6 @@ const GAME_DATA = {
       "area",
       "burning"
      ],
-     "materials": [],
      "costs": [
       {
        "energy": 3
@@ -71,7 +80,6 @@ const GAME_DATA = {
       "area",
       "ice"
      ],
-     "materials": [],
      "costs": [
       {
        "energy": 3
@@ -81,17 +89,7 @@ const GAME_DATA = {
       }
      ]
     }
-   ],
-   "memo": [],
-   "costs": [
-    {
-     "energy": 3
-    },
-    {
-     "mana": 3
-    }
-   ],
-   "rarity": "rare"
+   ]
   },
   {
    "id": "blink",
@@ -102,6 +100,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 200% 거리 내 지형과 상관없이 이동",
    "kind": "reward",
+   "rarity": "rare",
    "name": "순간이동",
    "note": "",
    "tags": [
@@ -122,17 +121,16 @@ const GAME_DATA = {
      "tags": [
       "move",
       "mana"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "rare"
+   "memo": []
   },
   {
    "id": "card_absorbing",
    "effect": "패를 1장 버리고, 2 + 방어력 10%만큼 마나 회복. 버린 카드가 마나를 사용하는 카드라면, 그 비용의 절반만큼 추가로 회복",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "카드 흡수",
    "note": "",
    "tags": [
@@ -141,13 +139,13 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "card_shield",
    "effect": "카드를 원하는 수만큼 골라 버리고, 방어력 100%*(버린 카드 수 + 1)만큼 방어도 (버린 카드 수 + 1)턴 획득",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "카드 방패",
    "note": "",
    "tags": [
@@ -160,8 +158,7 @@ const GAME_DATA = {
      "energy": 1
     }
    ],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "charge",
@@ -172,19 +169,20 @@ const GAME_DATA = {
    ],
    "effect": "2 + 이동속도 25%만큼 기력 회복",
    "kind": "reward",
+   "rarity": "common",
    "name": "충전",
    "note": "",
    "tags": [
     "energy"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "chocolate",
    "effect": "1장 드로우\n원한: 기력 1 회복",
    "kind": "reward",
+   "rarity": "common",
    "name": "초콜릿",
    "note": "",
    "tags": [
@@ -194,19 +192,21 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "club",
    "costs": [
     {
-     "energy": 2,
+     "energy": 2
+    },
+    {
      "mana": 2
     }
    ],
    "effect": "옆칸 단일 대상 공격력 150% 피해, 기절 1턴 부여",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "몽둥이",
    "note": "",
    "tags": [
@@ -214,8 +214,7 @@ const GAME_DATA = {
     "sturn"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "concentration",
@@ -229,19 +228,20 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 25% + 2만큼 드로우",
    "kind": "reward",
+   "rarity": "common",
    "name": "집중",
    "note": "",
    "tags": [
     "draw"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "dash",
    "effect": "이동속도 50% + 1 거리 내 이동",
    "kind": "reward",
+   "rarity": "common",
    "name": "대시",
    "note": "",
    "tags": [
@@ -249,13 +249,13 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "first_aid",
    "effect": "대상의 체력을 방어력 200%만큼 회복한다. 자신에게는 사용할 수 없다.",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "응급처치",
    "note": "",
    "tags": [
@@ -267,13 +267,13 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "food",
    "effect": "최대체력 5%만큼 체력을 회복한다. 사용 후 이번 전투동안 소멸된다.",
    "kind": "reward",
+   "rarity": "common",
    "name": "비상식량",
    "note": "",
    "tags": [
@@ -281,8 +281,7 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "frost",
@@ -296,6 +295,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 1 거리 내에 대상에게 방어력 60% 만큼 빙결 2턴 부여",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "서리",
    "note": "",
    "tags": [
@@ -303,8 +303,7 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "guard",
@@ -318,6 +317,7 @@ const GAME_DATA = {
    ],
    "effect": "방어력 100%만큼 방어도 1턴 획득",
    "kind": "reward",
+   "rarity": "common",
    "name": "방어",
    "note": "",
    "tags": [
@@ -341,8 +341,7 @@ const GAME_DATA = {
      "tags": [
       "attack",
       "defense"
-     ],
-     "materials": []
+     ]
     },
     {
      "costs": [
@@ -360,12 +359,10 @@ const GAME_DATA = {
      "note": "",
      "tags": [
       "defense"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "common"
+   "memo": []
   },
   {
    "id": "harden",
@@ -376,14 +373,14 @@ const GAME_DATA = {
    ],
    "effect": "이번 전투동안 현재 방어력 20%만큼 경질화 부여",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "단단해지기",
    "note": "",
    "tags": [
     "hardening"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "heavy",
@@ -397,6 +394,7 @@ const GAME_DATA = {
    ],
    "effect": "옆칸 단일대상 공격력 250% 피해",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "강타",
    "note": "",
    "tags": [
@@ -422,8 +420,7 @@ const GAME_DATA = {
      "note": "",
      "tags": [
       "attack"
-     ],
-     "materials": []
+     ]
     },
     {
      "costs": [
@@ -445,8 +442,7 @@ const GAME_DATA = {
      "tags": [
       "attack",
       "sturn"
-     ],
-     "materials": []
+     ]
     },
     {
      "costs": [
@@ -468,12 +464,10 @@ const GAME_DATA = {
      "tags": [
       "attack",
       "mana"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "uncommon"
+   "memo": []
   },
   {
    "id": "ignite",
@@ -487,6 +481,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 1 거리 내 대상에게 공격력 60% 만큼 화상 2턴 부여",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "방화",
    "note": "",
    "tags": [
@@ -494,8 +489,7 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "insight",
@@ -509,14 +503,14 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 3만큼 드로우, 행동패 제한을 초과할 수 있다.",
    "kind": "reward",
+   "rarity": "rare",
    "name": "통찰",
    "note": "",
    "tags": [
     "draw"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "rare"
+   "upgrades": []
   },
   {
    "id": "larry",
@@ -525,23 +519,24 @@ const GAME_DATA = {
      "mana": 4
     }
    ],
-   "effect": "자신 옆칸에 아군 해골병사 소환\n(체력: 방어력의 100% + 10, 공격력: 2 + 공격력의 50%, 이동속도: 1, 나머지는 0)\n해골병사: 플레이어 턴 시작시마다 가장 가까운 적에게 이동속도만큼 다가가 공격력 100% 피해, 대상을 도발. (해골병사 스탯을 기준으로)",
+   "effect": "자신 옆칸에 아군 해골병사 소환\n(체력: 방어력의 100% + 10, 공격력: 2 + 공격력의 50%, 이동속도: 1, 나머지는 0)\n해골병사: 플레이어 턴 시작시마다 가장 가까운 적에게 이동속도만큼 다가가 공격력 100% 피해, 대상을 도발.",
    "kind": "reward",
+   "rarity": "rare",
    "name": "해골병사",
    "note": "",
    "tags": [
-    "tag_1",
+    "summon",
     "attack",
     "taunt"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "rare"
+   "upgrades": []
   },
   {
    "id": "lightning_bolt",
    "effect": "현재위치 3x3 영역 대상 공격력 100% 피해 + 기절 1턴 부여",
    "kind": "reward",
+   "rarity": "rare",
    "name": "천둥",
    "note": "",
    "tags": [
@@ -558,13 +553,13 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "upgrades": [],
-   "rarity": "rare"
+   "upgrades": []
   },
   {
    "id": "overload",
    "effect": "2만큼 기력을 얻고, 무기력 2만큼 1턴 부여",
    "kind": "reward",
+   "rarity": "common",
    "name": "과부하",
    "note": "",
    "tags": [
@@ -573,8 +568,7 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "pray",
@@ -585,14 +579,14 @@ const GAME_DATA = {
    ],
    "effect": "덱/묘지에서 카드 1장을 골라 패로 가져옴",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "기도",
    "note": "",
    "tags": [
     "draw"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   },
   {
    "id": "reload",
@@ -603,6 +597,7 @@ const GAME_DATA = {
    ],
    "effect": "패를 1장 버리고, 2장 + 이동속도 25%만큼 드로우",
    "kind": "reward",
+   "rarity": "common",
    "name": "리로드",
    "note": "",
    "tags": [
@@ -610,8 +605,7 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "rest",
@@ -625,6 +619,7 @@ const GAME_DATA = {
    ],
    "effect": "2 + 방어력의 10%만큼 마나를 회복한다.",
    "kind": "reward",
+   "rarity": "common",
    "name": "휴식",
    "note": "",
    "tags": [
@@ -650,12 +645,10 @@ const GAME_DATA = {
      "note": "",
      "tags": [
       "health"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "common"
+   "memo": []
   },
   {
    "id": "roll",
@@ -669,6 +662,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 1 거리 내 이동, 이동속도 25% + 1만큼 드로우",
    "kind": "reward",
+   "rarity": "common",
    "name": "구르기",
    "note": "",
    "tags": [
@@ -685,7 +679,7 @@ const GAME_DATA = {
        "mana": 1
       }
      ],
-     "effect": "이동속도 50% 거리 내 이동, 이동속도 25% + 1만큼 드로우, 디버프 상태이상 1개 제거",
+     "effect": "이동속도 50% + 1 거리 내 이동, 이동속도 25% + 1만큼 드로우. 디버프 상태이상 1개 제거",
      "from": "default",
      "key": "green",
      "name": "초록 구르기",
@@ -694,12 +688,10 @@ const GAME_DATA = {
       "move",
       "draw",
       "cleanse"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "common"
+   "memo": []
   },
   {
    "id": "shield",
@@ -713,19 +705,20 @@ const GAME_DATA = {
    ],
    "effect": "방어력 200%만큼 방어도 3턴 획득",
    "kind": "reward",
+   "rarity": "common",
    "name": "보호막",
    "note": "",
    "tags": [
     "defense"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "shield_fix",
    "effect": "적용된 모든 방어도에 방어도 30% 증가 + 지속시간 1턴 증가",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "방패고정",
    "note": "",
    "tags": [
@@ -740,13 +733,31 @@ const GAME_DATA = {
      "mana": 1
     }
    ],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
+  },
+  {
+   "id": "slime",
+   "costs": [
+    {
+     "energy": 2
+    }
+   ],
+   "effect": "[묘지로] 사용불가",
+   "kind": "special",
+   "rarity": "common",
+   "name": "점액",
+   "note": "",
+   "tags": [
+    "status_effect_card"
+   ],
+   "memo": [],
+   "upgrades": []
   },
   {
    "id": "sprint",
    "effect": "거리 제한없이 이동, 이동속도 50% + 2만큼 드로우",
    "kind": "reward",
+   "rarity": "rare",
    "name": "전력질주",
    "note": "",
    "tags": [
@@ -762,13 +773,13 @@ const GAME_DATA = {
      "mana": 3
     }
    ],
-   "upgrades": [],
-   "rarity": "rare"
+   "upgrades": []
   },
   {
    "id": "step",
    "effect": "이동속도 거리 이내 이동",
    "kind": "basic",
+   "rarity": "common",
    "name": "이동",
    "note": "",
    "tags": [
@@ -785,7 +796,6 @@ const GAME_DATA = {
       "move",
       "strength"
      ],
-     "materials": [],
      "costs": [
       {
        "energy": 1
@@ -798,13 +808,13 @@ const GAME_DATA = {
     {
      "energy": 1
     }
-   ],
-   "rarity": "common"
+   ]
   },
   {
    "id": "strike",
    "effect": "옆칸 단일대상 공격력 100% 피해",
    "kind": "basic",
+   "rarity": "common",
    "name": "공격",
    "note": "",
    "tags": [
@@ -820,7 +830,6 @@ const GAME_DATA = {
      "tags": [
       "attack"
      ],
-     "materials": [],
      "costs": [
       {
        "energy": 1
@@ -833,13 +842,13 @@ const GAME_DATA = {
     {
      "energy": 1
     }
-   ],
-   "rarity": "common"
+   ]
   },
   {
    "id": "throwing_knife",
    "effect": "이동속도 거리 내 대상 2 피해",
    "kind": "special",
+   "rarity": "common",
    "name": "투척용 단검",
    "note": "나이프 홀스터를 통해 얻는다.",
    "tags": [
@@ -848,8 +857,7 @@ const GAME_DATA = {
    ],
    "memo": [],
    "costs": [],
-   "upgrades": [],
-   "rarity": "common"
+   "upgrades": []
   },
   {
    "id": "totem",
@@ -858,12 +866,13 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "effect": "방어력 200%의 체력을 가진 토템 소환(이동속도 200% 턴동안 지속)\n토템: 토템으로부터 3칸 이내의 적에게 도발 부여",
+   "effect": "방어력 200%의 체력을 가진 토템 소환(이동속도 200% 턴동안 지속)\n토템: 플레이어 턴 종료시, 토템으로부터 3칸 이내의 적에게 도발 부여",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "토템",
    "note": "",
    "tags": [
-    "tag_1",
+    "summon",
     "taunt"
    ],
    "upgrades": [
@@ -885,15 +894,13 @@ const GAME_DATA = {
      "name": "붉은 토템",
      "note": "",
      "tags": [
-      "tag_1",
+      "summon",
       "attack",
       "taunt"
-     ],
-     "materials": []
+     ]
     }
    ],
-   "memo": [],
-   "rarity": "rare"
+   "memo": []
   },
   {
    "id": "zoom_punch",
@@ -905,16 +912,16 @@ const GAME_DATA = {
      "mana": 2
     }
    ],
-   "effect": "옆칸 대상 공격력 50% 피해\n사용시마다 \"줌 펀치\" 카드 피해량이 공격력 50%만큼 증가\n기절한 적에게는 2배의 피해를 준다.",
+   "effect": "옆칸 대상 공격력 50% 피해\n사용시마다 이번 전투동안 \"줌 펀치\" 카드 피해량이 공격력 50%만큼 증가\n기절한 적에게는 2배의 피해를 준다.",
    "kind": "reward",
+   "rarity": "uncommon",
    "name": "줌 펀치",
    "note": "",
    "tags": [
     "attack"
    ],
    "memo": [],
-   "upgrades": [],
-   "rarity": "uncommon"
+   "upgrades": []
   }
  ],
  "equipment": [
@@ -964,7 +971,10 @@ const GAME_DATA = {
    "rarity": "uncommon",
    "source": "상점, 보물상자",
    "memo": [],
-   "tags": []
+   "tags": [
+    "move",
+    "attack"
+   ]
   },
   {
    "id": "rusty_dagger",
@@ -980,6 +990,19 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "sturdy_boots",
+   "effect": "이동속도 +1",
+   "name": "튼튼한 장화",
+   "note": "",
+   "price": 50,
+   "rarity": "common",
+   "source": "상점, 보물상자",
+   "memo": [],
+   "tags": [
+    "move"
+   ]
+  },
+  {
    "id": "tool_belt",
    "effect": "행동패 +1",
    "name": "공구허리띠",
@@ -991,28 +1014,15 @@ const GAME_DATA = {
    "tags": []
   }
  ],
- "materials": [],
  "enemies": [
   {
    "id": "goblin",
    "atk": 5,
    "def": 5,
-   "drops": [
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "leather"
-    },
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "bone"
-    }
-   ],
    "floors": "1-...",
    "hp": 16,
    "name": "고블린",
-   "note": ".",
+   "note": "",
    "pattern": "A. 플레이어와 같은 행 또는 열에 있고 벽으로 막혀있지 않다면, 플레이어를 향해 이동속도의 500%만큼 돌진한다. 부딪힌 대상에게 공격력의 200% 피해\nB. 1턴 쉰다.\nC. A행동이 가능하도록 이동속도 거리 내로 이동한다. 가능한 경우에 다음턴 A행동을 한다.\nA 이후엔 항상 B를 행동한다. C를 반복한다.",
    "speed": 1,
    "tags": [
@@ -1024,18 +1034,6 @@ const GAME_DATA = {
    "id": "mini_stone_golem",
    "atk": 5,
    "def": 8,
-   "drops": [
-    {
-     "chance": 37.5,
-     "count": 1,
-     "id": "stone"
-    },
-    {
-     "chance": 12.5,
-     "count": 1,
-     "id": "mana_stone"
-    }
-   ],
    "floors": "1-...",
    "hp": 12,
    "name": "미니 돌 골렘",
@@ -1051,23 +1049,6 @@ const GAME_DATA = {
    "id": "ogre",
    "atk": 9,
    "def": 6,
-   "drops": [
-    {
-     "chance": 37.5,
-     "count": 1,
-     "id": "leather"
-    },
-    {
-     "chance": 37.5,
-     "count": 1,
-     "id": "bone"
-    },
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "mat_1"
-    }
-   ],
    "floors": "1-...",
    "hp": 32,
    "name": "오우거",
@@ -1084,13 +1065,6 @@ const GAME_DATA = {
    "id": "rat",
    "atk": 3,
    "def": 2,
-   "drops": [
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "leather"
-    }
-   ],
    "floors": "1-...",
    "hp": 8,
    "name": "들쥐",
@@ -1104,13 +1078,6 @@ const GAME_DATA = {
    "id": "skeleton",
    "atk": 5,
    "def": 5,
-   "drops": [
-    {
-     "chance": 50,
-     "count": 1,
-     "id": "bone"
-    }
-   ],
    "floors": "1-...",
    "hp": 12,
    "name": "해골",
@@ -1140,20 +1107,12 @@ const GAME_DATA = {
     "defense",
     "attack"
    ],
-   "memo": [],
-   "drops": []
+   "memo": []
   },
   {
    "id": "slime",
    "atk": 5,
    "def": 5,
-   "drops": [
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "slime"
-    }
-   ],
    "floors": "1-...",
    "hp": 12,
    "name": "슬라임",
@@ -1169,16 +1128,28 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "slime_king",
+   "atk": 8,
+   "def": 7,
+   "floors": "1-...",
+   "hp": 50,
+   "name": "슬라임킹",
+   "note": "2x2의 크기를 가진다.",
+   "pattern": "A. 플레이어가 있는 방향으로 벽에 부딪힐 때까지 돌진, 지나간 자리 그리고 부딪힌 지점 4x4 영역에 점액 장판(3턴 지속)을 남긴다. 돌진 중 충돌시 공격력 200% 피해, 점액 카드를 이동속도 200%만큼 패에 넣는다.\n점액 장판: 이동 중 장판을 밟을 경우 이동이 중지된다. 또한 장판 위에 있으면 둔화 50% 적용\nB. 플레이어 위치, 그 주변 무작위 위치 2곳에 각각 1칸 거리 범위 점액을 던진다. 공격력 100% 피해. 맞으면 둔화(50%, 5턴 지속) 적용, 점액 카드 이동속도 100%만큼 패에 삽입\nC. 플레이어에게 이동속도만큼 다가가거나, 옆칸일 경우 공격력 100% 피해. 공격 성공시 점액 카드 이동속도 100%만큼 패에 삽입\nD. 방어력 100%만큼 방어도를 1턴 얻는다.\nE. 자신의 현재체력 20%에 해당하는 슬라임을 소환한다. 각 스탯은 자신의 각 스탯 50%만큼 부여\n패턴 로테이션은 [ABCDE, ACEBD, ACDEB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
+   "speed": 1,
+   "tags": [
+    "area",
+    "charge",
+    "slowness",
+    "defense",
+    "summon"
+   ],
+   "memo": []
+  },
+  {
    "id": "spider",
    "atk": 3,
    "def": 3,
-   "drops": [
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "string"
-    }
-   ],
    "floors": "1-...",
    "hp": 12,
    "name": "거미",
@@ -1196,18 +1167,6 @@ const GAME_DATA = {
    "id": "stone_golem",
    "atk": 8,
    "def": 12,
-   "drops": [
-    {
-     "chance": 75,
-     "count": 1,
-     "id": "stone"
-    },
-    {
-     "chance": 25,
-     "count": 1,
-     "id": "mana_stone"
-    }
-   ],
    "floors": "1-...",
    "hp": 32,
    "name": "돌 골렘",
@@ -1229,7 +1188,7 @@ const GAME_DATA = {
    "hp": 10,
    "name": "서큐버스",
    "note": "",
-   "pattern": "A. 플레이어에게 이동속도만큼 이동 또는 옆칸인 경우 매료(2) 3턴 부여, 이미 매료상태라면 공격력 100% 피해. 피해를 입혔다면 자신은 방어력 100%만큼 체력회복, 힘 1 부여, 경질화 1 부여, 성장 1 부여.\nB. 방어력 100%만큼 방어도 2턴 획득\n패턴 로테이션은 [AAAB]. 어느 행동부터 시작할지는 무작위 결정",
+   "pattern": "A. 플레이어에게 이동속도만큼 이동 또는 옆칸인 경우 매료(2) 3턴 부여, 이미 자신에 대한 매료상태라면 공격력 100% 피해. 피해를 입혔다면 자신은 방어력 100%만큼 체력회복, 힘 1 부여, 경질화 1 부여, 성장 1 부여.\nB. 방어력 100%만큼 방어도 2턴 획득\n패턴 로테이션은 [AAAB]. 어느 행동부터 시작할지는 무작위 결정",
    "speed": 2,
    "tags": [
     "health",
@@ -1239,25 +1198,12 @@ const GAME_DATA = {
     "charm",
     "growth"
    ],
-   "memo": [],
-   "drops": []
+   "memo": []
   },
   {
    "id": "wolf",
    "atk": 4,
    "def": 3,
-   "drops": [
-    {
-     "chance": 10,
-     "count": 1,
-     "id": "mat_1"
-    },
-    {
-     "chance": 15,
-     "count": 1,
-     "id": "leather"
-    }
-   ],
    "floors": "1-...",
    "hp": 10,
    "name": "늑대",
@@ -1317,7 +1263,7 @@ const GAME_DATA = {
    "id": "charm",
    "color": "pink",
    "name": "매료",
-   "note": "디버프 상태이상 : 시전자로부터 N칸 이상 멀어지도록 이동할 수 없다.",
+   "note": "디버프 상태이상 : 시전자로부터 N칸 이내로만 이동할 수 있다. (N턴)",
    "tags": [
     "charm"
    ],
@@ -1506,6 +1452,16 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "status_effect_card",
+   "color": "violet",
+   "name": "상태이상 카드",
+   "note": "상태이상 카드에 부여되는 태그",
+   "tags": [
+    "status_effect_card"
+   ],
+   "memo": []
+  },
+  {
    "id": "strength",
    "color": "red",
    "name": "힘",
@@ -1526,12 +1482,12 @@ const GAME_DATA = {
    "memo": []
   },
   {
-   "id": "tag_1",
+   "id": "summon",
    "color": "violet",
    "name": "소환",
-   "note": "",
+   "note": "아군이나 설치물을 소환하는 카드 또는 효과에 부여된다.",
    "tags": [
-    "tag_1"
+    "summon"
    ],
    "memo": []
   },

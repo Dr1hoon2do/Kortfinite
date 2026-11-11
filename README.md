@@ -6,7 +6,7 @@ KuntoGame(HTML canvas2d 게임 라이브러리) 위에서 만드는 턴제 그�
 - 배포(GitHub Pages): `tools/build_bundle.py`가 스크립트 94개와 이미지를 `index.html` 하나로 묶어서 올린다 (요청 1번으로 뜬다). 원본은 배포 주소의 `/gamepage.html`에서 그대로 볼 수 있다.
 - `KuntoGame/` — 엔진 (`KuntoGame/API.md`)
 - `assets/dat/` — 게임 스크립트 (`assets/dat/README.md`)
-- `DATA.md` — 카드·적·재료·태그 데이터 표 (자동 생성)
+- `DATA.md` — 카드·적·태그 데이터 표 (자동 생성)
 - `tools/import_data.py` — 카드 공방 내보내기 → `GameData.js`
 - `tools/gen_data_md.py` — `GameData.js` → `DATA.md`
 

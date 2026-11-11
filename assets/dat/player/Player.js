@@ -34,8 +34,6 @@ class Player extends Entity {
         this.status = {};
         // 영구히 오른 능력치 (카드 효과: 처치·방 정리 때 조금씩) { maxHp, attack, defense, maxMana, speed }
         this.perm = {};
-        // 재료: { id: 개수 } — 적이 떨어뜨리고, 카드 강화에 쓴다
-        this.mats = {};
         // 이 방을 정리하면 할 일 (카드 효과 "방을 정리하면 ~"): [{ fx, card }]
         this.onClear = [];
         this._statVer = 0;
@@ -269,15 +267,6 @@ class Player extends Entity {
         CardPicker.open(cfg.title, cfg.cards, cfg.min, cfg.max, (picks) => { this.wantsCard = { card, target, picks }; });
     }
 
-    // 재료 더하기 / 가진 수
-    addMat(id, n = 1) {
-        this.mats[id] = (this.mats[id] ?? 0) + n;
-    }
-
-    matCount(id) {
-        return this.mats[id] ?? 0;
-    }
-
     // 이 카드를 지금 쓸 수 있는가 (비용 + 속박이면 이동 카드는 못 쓴다)
     canUse(card) {
         if (this.root > 0 && card.target && (card.target.walk || card.target.move)) return false;
@@ -315,7 +304,7 @@ class Player extends Entity {
     save() {
         return {
             hp: this.stats.hp, maxHp: this.baseMaxHp, money: this.money, kills: this.kills, mana: this.mana, perm: this.perm,
-            cards: this.cards.save(), mats: this.mats
+            cards: this.cards.save()
         };
     }
 
@@ -324,7 +313,6 @@ class Player extends Entity {
         this.kills = data.kills ?? 0;
         this.mana = data.mana ?? this.maxMana;
         this.cards.load(data.cards);
-        this.mats = data.mats ?? {};
         this.perm = data.perm ?? {};
         this.maxMana = Player.BASE.mana + (this.perm.maxMana ?? 0);
         this.baseMaxHp = data.maxHp ?? Player.BASE.hp;

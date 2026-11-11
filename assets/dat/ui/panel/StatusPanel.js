@@ -14,7 +14,6 @@ class StatusPanel extends SidePanel {
             ["기력", (p) => `${p.energy} / ${p.maxEnergy}${p.drawLock > 0 ? ` · 쉼 ${p.drawLock}턴` : ""}`],
             ["방어도", (p) => p.blocks.length ? p.blocks.map((b) => `${b.v}(${b.t}턴)`).join(" + ") : "0"],
             ["상태", (p) => Status.text(p) || "없음"],
-            ["재료", (p) => Object.entries(p.mats ?? {}).filter(([, v]) => v).map(([k, v]) => `${GameContent.materials.get(k)?.name ?? k} ${v}`).join(", ") || "없음"],
             ["마나", (p) => `${p.mana} / ${p.maxMana}`],
             ["돈", (p) => `${p.money} G`],
             ["처치", (p) => p.kills],

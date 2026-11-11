@@ -2,7 +2,7 @@
 //   쉬기   — 최대 체력의 30%를 회복한다
 //   명상   — 마나를 가득 채운다
 //   정리   — 덱에서 카드 한 장을 아주 없앤다 (공짜)
-//   강화   — 강화할 수 있는 카드 한 장을 골라, 강화 카드로 바꾼다 (재료가 든다. 재료는 적을 잡으면 떨어진다)
+//   강화   — 강화할 수 있는 카드 한 장을 골라, 강화 카드로 바꾼다 (재료 없이 바로 바꾼다)
 // 고르면 모닥불은 다 쓴 것이 되고, 출구로 나가면 된다.
 class RestDialog extends Component {
     static HEAL = 0.3;
@@ -102,12 +102,7 @@ class RestDialog extends Component {
         return this.player.cards.allActions.filter((c) => GameContent.upgradesOf(c.defId).length > 0);
     }
 
-    // 재료가 모자라는 것 [{ id, need, have }]
-    lacking(def) {
-        return (def.upgradeMats ?? []).map((m) => ({ id: m.id, need: m.count ?? 1, have: this.player.matCount(m.id) })).filter((m) => m.have < m.need);
-    }
-
-    // 강화: 카드 고르기 → (갈래가 여럿이면) 강화 고르기 → 재료를 내고 그 자리에서 바꾼다
+    // 강화: 카드 고르기 → (갈래가 여럿이면) 강화 고르기 → 그 자리에서 바꾼다
     upgrade() {
         const fire = this.fire;
         this.close();
@@ -116,12 +111,6 @@ class RestDialog extends Component {
             const previews = opts.map((d) => Object.assign(new Card(d.id), { data: card.data ? { ...card.data } : null }).rollCost());
             const apply = (preview) => {
                 const def = preview.def;
-                const lack = this.lacking(def);
-                if (lack.length) {
-                    MessageLog.add(`재료가 모자라다: ${lack.map((m) => `${GameContent.materials.get(m.id)?.name ?? m.id} ${m.have}/${m.need}`).join(", ")}`, "#e07060");
-                    return;
-                }
-                for (const m of def.upgradeMats ?? []) this.player.mats[m.id] -= m.count ?? 1;
                 const before = card.name;
                 card.defId = def.id;
                 card.rollCost();

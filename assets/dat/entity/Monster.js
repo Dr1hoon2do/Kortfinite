@@ -3,7 +3,6 @@
 // lv: 층이 깊을수록 오른다 (체력 +30%, 공격 +1). rank: "normal" | "elite" | "boss"
 // moves: 이동속도 (한 턴에 움직이는 칸 수). 둔화에 걸리면 줄어든다 (speedNow)
 // 방어도(blocks): [{ v, t }] — 따로 턴을 세고 곧 끝나는 것부터 깎인다. 자기 턴이 시작될 때 턴이 하나 준다 (1턴짜리는 그때 사라진다)
-// 드랍(drops): 쓰러지면 확률대로 재료가 플레이어에게 들어간다
 // 새 몬스터: 공방 데이터에 적을 만들고 data/EnemyImpl.js에 행동을 짠다 + 스프라이트(entities/종류.png)
 class Monster extends Entity {
     static KINDS = {};
@@ -38,7 +37,6 @@ class Monster extends Entity {
         this.lv = lv;
         this.rank = rank;
         this.moves = k.moves ?? 1;
-        this.drops = k.drops ?? [];
         this.baseAttack = this.stats.attack;
         this.baseDefense = this.stats.defense;
         this.blocks = [];
@@ -89,17 +87,3 @@ class Monster extends Entity {
     }
 }
 
-// 쓰러지면 재료를 떨어뜨린다 (누가 잡았든)
-Events.on(GameEvent.KILLED, ({ target, world }) => {
-    if (!(target instanceof Monster) || !Player.current) return;
-    const p = Player.current;
-    const rng = world && world.rng ? world.rng : Math.random;
-    const got = [];
-    for (const d of target.drops) {
-        if (rng() * 100 < d.chance) {
-            p.addMat(d.id, d.count ?? 1);
-            got.push(`${GameContent.materials.get(d.id)?.name ?? d.id} ×${d.count ?? 1}`);
-        }
-    }
-    if (got.length) MessageLog.add(`재료를 얻었다: ${got.join(", ")}`, "#d0b070");
-});

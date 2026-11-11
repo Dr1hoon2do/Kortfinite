@@ -48,6 +48,9 @@ const EQUIP = {
         }
     },
 
+    // 튼튼한 장화: 이동속도 +1
+    sturdy_boots: { icon: "chain", color: "#a07850", stats: { speed: 1 } },
+
     // 공구허리띠: 행동 패 +1
     tool_belt: { icon: "chain", color: "#c0a060", stats: { actionHand: 1 } }
 };

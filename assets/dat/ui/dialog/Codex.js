@@ -5,10 +5,9 @@ class Codex extends Component {
     static TABS = [["skill", "카드"], ["upgrade", "강화"], ["monster", "몬스터"]];
     static CARD_W = 80;
 
-    // 적 설명: 공방의 행동 글 + 나오는 층 + 떨어뜨리는 재료
+    // 적 설명: 공방의 행동 글
     static patternText(k) {
-        const drops = (k.drops ?? []).map((d) => `${GameContent.materials.get(d.id)?.name ?? d.id} ${d.chance}%`).join(", ");
-        return [k.note, k.pattern, drops ? `재료: ${drops}` : ""].filter(Boolean).join("\n");
+        return [k.note, k.pattern].filter(Boolean).join("\n");
     }
 
     // 비용 경우가 여럿인 카드는 경우마다 따로 한 장씩 (나올 때 그중 하나가 정해지니까)
@@ -123,7 +122,7 @@ class Codex extends Component {
             this.note.setText("1층 기준 · 정예·우두머리는 더 세다");
             return;
         }
-        this.note.setText(this.tab === "upgrade" ? "캠프에서 재료를 내고 강화 · 공격력 5 기준" : "누르면 크게 · 공격력 5 기준");
+        this.note.setText(this.tab === "upgrade" ? "캠프에서 강화 · 공격력 5 기준" : "누르면 크게 · 공격력 5 기준");
         for (const card of this.cards(this.tab)) {
             const go = this.content.createChild("card");
             const view = go.addComponent(new CardView(card));

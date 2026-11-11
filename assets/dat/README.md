@@ -7,7 +7,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 
 ## 데이터와 코드의 분리
 
-카드·적·재료·태그의 **내용**은 카드 공방(Kortfinite-Workshop)에서 짜고, **동작**은 코드에 짠다.
+카드·적·태그의 **내용**은 카드 공방(Kortfinite-Workshop)에서 짜고, **동작**은 코드에 짠다.
 
 ```
 카드 공방 ──내보내기(data.json)──▶ tools/import_data.py ──▶ data/GameData.js   (이름·비용·설명·태그·강화·스탯·드랍)
@@ -20,7 +20,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 - 설명글의 "공격력 60%" 같은 말은 `GameContent.render`가 지금 능력치로 바꿔 숫자를 보여 준다.
 - 새 카드/적이 데이터에 생기면 `python3 tools/import_data.py 내보낸파일.json`이 동작이 없는 id를 알려 준다.
 - `DATA.md`는 GameData에서 자동으로 만든 표다 (`python3 tools/gen_data_md.py`).
-- `kind: "basic"` 카드는 시작 덱(3장씩), `reward`는 보상·상점 풀, 강화(upgrades)는 모닥불에서 재료를 내고 바꾼다.
+- `kind: "basic"` 카드는 시작 덱(3장씩), `reward`는 보상·상점 풀, 강화(upgrades)는 모닥불에서 바꾼다.
 - **비용**: 공방 카드(와 강화)의 `costs`는 "비용의 경우들"이다. 한 경우 안의 자원은 모두 함께 낸다(`{energy:1, mana:1}`). 경우가 여럿이면(`[{energy:2}, {mana:2}]`) 카드 한 장마다 그중 하나로 정해져 나온다 (`Card.costOptions` · `card.costIndex` · `data.pay` = 몇 번째 경우). 도감에는 경우마다 한 장씩 보이고, 모닥불 강화 때 범위를 벗어나면 다시 굴린다. 옛 데이터의 `cost`는 자원마다 한 경우로 쪼개 읽는다.
 
 ## 폴더
