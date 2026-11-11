@@ -7,11 +7,11 @@
 class Monster extends Entity {
     static KINDS = {};
 
-    // 정예·보스: 이름 앞에 붙는 말, 체력 배수, 공격 더하기
+    // 정예·보스: 이름 앞에 붙는 말, 능력치(체력·공격·방어) 배수. 정예만 1.5배, 보스는 배수 없음 (공방 스탯 그대로, 대신 패턴: 세 턴에 한 번 연속 행동)
     static RANKS = {
-        normal: { title: "", hp: 1, attack: 0 },
-        elite: { title: "정예", hp: 1.8, attack: 2 },
-        boss: { title: "우두머리", hp: 2, attack: 4 } // 체력은 낮추고 공격력·패턴(세 턴에 한 번 연속 행동)으로 어렵게
+        normal: { title: "", hp: 1, attack: 1, defense: 1 },
+        elite: { title: "정예", hp: 1.5, attack: 1.5, defense: 1.5 },
+        boss: { title: "우두머리", hp: 1, attack: 1, defense: 1 }
     };
     static BOSS_DOUBLE_EVERY = 3; // 우두머리는 이 턴마다 한 번 한 턴에 두 번 움직인다
 
@@ -29,8 +29,8 @@ class Monster extends Entity {
             // data.stats: 소환된 것처럼 능력치를 정해 줄 때 { hp, atk, def } (층·등급 보정 없이 그대로)
             stats: data.stats ? { maxHp: Math.max(1, data.stats.hp), attack: data.stats.atk, defense: data.stats.def } : {
                 maxHp: Math.floor(k.hp * (1 + 0.3 * (lv - 1)) * R.hp + 1e-9),
-                attack: k.attack + (lv - 1) + R.attack,
-                defense: k.defense + Math.floor((lv - 1) / 2)
+                attack: Math.floor((k.attack + (lv - 1)) * R.attack + 1e-9),
+                defense: Math.floor((k.defense + Math.floor((lv - 1) / 2)) * R.defense + 1e-9)
             },
             tags: ["creature", "monster", kind, ...(k.tags ?? []), ...(rank !== "normal" ? [rank] : [])],
             ai: new EnemyAI({ brain: kind })
