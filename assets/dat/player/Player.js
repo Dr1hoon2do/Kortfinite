@@ -274,7 +274,7 @@ class Player extends Entity {
             this.wantsCard = { card, target, picks: [] };
             return;
         }
-        CardPicker.open(cfg.title, cfg.cards, cfg.min, cfg.max, (picks) => { this.wantsCard = { card, target, picks }; });
+        CardPicker.open(cfg.title, cfg.cards, cfg.min, cfg.max, (picks) => { this.wantsCard = { card, target, picks }; }, { sections: cfg.sections ?? null });
     }
 
     // 이 카드를 지금 쓸 수 있는가 (비용 + 속박이면 이동 카드는 못 쓴다)

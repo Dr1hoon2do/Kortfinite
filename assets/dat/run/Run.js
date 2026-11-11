@@ -89,7 +89,10 @@ class Run extends Component {
     // 게임 시작: 저장본에 못 끝낸 방이 있으면 그 방으로, 아니면 지도
     begin() {
         if (this.pending) this.enter(this.pending, true);
-        else if (!this.visited.length) this.enter(this.map.start.id, true); // 새 층: 시작 방에서
+        else if (!this.visited.length) {
+            if (!this.questsLoaded) QuestLog.reset(this.floorNo); // 새 층(저장본 없이 시작): 퀘스트 기록을 비운다
+            this.enter(this.map.start.id, true); // 새 층: 시작 방에서
+        }
         else this.showMap();
     }
 
@@ -120,7 +123,7 @@ class Run extends Component {
         const salt = this.salt(node);
         const known = this.rooms[id] ?? null;
         this.taken = new Set(known && known.taken ? known.taken : []);
-        const plan = new RoomPlan(node, Rng.mix(this.seed, salt), known);
+        const plan = new RoomPlan(node, Rng.mix(this.seed, salt), known, this.floorNo);
         this.plan = plan;
         const room = new ChunkManager({ chunkSize: 16, tileSize: 16, renderDistance: 48, generator: plan });
         room.plan = plan;
@@ -154,15 +157,20 @@ class Run extends Component {
             player.mana = Math.min(player.maxMana, player.mana + Run.ROOM_MANA);
             player.cards.resetForRoom(Run.OPENING_HAND);
             Equip.roomStart(player, room); // 장착한 장비 (철모, 마력석 마법서 …)
+            this.questRoomStart = true;
             MessageLog.add(node.type === "boss" ? "우두머리다! 쓰러뜨리면 다음 층으로 내려갈 수 있다" : "적을 모두 쓰러뜨리면 출구가 열린다", "#e8b860");
         } else {
             this.cleared = true;
             if (this.exit) this.exit.setOpen(true);
-            MessageLog.add({ shop: "상인이 있다. 말을 걸어 보자 (탭하면 걸어간다)", rest: "모닥불이 있다. 한 번 쉴 수 있다", treasure: "보물 상자가 있다!", start: "던전의 시작이다. 출구로 나가 지도에서 갈 방을 고르자" }[node.type] ?? "", "#a0d0f0");
+            MessageLog.add({ shop: "상인이 있다. 말을 걸어 보자 (탭하면 걸어간다)", altar: "제단이 있다. 다가가 보자", quest: "퀘스트 게시판이 있다. 다가가 보자", rest: "모닥불이 있다. 한 번 쉴 수 있다", treasure: "보물 상자가 있다!", start: "던전의 시작이다. 출구로 나가 지도에서 갈 방을 고르자" }[node.type] ?? "", "#a0d0f0");
         }
         if (node.type === "treasure") this.spawnPickups(this.rewardItems(), true); // 보물 방: 물건이 바닥에 놓여 있다
         if (node.type === "shop") this.spawnPickups(this.shopItems(), false);    // 상점: 진열대
         EnemyMoves.planAll(room, player, 0); // 적의 첫 의도
+        if (this.questRoomStart) {
+            this.questRoomStart = false;
+            QuestLog.onRoomStart(this); // 적이 놓인 직후 (퀘스트 진행)
+        }
         this.fitCamera(true);
         Events.emit(GameEvent.ROOM_ENTERED, { node, room });
         return true;
@@ -192,6 +200,10 @@ class Run extends Component {
                 st.shopLeft = e.stock.some((o) => !o.sold); // 아직 안 산 물건이 있다
             }
         }
+        // 제단·게시판 등 roomState()를 가진 엔티티(방에 하나뿐)가 남기는 상태 → extra
+        const holders = new Set(this.room.actors);
+        for (const s of this.plan.spawns) for (const e of this.room.entitiesAt(s.x, s.y)) holders.add(e);
+        for (const e of holders) if (typeof e.roomState === "function") { st.extra = e.roomState(); break; }
         // 바닥에 남은 것 (가진 건 taken). 남았으면 지도에 느낌표
         st.taken = [...this.taken];
         st.left = [...this.room.hazards].filter((h) => h instanceof Pickup).length;
@@ -215,6 +227,7 @@ class Run extends Component {
     gotoFloor(n) {
         this.floorNo = Math.max(1, Math.min(RunMap.FLOORS, n));
         this.map = new RunMap(this.seed, this.floorNo);
+        QuestLog.reset(this.floorNo);
         this.rooms = {};
         this.visited = [];
         this.current = null;
@@ -228,6 +241,7 @@ class Run extends Component {
         if (!this.canDescend) return false;
         this.floorNo++;
         this.map = new RunMap(this.seed, this.floorNo);
+        QuestLog.reset(this.floorNo);
         this.rooms = {};
         this.visited = [];
         this.current = null;
@@ -269,7 +283,7 @@ class Run extends Component {
     // 정리한 방의 바닥에 보상을 떨어뜨린다
     dropRewards() {
         this.spawnPickups(this.rewardItems(), true);
-        MessageLog.add("보상이 바닥에 떨어졌다. 밟아서 가져가자 (카드는 하나만)", "#f0d878");
+        MessageLog.add("보상이 바닥에 떨어졌다. 옆에 서서 상호작용(손 버튼)으로 가져가자 (카드는 하나만)", "#f0d878");
     }
 
     // 놓을 자리: scatter면 방 가운데 근처에 흩어 놓고 (출구로 가는 가운데 줄은 되도록 피한다), 아니면 상점 진열대 두 줄
@@ -331,6 +345,7 @@ class Run extends Component {
             this.cleared = true;
             if (this.exit) this.exit.setOpen(true);
             Events.emit(GameEvent.ROOM_CLEARED, { node: this.node, room: this.room });
+            QuestLog.onRoomCleared(this);
             if (this.node.type === "boss") {
                 const last = this.floorNo >= RunMap.FLOORS;
                 MessageLog.add(last ? "우두머리를 쓰러뜨렸다! 출구로 나가면 던전을 클리어한다" : "우두머리를 쓰러뜨렸다! 남은 방을 둘러봐도 되고, 지도에서 다음 층으로 내려갈 수 있다", "#f0d878");
@@ -383,7 +398,7 @@ class Run extends Component {
             version: RunStore.VERSION, seed: this.seed, debug: this.debug,
             floorNo: this.floorNo, rooms: this.rooms,
             current: this.current, visited: this.visited, pending: this.pending, removeCount: this.removeCount,
-            player: this.player.save()
+            player: this.player.save(), quests: QuestLog.save()
         };
     }
 
@@ -401,5 +416,7 @@ class Run extends Component {
         this.pending = data.pending ?? null;
         this.removeCount = data.removeCount ?? 0;
         this.player.load(data.player);
+        QuestLog.load(data.quests ?? null);
+        this.questsLoaded = true;
     }
 }

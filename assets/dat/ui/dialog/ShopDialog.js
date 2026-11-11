@@ -1,10 +1,12 @@
 // 상점 창 (상인에게 말을 걸면). 물건마다 한 줄: 그림, 이름, 짧은 설명, 값 [사기].
 //   목록은 페이지식이다: 한 쪽에 들어가는 만큼만 보이고, 아래 [▲]/[▼]로 쪽을 넘긴다 (끌어서 스크롤하지 않는다).
 //   행동 카드(주문 포함)는 사면 덱에 들어간다. 장비·소모품·젬은 패에 들어간다 (자리가 있어야).
-//   맨 아래 [카드 빼기]: 덱에서 카드 한 장을 아주 없앤다 (상점마다 한 번, 값은 할 때마다 오른다).
+//   위쪽 "카드 강화": 상인이 파는 강화 3개 (붉은·푸른·노란 중 2 + 초록·보라 중 1). 사면 카드 한 장을 골라 강화한다 (UpgradeFlow). 살 때마다 값이 50%씩 오른다.
+//   아래쪽 "카드 정리": [카드 빼기]: 덱에서 카드 한 장을 아주 없앤다 (상점마다 한 번, 값은 할 때마다 오른다).
 // 거래는 턴을 쓰지 않는다.
 class ShopDialog extends Component {
     static ROW = 64;
+    static HEAD = 24;
 
     constructor(options) {
         super();
@@ -80,14 +82,14 @@ class ShopDialog extends Component {
         if (Input.getButtonDown("cancel")) return this.close();
         if (!this.npc.alive || this.npc.angry || !this.player.alive) return this.close();
         this.moneyText.setText(`내 돈 ${this.player.money} G`);
-        const key = [this.player.money, this.player.cards.version, this.npc.stock.map((s) => s.sold ? 1 : 0).join(""), this.run.removeCount, this.page, this.pageSize()].join("|");
+        const key = [this.player.money, this.player.cards.version, this.npc.stock.map((s) => s.sold ? 1 : 0).join(""), this.npc.upgrades.map((u) => u.sold ? 1 : 0).join("") + this.npc.buys, this.run.removeCount, this.page, this.pageSize()].join("|");
         if (key !== this._key) {
             this._key = key;
             this.rebuild();
         }
     }
 
-    addRow(y, { def, name, info, button, ok, onTap, faded, card }) {
+    addRow(y, { def, chip, name, info, button, ok, onTap, faded, card, poor }) {
         const h = ShopDialog.ROW - 6;
         const go = this.content.createChild("row");
         const rt = UIKit.place(go, 6, y, null, h);
@@ -97,7 +99,12 @@ class ShopDialog extends Component {
             go.addComponent(new UIButton({ onTap: () => this.inspect(card, rt, bg) }));
             CardInspector.track(this, rt, card, true);
         }
-        UIKit.icon(rt, "icon", def, 4, 5, 36);
+        if (chip) {
+            // 색 칩: 강화 색 사각형
+            const c = rt.createChild("chip");
+            UIKit.place(c, 8, 9, 28, 28);
+            c.addComponent(new UIRect({ color: faded ? UIKit.COLORS.faint : chip, borderColor: "rgba(0, 0, 0, 0.6)", borderWidth: 2 }));
+        } else UIKit.icon(rt, "icon", def, 4, 5, 36);
         // 글자 칸: 오른쪽 값 버튼과 겹치지 않게 잘라서 보인다
         const box = rt.createChild("text");
         const brt = box.getComponent(RectTransform);
@@ -110,14 +117,42 @@ class ShopDialog extends Component {
         b.rt.setAnchor(1, 0, 1, 0);
         b.rt.setOffsets(-70, (h - 30) / 2, 6, -((h - 30) / 2 + 30));
         UIKit.setEnabled(b, ok);
+        if (poor) b.text.color = "#e85a4a"; // 돈이 모자라면 값이 빨갛다
         this.rows.push(go);
         return y + ShopDialog.ROW;
     }
 
-    // 한 쪽에 들어가는 줄 수 (목록 높이 ÷ 줄 높이)
+    // 목록 높이 (논리 단위)
     pageSize() {
-        const h = this.list.rect.height / this.list.uiRoot.scale;
-        return Math.max(1, Math.floor((h - 6) / ShopDialog.ROW));
+        return Math.floor(this.list.rect.height / this.list.uiRoot.scale);
+    }
+
+    // 구분 글자 줄 (낮다)
+    addHeader(y, text) {
+        const go = this.content.createChild("head");
+        const rt = UIKit.place(go, 6, y, null, ShopDialog.HEAD);
+        UIKit.label(rt, "t", text, 4, 5, null, 16, { fontSize: 12, fontWeight: "bold", color: UIKit.COLORS.gold });
+        const line = rt.createChild("line");
+        UIKit.place(line, 0, ShopDialog.HEAD - 2, null, 1);
+        line.addComponent(new UIRect({ color: UIKit.COLORS.border }));
+        this.rows.push(go);
+        return y + ShopDialog.HEAD;
+    }
+
+    // 높이를 채워 가며 쪽으로 나눈다 (구분 글자 줄은 낮다)
+    paginate(entries, height) {
+        const pages = [[]];
+        let used = 6;
+        for (const e of entries) {
+            const h = e.head ? ShopDialog.HEAD : ShopDialog.ROW;
+            if (used + h > height && pages[pages.length - 1].length > 0) {
+                pages.push([]);
+                used = 6;
+            }
+            pages[pages.length - 1].push(e);
+            used += h;
+        }
+        return pages;
     }
 
     turnPage(d) {
@@ -126,9 +161,12 @@ class ShopDialog extends Component {
         this._key = null; // 다음 update에서 다시 그린다 (쪽이 범위를 넘으면 rebuild가 바로잡는다)
     }
 
-    // 목록의 줄: [카드 빼기]만 있다 (물건은 진열대에 바닥에 놓여 있고 밟으면 산다: Run.shopItems)
+    // 목록의 줄: 카드 강화 3개, 카드 빼기 (물건은 진열대에 바닥에 놓여 있고 옆에서 상호작용하면 산다: Run.shopItems)
     entries() {
-        return [{ remove: true }];
+        const list = [{ head: "카드 강화" }];
+        this.npc.upgrades.forEach((u, i) => list.push({ upgrade: u, index: i }));
+        list.push({ head: "카드 정리" }, { remove: true });
+        return list;
     }
 
     rebuild() {
@@ -137,20 +175,39 @@ class ShopDialog extends Component {
         CardInspector.untrack(this);
         const p = this.player;
         const entries = this.entries();
-        const size = this.pageSize();
-        const pages = Math.max(1, Math.ceil(entries.length / size));
+        const chunks = this.paginate(entries, this.pageSize());
+        const pages = chunks.length;
         this.page = Math.max(0, Math.min(pages - 1, this.page));
         this.pageText.setText(`${this.page + 1} / ${pages} 쪽`);
         UIKit.setEnabled(this.prevButton, this.page > 0);
         UIKit.setEnabled(this.nextButton, this.page < pages - 1);
         let y = 6;
-        for (const entry of entries.slice(this.page * size, this.page * size + size)) {
+        for (const entry of chunks[this.page]) {
+            if (entry.head) {
+                y = this.addHeader(y, entry.head);
+                continue;
+            }
+            if (entry.upgrade) {
+                const u = entry.upgrade;
+                const c = UpgradeFlow.COLORS[u.color];
+                const price = this.npc.upgradePrice(u.color);
+                const none = !u.sold && UpgradeFlow.candidates(p, [u.color]).length === 0;
+                const poor = !u.sold && p.money < price;
+                y = this.addRow(y, {
+                    chip: c.css, name: `${c.name} 강화`,
+                    info: u.sold ? "품절" : none ? "이 색 강화를 받을 카드가 없다" : `카드 한 장을 골라 ${c.name} 강화`,
+                    button: u.sold ? "품절" : `${price} G`, ok: !u.sold && !none && !poor,
+                    faded: u.sold, poor,
+                    onTap: () => this.buyUpgrade(u)
+                });
+                continue;
+            }
             if (entry.remove) {
                 const cost = this.run.removeCost;
                 y = this.addRow(y, {
                     def: { sprite: "cards", frame: 9 }, name: "카드 빼기",
                     info: `덱에서 카드 한 장을 아주 없앤다 (이 상점에서 뺄 때마다 +25 G${this.run.removeCount ? `, ${this.run.removeCount}번 뺐다` : ""})`,
-                    button: `${cost} G`, ok: p.money >= cost && p.cards.allActions.length > 1,
+                    button: `${cost} G`, ok: p.money >= cost && p.cards.allActions.length > 1, poor: p.money < cost,
                     onTap: () => this.remove()
                 });
                 continue;
@@ -205,6 +262,30 @@ class ShopDialog extends Component {
         this.npc.money += offer.price;
         offer.sold = true;
         MessageLog.add(`${josa(card.name, "을를")} ${offer.price} G에 샀다 (${where})`, "#e8c860");
+    }
+
+    // 카드 강화 사기: 상점 창을 닫고 강화 흐름을 연다. 실제로 강화됐을 때만 돈을 내고 품절로 한다. 끝나면 상점 창을 다시 연다
+    buyUpgrade(u) {
+        const p = this.player;
+        const npc = this.npc;
+        const price = npc.upgradePrice(u.color);
+        if (u.sold || p.money < price) return;
+        if (UpgradeFlow.candidates(p, [u.color]).length === 0) return;
+        const c = UpgradeFlow.COLORS[u.color];
+        this.close();
+        UpgradeFlow.open({
+            colors: [u.color], title: `강화 · 카드를 고른다 (${price} G)`,
+            onDone: (card) => {
+                if (card && !u.sold) {
+                    p.money -= price;
+                    npc.money += price;
+                    u.sold = true;
+                    npc.buys++;
+                    MessageLog.add(`${c.name} 강화를 ${price} G에 샀다`, "#e8c860");
+                }
+                if (npc.alive && !npc.angry && p.alive) this.open(npc);
+            }
+        });
     }
 
     remove() {

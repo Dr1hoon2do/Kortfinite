@@ -48,9 +48,9 @@ class Rng {
 
 // 층 지도 (아이작식): 한 층은 격자 위에 이어 붙인 방들이다. 시작 방에서 출발해 옆 방으로 탐색해 나가고, 막다른 방들 중
 // 가장 먼 곳이 우두머리 방이다. 우두머리를 쓰러뜨리면 다음 층으로 내려갈 수 있고, 남은 방을 더 둘러봐도 된다.
-//   start 시작(비어 있다) · battle 전투 · elite 정예 · shop 상점 · rest 휴식 · treasure 보물 · boss 우두머리
+//   start 시작(비어 있다) · battle 전투 · elite 정예 · shop 상점 · rest 휴식 · treasure 보물 · boss 우두머리 · altar 제단 · quest 퀘스트
 // 격자에서 붙어 있는 방끼리는 문으로 이어진다. 지도에는 가 본 방과 그 옆 방(종류가 보인다)만 나타난다.
-// 특수 방(상점·보물·휴식·정예)은 막다른 방에 놓이고, 우두머리는 시작에서 가장 먼 막다른 방이다.
+// 특수 방(상점·보물·휴식·제단·퀘스트·정예)은 막다른 방에 놓이고, 우두머리는 시작에서 가장 먼 막다른 방이다.
 // 난이도(row)는 층과 시작에서의 거리로 정해진다: 층마다 5단계 (시작에서 멀수록 세다).
 class RunMap {
     static FLOORS = 3;
@@ -64,7 +64,9 @@ class RunMap {
         rest: { name: "휴식", icon: 3, color: "#f0a050" },
         treasure: { name: "보물", icon: 4, color: "#e8b840" },
         boss: { name: "우두머리", icon: 5, color: "#ff6040" },
-        start: { name: "시작", icon: 6, color: "#a0d0f0" }
+        start: { name: "시작", icon: 6, color: "#a0d0f0" },
+        altar: { name: "제단", icon: 7, color: "#c090f0" },
+        quest: { name: "퀘스트", icon: 8, color: "#80d890" }
     };
 
     // seed: 런 시드, floor: 1부터
@@ -128,7 +130,7 @@ class RunMap {
             const id = RunMap.id(c.x + dx, c.y + dy);
             if (cells.has(id)) c.next.push(id);
         }
-        // 막다른 방 (시작 제외) 중 우두머리·상점·보물·휴식이 들어갈 자리가 모자라면 다시
+        // 막다른 방 (시작 제외) 중 우두머리·상점·보물·퀘스트·제단·휴식이 들어갈 자리가 모자라면 다시
         const leaves = [...cells.values()].filter((c) => c.next.length === 1 && c.id !== "0,0");
         if (leaves.length < 5) return false;
         // 시작에서의 거리
@@ -152,10 +154,15 @@ class RunMap {
         boss.type = "boss";
         rest[0].type = "shop";
         rest[1].type = "treasure";
-        rest[2].type = "rest";
+        rest[2].type = "quest";
+        rest[3].type = "altar";
+        // 휴식: 남는 막다른 방이 있으면 거기, 없으면 시작 옆이 아닌 안쪽 전투 방
+        const restSpot = rest[4] ?? Rng.pick(rng, [...cells.values()].filter((c) => c.type === "battle" && c.dist >= 2));
+        if (!restSpot) return false;
+        restSpot.type = "rest";
         // 정예: 남은 막다른 방 먼저, 모자라면 시작에서 3칸 이상 떨어진 방. 층이 깊을수록 하나 더
         const eliteWant = this.floor >= 3 ? 2 : 1;
-        const spots = [...rest.slice(3), ...Rng.shuffle(rng, [...cells.values()].filter((c) => c.type === "battle" && c.dist >= 3 && !rest.slice(3).includes(c)))];
+        const spots = [...rest.slice(5), ...Rng.shuffle(rng, [...cells.values()].filter((c) => c.type === "battle" && c.dist >= 3 && !rest.slice(5).includes(c)))];
         for (const c of spots.slice(0, eliteWant)) c.type = "elite";
         // 난이도·번호
         const base = (this.floor - 1) * RunMap.STEPS;

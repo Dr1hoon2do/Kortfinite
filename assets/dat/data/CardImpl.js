@@ -193,6 +193,23 @@ class CardOps {
     static handPick(title, min, max) {
         return (u, card) => ({ title, cards: u.cards.actions.filter((c) => c !== card), min, max });
     }
+
+    // 구역으로 나눠 고르는 고르기 창 설정 만들기 (picker 안에서 부른다).
+    //   zones: [["덱", u.cards.deck], ["묘지", u.cards.graveyard]]  — [머리글, 카드들]
+    //   opts.total: [min, max] 전체 선택 장수 (기본 [1, 1])
+    //   opts.each: 구역마다 최대 장수 (숫자 하나면 모든 구역, 배열이면 구역별. 생략하면 전체 max)
+    // 각 구역은 이름순으로 정렬해 보인다 (덱의 뽑는 순서를 감춘다). 예:
+    //   picker: (u) => CardOps.zonePick("가져올 카드를 고른다", [["덱", u.cards.deck], ["묘지", u.cards.graveyard]], { total: [1, 1], each: 1 })
+    // 반환은 { title, cards(모든 구역 합), min, max, sections } — Player.requestCard가 CardPicker에 넘긴다
+    static zonePick(title, zones, opts = {}) {
+        const [min, max] = opts.total ?? [1, 1];
+        const byName = (list) => [...list].sort((a, b) => a.def.name.localeCompare(b.def.name, "ko"));
+        const sections = zones.map(([zt, cards], i) => ({
+            title: zt, cards: byName(cards),
+            max: Array.isArray(opts.each) ? (opts.each[i] ?? max) : (opts.each ?? max)
+        }));
+        return { title, cards: sections.flatMap((s) => s.cards), min, max, sections };
+    }
 }
 
 // ---------- 짧은 설명 도우미 ----------
@@ -722,10 +739,11 @@ const CARDS = {
     // 기도: [턴 제한(3)] 덱/묘지에서 1장 골라 패로. 붉은: 그 카드 이번 턴 피해 +75% / 푸른: 비용 -(1 + 방어력 10%) / 노란: 덱과 묘지에서 각각 1장
     pray: {
         icon: "star", color: "#f0e8b0",
-        picker: (u, card) => ({
-            title: card.def.two ? "덱과 묘지에서 각각 1장을 고른다 (한쪽만 골라도 된다)" : "덱/묘지에서 패로 가져올 카드를 고른다",
-            cards: [...u.cards.deck, ...u.cards.graveyard], min: 1, max: card.def.two ? 2 : 1
-        }),
+        picker: (u, card) => CardOps.zonePick(
+            card.def.two ? "덱·묘지에서 각 1장 (한쪽만 골라도 된다)" : "덱/묘지에서 패로 가져올 카드를 고른다",
+            [["덱", u.cards.deck], ["묘지", u.cards.graveyard]],
+            { total: [1, card.def.two ? 2 : 1], each: 1 }
+        ),
         use(ctx) {
             const u = ctx.user;
             const d = ctx.card.def;

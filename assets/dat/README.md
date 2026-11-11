@@ -60,7 +60,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 | 적 행동 | `data/EnemyImpl.js` — `EnemyMoves.SPECS[id]`(`rotations`+`actions` 또는 `brain`). 새 의도 종류는 `entity/EnemyAI.js` |
 | 상태 이상 종류·수치 | `rules/Status.js`의 `Status.DEFS`, 피해 보정 `Status.modify` |
 | 바닥에 떨어진 보상·상점 진열대·보물 방 물건 | `entity/Pickups.js` (`Pickup`·`Pickups`), 놓는 곳 `run/Run.js` (`rewardItems`·`shopItems`·`spawnPickups`), 그림 `entity/Allies.js` HazardOverlay |
-| 층 수·방 수·방 종류 | `run/RunMap.js` (`FLOORS`, `ROOMS`, `STEPS`, `TYPES`, `build`) |
+| 층 수·방 수·방 종류 (전투·정예·상점·휴식·보물·제단·퀘스트·우두머리; 제단·퀘스트는 층마다 막다른 방 하나씩, 소품은 `entity/Altar.js`·`QuestBoard.js`가 방 상태를 `roomState()`로 `extra`에 남긴다) | `run/RunMap.js` (`FLOORS`, `ROOMS`, `STEPS`, `TYPES`, `build`), `run/RoomGen.js` (`STYLE`) |
 | 다녀간 방 기록(정리·상점·휴식·상자) | `run/Run.js` (`rooms`, `captureRoom`), `run/RoomGen.js` (`RoomPlan` state) |
 | 방 크기·층별 무리·정예·우두머리 | `run/RoomGen.js` (`RoomPlan.STYLE`, `BUDGET`, `MAX_ENEMIES`) |
 | 보상·상점 값 | `run/RoomGen.js`의 `Rewards`, `run/Run.js`의 `REMOVE_BASE` |
@@ -91,3 +91,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 - **카드 규칙 글**: 설명글의 `[소멸]`(태그 exhaustion)은 쓰면 이번 전투 동안만 빠지고, `[턴 제한(N)]`(태그 turn_limit)은 한 턴에 N번까지만 쓴다 (`CardDef.turnLimit`, `Player.turnUses`; 노란 공격은 드로우 효과만 제한). `준비`(prepare)는 패에 있는 동안의 효과로 `CardPrep`이 다룬다 (공격 푸른: 카드를 쓸 때마다 +25%·턴 끝 초기화, 서리 푸른: 턴 끝마다 지속 +방어력 20%·쓰면 초기화).
 - **상태이상 추가**: 신속(이동속도 +수치), 보호(피해를 N회 통째로 무시), 기절 면역(우두머리: 기절한 동안과 그 뒤 √(누적 기절 턴)턴). 기도 붉은 변형은 가져온 카드의 이번 턴 피해를 올리고(`Player.dmgBoost`), 푸른 변형은 비용을 줄인다(`card.data.costCut`).
 - **점액 카드**: `noDiscard` — [묘지로]로 못 버리고, 기력 1을 내고 쓰면 소멸한다. 카드 효과로는 버려진다.
+- **바닥 물건·정보**: 떨어진 것(Pickup)은 길을 막는 상호작용 물건이다. 옆칸에서 손 버튼·E·탭으로만 가진다 (밟아서 줍지 않는다). 옆에 서면 `PickupInfo`가 카드 이름·비용·설명·값을 보여 준다. (구부러진 동전은 예외로 밟으면 줍는다.)
+- **강화의 길**: 모닥불(색 상관없이) · 제단(색 상관없이, 카드/돈/체력을 바침) · 퀘스트 보상(그 색) · 상인(붉·푸·노 50G, 초록·보라 100G, 살 때마다 +50%). 모두 `UpgradeFlow.open({ colors })`로 카드를 골라 바꾼다.
+- **새 방**: 제단(altar: 층 × 20G, 카드 3장 중 1장 또는 피를 바치고 강화/장비/영구 능력치 중 하나), 퀘스트(quest: 게시판에서 층마다 2개까지 받고, 완료 후 다시 와서 보상). 방 상태는 소품의 `roomState()`로 저장한다.
+- **카드 고르기 구역**: `CardPicker`의 `sections`와 `CardOps.zonePick`으로 덱/묘지 같은 구역을 나눠 보여 준다 (기도).

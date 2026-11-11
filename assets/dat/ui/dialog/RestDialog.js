@@ -99,28 +99,14 @@ class RestDialog extends Component {
 
     // 강화할 수 있는 카드들
     upgradable() {
-        return this.player.cards.allActions.filter((c) => GameContent.upgradesOf(c.defId).length > 0);
+        return UpgradeFlow.candidates(this.player);
     }
 
-    // 강화: 카드 고르기 → (갈래가 여럿이면) 강화 고르기 → 그 자리에서 바꾼다
+    // 강화: 공용 흐름(UpgradeFlow)에 맡긴다. 창을 먼저 닫고(겹침 방지) 연다
     upgrade() {
         const fire = this.fire;
         this.close();
-        this.deckView.pick("강화 · 카드를 고른다", this.upgradable(), (card) => {
-            const opts = GameContent.upgradesOf(card.defId);
-            const previews = opts.map((d) => Object.assign(new Card(d.id), { data: card.data ? { ...card.data } : null }).rollCost());
-            const apply = (preview) => {
-                const def = preview.def;
-                const before = card.name;
-                card.defId = def.id;
-                card.rollCost();
-                this.player.cards._changed();
-                fire.used = true;
-                MessageLog.add(`${before} → ${card.name} 강화했다`, "#f0c080");
-            };
-            if (previews.length === 1) return apply(previews[0]);
-            this.deckView.pick(`강화 · ${card.name}`, previews, apply);
-        });
+        UpgradeFlow.open({ colors: null, title: "강화 · 카드를 고른다", onDone: (c) => { if (c) fire.used = true; } });
     }
 
     update() {
