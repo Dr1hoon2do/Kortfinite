@@ -597,13 +597,21 @@ const CARDS = {
                 MessageLog.add(`${josa(foe.displayName, "이가")} 불타오른다 (화상 ${n}, ${turns}턴)`, "#ff8a40");
                 out.push([CardOps.inflict(foe, "burn", n, turns)]);
             }
+            if (d.swiftFromBurn) {
+                // 방 안 모든 적의 화상 중 가장 긴 지속시간만큼 자신에게 신속 2
+                const T = Math.max(0, ...ctx.world.hostiles(u).map((e) => Status.turns(e, "burn")));
+                if (T > 0) {
+                    Status.add(u, "swift", 2, T);
+                    out.push([new PopupAnim(u, `신속 2`, Status.DEFS.swift.color)]);
+                }
+            }
             return out;
         },
         short: (c) => {
             const d = c.def;
             const n = CardOps.atk(PL(), d.longBurn ? 40 : 60);
             const turns = d.longBurn ? Math.max(1, CardOps.def(PL(), 100)) : d.burnTurns ?? 2;
-            return `${CK.st("burn", "화상 " + n)} ${turns}턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸${d.consume ? " · 이미 화상이면 소모해 폭발" : ""}`;
+            return `${CK.st("burn", "화상 " + n)} ${turns}턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸${d.consume ? " · 이미 화상이면 소모해 폭발" : ""}${d.swiftFromBurn ? " · 적 화상 최대 턴만큼 " + CK.st("swift", "신속 2") : ""}`;
         }
     },
 
@@ -956,19 +964,51 @@ const VARIANTS = {
         red: { afterHit: (u, f) => CardOps.inflict(f, "burn", CardOps.atk(u, 50), 3) },
         blue: { afterHit: (u, f) => CardOps.inflict(f, "ice", CardOps.atk(u, 50), 2) }
     },
+    // 순간이동 변형. 푸른: 떠나기 직전 내 칸 3x3 적 둔화 100% 2턴 / 붉은: 남은 이동거리만큼 힘 2턴 / 노란: 거리 무제한 + 기력 1
     blink: {
         blue: {
             use(ctx) {
-                const steps = CardOps.teleport(ctx, CardOps.spd(ctx.user, 200));
-                if (!steps) return null;
                 const u = ctx.user;
-                if (Entity.DIRS.some(([dx, dy]) => CardOps.foeAt(ctx, u.x + dx, u.y + dy))) {
-                    const got = CardOps.mana(u, 3);
-                    if (got) steps.push([new PopupAnim(u, `마나 +${got}`, "#7cb0f0")]);
+                const foes = CardOps.foesSquare(ctx, u.x, u.y, 1);
+                const steps = CardOps.teleport(ctx, CardOps.spd(u, 200));
+                if (!steps) return null;
+                if (foes.length) steps.unshift(foes.map((f) => CardOps.inflict(f, "slow", 100, 2)));
+                return steps;
+            },
+            short: () => `주변 3×3 ${CK.st("slow", "둔화 100%")} 2턴 · ${CK.spd(CardOps.spd(PL(), 200))}칸 순간이동`
+        },
+        red: {
+            use(ctx) {
+                const u = ctx.user;
+                const n = CardOps.spd(u, 200);
+                const fx = u.x;
+                const fy = u.y;
+                const steps = CardOps.teleport(ctx, n);
+                if (!steps) return null;
+                const left = n - (Math.abs(u.x - fx) + Math.abs(u.y - fy));
+                if (left > 0) {
+                    Status.add(u, "str", left, 2);
+                    MessageLog.add(`남은 이동거리 ${left}만큼 힘을 얻었다 (2턴)`, "#e8584a");
+                    steps.push([new PopupAnim(u, `힘 ${left}`, Status.DEFS.str.color)]);
                 }
                 return steps;
             },
-            short: () => `${CK.spd(CardOps.spd(PL(), 200))}칸 순간이동 · 옆에 적이면 마나 +3`
+            short: () => `${CK.spd(CardOps.spd(PL(), 200))}칸 순간이동 · 남은 거리만큼 ${CK.st("str", "힘")} 2턴`
+        },
+        yellow: {
+            target: () => ({ range: 99, radius: 0, taps: 1, verb: "순간이동", color: "#c8a0f8", move: true, tiles: (w) => CardOps.freeTiles(w, PL(), 99).filter((k) => !Status.charmBlocks(PL(), ...k.split(",").map(Number))) }),
+            use(ctx) {
+                const u = ctx.user;
+                const steps = CardOps.teleport(ctx, 99);
+                if (!steps) return null;
+                const got = Math.min(1, u.maxEnergy - u.energy);
+                if (got > 0) {
+                    u.energy += got;
+                    steps.push([new PopupAnim(u, `기력 +${got}`, "#f29a3a")]);
+                }
+                return steps;
+            },
+            short: () => `거리 무제한 순간이동 · ${CK.energy("기력 +1")} 회복`
         }
     },
     guard: {
@@ -998,7 +1038,8 @@ const VARIANTS = {
     },
     ignite: {
         red: { consume: true, burnTurns: 3 },
-        blue: { longBurn: true }
+        blue: { longBurn: true },
+        yellow: { swiftFromBurn: true }
     },
     overload: {
         red: { strengthFromSpent: true },

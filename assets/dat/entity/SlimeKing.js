@@ -1,9 +1,12 @@
 // 슬라임킹 (공방 데이터 slime_king, 2x2). 행동 하나하나가 의도(intent)를 만들고, kind "custom"은 run/view/describe를 스스로 가진다.
-//   A 점액 돌진 — 플레이어 쪽으로 벽·무언가에 부딪힐 때까지 돌진. 지나간 자리와 멈춘 곳 4x4에 점액 장판 3턴. 충돌 공격력 200% + 점액 카드
-//   B 점액 던지기 — 플레이어 자리와 그 주변 무작위 2곳에 1칸 범위. 공격력 100%, 맞으면 점액 카드, 떨어진 범위에 점액 장판 3턴
+//   A 점액 돌진 — 플레이어 쪽으로 벽·무언가에 부딪힐 때까지 돌진. 충돌 공격력 160% + 점액 카드 (이동속도 200%)
+//   B 점액 던지기 — 플레이어 자리와 그 주변 무작위 6곳에 한 칸씩. 공격력 80%, 맞으면 점액 카드(이동속도 100%), 떨어진 칸마다 점액 장판 2턴
 //   C 다가가기 — 이동속도만큼 다가가거나 옆이면 공격력 100%. 맞히면 점액 카드
 //   D 방어 — 방어력 100% 방어도 1턴
-//   E 슬라임 소환 — 현재 체력 20%를 체력으로, 공격·방어는 자기 50%인 슬라임을 곁에
+//   E 슬라임 소환 — 현재 체력 15%를 체력으로, 공격·방어는 킹의 40%인 슬라임을 곁에
+//   F 점액 손 — entity/SlimeKingPull.js
+//   G 휴식 — 1턴 쉬며 체력 5 회복
+// 킹이 움직여 지나간 자리(발자국 2x2 전체)에는 점액 장판(2턴)이 생긴다 (돌진·다가가기).
 // 점액 카드 수는 자기 이동속도 비례 (돌진 200%, 던지기·공격 100%).
 class SlimeKing {
     // ---------- 도우미 ----------
@@ -59,6 +62,12 @@ class SlimeKing {
         return null;
     }
 
+    // 킹이 움직일 때마다 새로 차지한 칸들(발자국 전체)에 점액 장판을 깐다. (fx, fy)는 움직이기 전 왼쪽 아래 칸
+    static trail(w, e, life = 2, fx = e.x, fy = e.y) {
+        const before = new Set(e.tilesOf(fx, fy).map(([x, y]) => x + "," + y));
+        for (const [x, y] of e.tilesOf()) if (!before.has(x + "," + y)) Goo.lay(w, x, y, life);
+    }
+
     // ---------- A 점액 돌진 ----------
     static dirTo(e, foe) {
         const c = SlimeKing.center(e);
@@ -97,22 +106,15 @@ class SlimeKing {
         return { steps, x, y, tiles, hit };
     }
 
-    // 멈춘 곳 4x4 (킹 2x2의 사방 한 칸씩)
-    static impactZone(w, e, x, y) {
-        const out = [];
-        for (let dy = -1; dy <= e.size; dy++) for (let dx = -1; dx <= e.size; dx++) if (EnemyMoves.walkableTile(w, x + dx, y + dy)) out.push([x + dx, y + dy]);
-        return out;
-    }
-
     static chargeIntent(ctx, e, foe) {
         const dir = SlimeKing.dirTo(e, foe);
         const r = SlimeKing.sim(ctx.world, e, dir);
         if (r.steps < 1) return null;
-        const dmg = EnemyMoves.val(e, "atk", 200);
+        const dmg = EnemyMoves.val(e, "atk", 160);
         return {
-            kind: "custom", name: "점액 돌진", dir, dmg, tiles: r.tiles, zone: SlimeKing.impactZone(ctx.world, e, r.x, r.y), color: "#f08030",
+            kind: "custom", name: "점액 돌진", dir, dmg, tiles: r.tiles, color: "#f08030",
             view: () => ({ kind: "charge", v: dmg }),
-            text: () => `점액 돌진: 주황 칸을 따라 벽에 부딪힐 때까지 돌진. 부딪힌 상대에게 ${dmg} 피해 + 점액 카드 ${Math.floor(e.speedNow * 2)}장. 지나간 자리와 멈춘 곳 4x4에 점액 장판(3턴)`,
+            text: () => `점액 돌진: 주황 칸을 따라 벽에 부딪힐 때까지 돌진. 부딪힌 상대에게 ${dmg} 피해 + 점액 카드 ${Math.floor(e.speedNow * 2)}장. 슬라임킹이 지나간 자리엔 점액 장판(2턴)이 생성된다`,
             run: SlimeKing.runCharge
         };
     }
@@ -129,12 +131,14 @@ class SlimeKing {
         if (r.steps < 1) return { anims: [new PopupAnim(e, "…", "#c8b890")], hitPlayer };
         const fx = e.x;
         const fy = e.y;
-        for (let i = 0; i < r.steps; i++) w.moveEntity(e, intent.dir[0], intent.dir[1]);
+        for (let i = 0; i < r.steps; i++) {
+            const bx = e.x;
+            const by = e.y;
+            w.moveEntity(e, intent.dir[0], intent.dir[1]);
+            SlimeKing.trail(w, e, 2, bx, by); // 지나간 자리에 점액 장판
+        }
         anims.push(new MoveAnim(e, new Vector(fx * t, fy * t), new Vector(e.x * t, e.y * t), 0.06 * r.steps + 0.06));
-        const zone = SlimeKing.impactZone(w, e, e.x, e.y);
-        for (const [x, y] of r.tiles) Goo.lay(w, x, y, 3);
-        for (const [x, y] of zone) Goo.lay(w, x, y, 3);
-        anims.push(new AreaFlashAnim(w, zone, "#7cd47c", 0.35, false));
+        anims.push(new AreaFlashAnim(w, r.tiles, "#7cd47c", 0.35, false));
         MessageLog.add(`${josa(e.displayName, "이가")} 점액을 흩뿌리며 돌진했다!`, "#7cd47c");
         const foe = r.hit;
         if (foe && foe.alive && (foe === p || foe instanceof Ally)) {
@@ -158,13 +162,10 @@ class SlimeKing {
             if (EnemyMoves.walkableTile(w, foe.x + dx, foe.y + dy)) near.push([foe.x + dx, foe.y + dy]);
         }
         for (let i = near.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [near[i], near[j]] = [near[j], near[i]]; }
-        const centers = [[foe.x, foe.y], ...near.slice(0, 2)];
-        const seen = new Set();
-        const tiles = [];
-        for (const [cx, cy] of centers) for (const [x, y] of EnemyMoves.around(w, cx, cy, 1)) if (!seen.has(x + "," + y)) { seen.add(x + "," + y); tiles.push([x, y]); }
+        const centers = [[foe.x, foe.y], ...near.slice(0, 6)]; // 플레이어 칸 + 주변 무작위 6곳 (모자라면 있는 만큼)
         return {
-            kind: "area", name: "점액 던지기", tiles, centers, dmg: EnemyMoves.val(e, "atk", 100), thrown: true, color: "#7cd47c",
-            cards: { pct: 100 }, goo: 3
+            kind: "area", name: "점액 던지기", tiles: centers.map(([x, y]) => [x, y]), centers, dmg: EnemyMoves.val(e, "atk", 80), thrown: true, color: "#7cd47c",
+            cards: { pct: 100 }, goo: 2
         };
     }
 
@@ -201,6 +202,7 @@ class SlimeKing {
             const fx = e.x;
             const fy = e.y;
             if (!w.moveEntity(e, dir[0], dir[1])) break;
+            SlimeKing.trail(w, e, 2, fx, fy); // 다가가는 걸음에도 점액 장판
             anims.push(new MoveAnim(e, new Vector(fx * t, fy * t), new Vector(e.x * t, e.y * t)));
             moved++;
         }
@@ -236,11 +238,11 @@ class SlimeKing {
         const ring = SlimeKing.ringTiles(w, e);
         if (!ring.length) return null;
         const spot = ring[Math.floor(rng() * ring.length)];
-        const hp = Math.max(1, Math.floor(e.stats.hp * 20 / 100 + 1e-9));
+        const hp = Math.max(1, Math.floor(e.stats.hp * 15 / 100 + 1e-9));
         return {
             kind: "custom", name: "슬라임 소환", tiles: [spot], color: "#8a50c8", spot,
             view: () => ({ kind: "summon" }),
-            text: () => `슬라임 소환: 현재 체력의 20%(${hp})를 체력으로, 공격·방어는 자기의 50%인 슬라임을 곁에 부른다`,
+            text: () => `슬라임 소환: 현재 체력의 15%(${hp})를 체력으로, 공격·방어는 자기의 40%인 슬라임을 곁에 부른다`,
             run: SlimeKing.runSummon
         };
     }
@@ -256,14 +258,33 @@ class SlimeKing {
         }
         if (!spot) return { anims: [new PopupAnim(e, "…", "#c8b890")], hitPlayer: false };
         const stats = {
-            hp: Math.max(1, Math.floor(e.stats.hp * 20 / 100 + 1e-9)),
-            atk: Math.floor(e.stats.attack * 50 / 100 + 1e-9),
-            def: Math.floor(e.stats.defense * 50 / 100 + 1e-9)
+            hp: Math.max(1, Math.floor(e.stats.hp * 15 / 100 + 1e-9)),
+            atk: Math.floor(e.stats.attack * 40 / 100 + 1e-9),
+            def: Math.floor(e.stats.defense * 40 / 100 + 1e-9)
         };
         const m = EntityTypes.create("slime", spot[0], spot[1], { lv: 1, stats });
         w.spawn(m);
         MessageLog.add(`${josa(e.displayName, "이가")} 슬라임을 뱉어 냈다 (체력 ${stats.hp}, 공격 ${stats.atk}, 방어 ${stats.def})`, "#b080e8");
         anims.push(new PopupAnim(e, "소환", "#b080e8"));
         return { anims, hitPlayer: false };
+    }
+
+    // ---------- G 휴식 ----------
+    static restIntent(ctx, e) {
+        const v = 5;
+        return {
+            kind: "custom", name: "휴식", color: "#7cd47c",
+            view: () => ({ kind: "heal", v }),
+            text: () => `휴식: 1턴 쉰다. 체력을 ${v} 회복한다`,
+            run: SlimeKing.runRest
+        };
+    }
+
+    static runRest(ai, ctx, turns, intent) {
+        const e = ai.entity;
+        const got = Math.max(0, Math.min(e.stats.maxHp - e.stats.hp, 5));
+        e.stats.hp += got;
+        MessageLog.add(`${josa(e.displayName, "이가")} 쉬면서 체력을 ${got} 회복했다`, "#7cd47c");
+        return { anims: [new PopupAnim(e, "+" + got, "#7cd47c")], hitPlayer: false };
     }
 }

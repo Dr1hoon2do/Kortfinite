@@ -128,7 +128,7 @@ EnemyMoves.SPECS = {
 
     // 슬라임: [ABCD, ACBD, ACDB] 중 하나
     //   A 다가가거나 옆칸이면 공격력 100% / B 방어력 100% 방어도 1턴 / C 쉼
-    //   D 사거리 5 (벽에 막힌다), 플레이어 칸 + 1칸 거리에 점액: 공격력 80% + 둔화(50%, 2턴) — 못 쓰면 A
+    //   D 사거리 5 (벽에 막힌다), 플레이어 위치로 점액을 던진다: 공격력 80% + 둔화(33%, 1턴) — 못 쓰면 A
     slime: {
         rotations: ["ABCD", "ACBD", "ACDB"],
         fallback: { D: "A" },
@@ -138,7 +138,7 @@ EnemyMoves.SPECS = {
             C: () => ({ kind: "idle" }),
             D(ai, ctx, e, foe) {
                 if (EnemyMoves.dist(e, foe) > 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
-                return { kind: "area", name: "점액 던지기", tiles: EnemyMoves.around(ctx.world, foe.x, foe.y, 1), dmg: EnemyMoves.val(e, "atk", 80), slow: { v: 33, t: 1 }, thrown: true, color: "#7cd47c" };
+                return { kind: "area", name: "점액 던지기", tiles: [[foe.x, foe.y]], dmg: EnemyMoves.val(e, "atk", 80), slow: { v: 33, t: 1 }, thrown: true, color: "#7cd47c" };
             }
         }
     },
@@ -225,17 +225,20 @@ EnemyMoves.SPECS = {
     // 돌 골렘: [ABCDBD, ADCBDB] 중 하나
     //   A 사거리 5, 플레이어 칸에 돌 공격력 100% — 안 닿으면 D / B 다가가거나 옆칸이면 방어력 100% 피해
     //   C 경질화(방어력 20%) + 방어력 100% 방어도 2턴 / D 쉼
-    // 슬라임킹 (2x2): [ABCDE, ACEBD, ACDEB] 중 하나. 동작은 entity/SlimeKing.js
-    //   A 점액 돌진(지나간 자리·멈춘 곳 4x4에 장판) / B 점액 던지기 / C 다가가기·공격 / D 방어도 / E 슬라임 소환
+    // 슬라임킹 (2x2): [ABCDEFG, ACGEFBD, GACDEBF] 중 하나. 동작은 entity/SlimeKing.js (F는 SlimeKingPull.js)
+    //   A 점액 돌진(충돌 160%, 지나간 자리에 장판 2턴) / B 점액 던지기(플레이어 칸 + 주변 6곳, 80%) / C 다가가기·공격 (걸음마다 장판)
+    //   D 방어도 / E 슬라임 소환(체력 15%, 공격·방어 40%) / F 점액 손 / G 휴식(체력 5 회복)
     slime_king: {
-        rotations: ["ABCDE", "ACEBD", "ACDEB"],
-        fallback: { A: "C", B: "C", E: "D" },
+        rotations: ["ABCDEFG", "ACGEFBD", "GACDEBF"],
+        fallback: { A: "C", B: "C", E: "D", F: "C" },
         actions: {
             A: (ai, ctx, e, foe) => SlimeKing.chargeIntent(ctx, e, foe),
             B: (ai, ctx, e, foe) => SlimeKing.throwIntent(ctx, e, foe),
             C: (ai, ctx, e, foe) => SlimeKing.biteIntent(ctx, e, foe),
             D: () => ({ kind: "block", pct: 100, turns: 1 }),
-            E: (ai, ctx, e) => SlimeKing.summonIntent(ctx, e)
+            E: (ai, ctx, e) => SlimeKing.summonIntent(ctx, e),
+            F: (ai, ctx, e, foe) => SlimeKingPull.intent(ctx, e, foe),
+            G: (ai, ctx, e) => SlimeKing.restIntent(ctx, e)
         }
     },
 

@@ -29,7 +29,7 @@ const GAME_DATA = {
    "id": "blast",
    "effect": "이동속도 거리 내 선택 타일 3x3 영역 대상 공격력 300% 피해",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "uncommon",
    "name": "폭발",
    "note": "",
    "tags": [
@@ -100,7 +100,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 200% 거리 내 지형과 상관없이 이동",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "common",
    "name": "순간이동",
    "note": "",
    "tags": [
@@ -113,14 +113,47 @@ const GAME_DATA = {
        "mana": 2
       }
      ],
-     "effect": "이동속도 200% 거리 내 지형과 상관없이 이동, 도착한 칸 옆에 적이 있으면 마나 3 회복",
+     "effect": "자신 위치 3x3 영역 대상 둔화(100%) 2턴 적용, 이후 이동속도 200% 거리 내 지형과 상관없이 이동",
      "from": "default",
      "key": "blue",
      "name": "푸른 순간이동",
      "note": "",
      "tags": [
       "move",
-      "mana"
+      "slowness",
+      "area"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "이동속도 200% 거리 내 지형과 상관없이 이동, 이후 남은 이동거리만큼 힘(2턴) 부여",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 순간이동",
+     "note": "",
+     "tags": [
+      "move",
+      "strength"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "거리와 지형 상관없이 이동, 기력 1 회복",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 순간이동",
+     "note": "",
+     "tags": [
+      "move",
+      "energy"
      ]
     }
    ],
@@ -130,7 +163,7 @@ const GAME_DATA = {
    "id": "card_absorbing",
    "effect": "패를 1장 버리고, 2 + 방어력 10%만큼 마나 회복. 버린 카드가 마나를 사용하는 카드라면, 그 비용의 절반만큼 추가로 회복",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "카드 흡수",
    "note": "",
    "tags": [
@@ -147,7 +180,7 @@ const GAME_DATA = {
    "id": "card_shield",
    "effect": "카드를 원하는 수만큼 골라 버리고, 방어력 100%*(버린 카드 수 + 1)만큼 방어도 (버린 카드 수 + 1)턴 획득",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "카드 방패",
    "note": "",
    "tags": [
@@ -210,7 +243,7 @@ const GAME_DATA = {
    ],
    "effect": "옆칸 단일 대상 공격력 150% 피해, 기절 1턴 부여",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "몽둥이",
    "note": "",
    "tags": [
@@ -362,7 +395,7 @@ const GAME_DATA = {
    "id": "first_aid",
    "effect": "대상의 체력을 방어력 200%만큼 회복한다. 자신에게는 사용할 수 없다.",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "응급처치",
    "note": "",
    "tags": [
@@ -405,7 +438,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 1 거리 내에 대상에게 방어력 60% 만큼 빙결 2턴 부여",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "서리",
    "note": "",
    "tags": [
@@ -561,7 +594,7 @@ const GAME_DATA = {
    ],
    "effect": "이번 전투동안 현재 방어력 20%만큼 경질화 부여",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "굳히기",
    "note": "",
    "tags": [
@@ -630,7 +663,7 @@ const GAME_DATA = {
    ],
    "effect": "옆칸 단일대상 공격력 250% 피해",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "강타",
    "note": "",
    "tags": [
@@ -708,7 +741,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 1 거리 내 대상에게 공격력 60% 만큼 화상 2턴 부여",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "방화",
    "note": "",
    "tags": [
@@ -755,6 +788,26 @@ const GAME_DATA = {
       "burning",
       "ranged"
      ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 50% + 1 거리 내 대상에게 공격력 60% 만큼 화상 2턴 부여\n이후 적에게 적용된 화상 중 가장 긴 지속시간 턴만큼 자신에게 신속 2만큼 부여",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 방화",
+     "note": "",
+     "tags": [
+      "burning",
+      "ranged",
+      "swift"
+     ]
     }
    ]
   },
@@ -770,7 +823,7 @@ const GAME_DATA = {
    ],
    "effect": "이동속도 50% + 3만큼 드로우, 행동패 제한을 초과할 수 있다.",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "uncommon",
    "name": "통찰",
    "note": "",
    "tags": [
@@ -788,7 +841,7 @@ const GAME_DATA = {
    ],
    "effect": "자신 옆칸에 아군 해골병사 소환\n(체력: 방어력의 100% + 10, 공격력: 2 + 공격력의 50%, 이동속도: 1, 나머지는 0)\n해골병사: 플레이어 턴 시작시마다 가장 가까운 적에게 이동속도만큼 다가가 공격력 100% 피해, 대상을 도발.",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "uncommon",
    "name": "해골병사",
    "note": "",
    "tags": [
@@ -803,7 +856,7 @@ const GAME_DATA = {
    "id": "lightning_bolt",
    "effect": "현재위치 3x3 영역 대상 공격력 100% 피해 + 기절 1턴 부여",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "common",
    "name": "천둥",
    "note": "",
    "tags": [
@@ -1193,7 +1246,7 @@ const GAME_DATA = {
    "id": "sprint",
    "effect": "거리 제한없이 이동, 이동속도 50% + 2만큼 드로우",
    "kind": "reward",
-   "rarity": "rare",
+   "rarity": "common",
    "name": "전력질주",
    "note": "",
    "tags": [
@@ -1338,7 +1391,7 @@ const GAME_DATA = {
    ],
    "effect": "방어력 200%의 체력을 가진 토템 소환(이동속도 200% 턴동안 지속)\n토템: 플레이어 턴 종료시, 토템으로부터 3칸 이내의 적에게 도발 부여",
    "kind": "reward",
-   "rarity": "uncommon",
+   "rarity": "common",
    "name": "토템",
    "note": "",
    "tags": [
@@ -1593,7 +1646,7 @@ const GAME_DATA = {
    "hp": 12,
    "name": "슬라임",
    "note": "",
-   "pattern": "A. 플레이어에게 이동속도만큼 다가가거나, 옆칸에 있다면 100% 피해를 준다.\nB. 방어력 100%에 해당하는 방어도(1턴)을 얻는다.\nC. 1턴 쉰다.\nD. 플레이어 위치로 1칸 거리 범위 점액을 던진다. 공격력 80% 피해. 맞으면 둔화(33%, 1턴 지속)에 걸린다. 벽에 막힌다. 사거리는 5.\n패턴 로테이션은 [ABCD, ACBD, ACDB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
+   "pattern": "A. 플레이어에게 이동속도만큼 다가가거나, 옆칸에 있다면 100% 피해를 준다.\nB. 방어력 100%에 해당하는 방어도(1턴)을 얻는다.\nC. 1턴 쉰다.\nD. 플레이어 위치로 점액을 던진다. 공격력 80% 피해. 맞으면 둔화(33%, 1턴 지속)에 걸린다. 벽에 막힌다. 사거리는 5.\n패턴 로테이션은 [ABCD, ACBD, ACDB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
    "speed": 1,
    "tags": [
     "slowness",
@@ -1612,7 +1665,7 @@ const GAME_DATA = {
    "hp": 50,
    "name": "슬라임킹",
    "note": "2x2의 크기를 가진다.",
-   "pattern": "A. 플레이어가 있는 방향으로 벽에 부딪힐 때까지 돌진, 지나간 자리 그리고 부딪힌 지점 4x4 영역에 점액 장판(3턴 지속)을 남긴다. 돌진 중 충돌시 공격력 200% 피해, 점액 카드를 이동속도 200%만큼 패에 넣는다.\n점액 장판: 이동 중 장판을 밟을 경우 이동이 중지된다. 또한 장판 위에 있으면 둔화 33% 적용(1턴)\nB. 플레이어 위치, 그 주변 무작위 위치 2곳에 각각 1칸 거리 범위 점액을 던진다. 공격력 100% 피해. 맞으면 점액 카드 이동속도 100%만큼 패에 삽입. 떨어진 범위에 점액 장판(3턴) 생성\nC. 플레이어에게 이동속도만큼 다가가거나, 옆칸일 경우 공격력 100% 피해. 공격 성공시 점액 카드 이동속도 100%만큼 패에 삽입\nD. 방어력 100%만큼 방어도를 1턴 얻는다.\nE. 자신의 현재체력 20%에 해당하는 슬라임을 소환한다. 각 스탯은 자신의 각 스탯 50%만큼 부여\n패턴 로테이션은 [ABCDE, ACEBD, ACDEB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
+   "pattern": "점액 장판: 이동 중 장판을 밟을 경우 이동이 중지된다. 또한 장판 위에 있으면 둔화 33% 적용(1턴)\n슬라임킹이 지나간 자리엔 점액 장판(2턴)이 생성된다.\nA. 플레이어가 있는 방향으로 벽에 부딪힐 때까지 돌진, 돌진 중 충돌시 공격력 160% 피해, 점액 카드를 이동속도 200%만큼 패에 넣는다.\nB. 플레이어 위치, 그 주변 무작위 위치 6곳에 점액을 던진다. 공격력 80% 피해. 맞으면 점액 카드 이동속도 100%만큼 패에 삽입. 떨어진 위치에 점액 장판(2턴) 생성\nC. 플레이어에게 이동속도만큼 다가가거나, 옆칸일 경우 공격력 100% 피해. 공격 성공시 점액 카드 이동속도 100%만큼 패에 삽입.\nD. 방어력 100%만큼 방어도를 1턴 얻는다.\nE. 자신의 현재체력 15%에 해당하는 슬라임을 소환한다. 각 스탯은 자신의 각 스탯 40%만큼 부여.\nF. 플레이어 위치로 1칸 범위 점액 손을 날린다. 맞으면 플레이어를 자신의 옆칸으로 당겨온다. 공격력 60% 피해, 점액 카드 이동속도 100% 삽입.\nG. 1턴 쉰다. 체력을 5 회복한다.\n패턴 로테이션은 [ABCDEFG, ACGEFBD, GACDEBF] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
    "speed": 1,
    "tags": [
     "area",
@@ -1701,6 +1754,16 @@ const GAME_DATA = {
  ],
  "tags": [
   {
+   "id": "acceleration",
+   "color": "amber",
+   "name": "가속",
+   "note": "버프 상태이상 : 수치만큼 턴 시작시 추가 드로우 (N턴)",
+   "tags": [
+    "acceleration"
+   ],
+   "memo": []
+  },
+  {
    "id": "area",
    "color": "violet",
    "name": "범위",
@@ -1717,6 +1780,16 @@ const GAME_DATA = {
    "note": "상대에게 피해를 주는 카드 또는 효과에 부여된다.",
    "tags": [
     "attack"
+   ],
+   "memo": []
+  },
+  {
+   "id": "bright",
+   "color": "olive",
+   "name": "총명",
+   "note": "버프 상태이상 : 수치만큼 행동패 최대소지 갯수 증가 (N턴)",
+   "tags": [
+    "bright"
    ],
    "memo": []
   },

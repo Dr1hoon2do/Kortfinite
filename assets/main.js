@@ -49,7 +49,7 @@ async function main() {
                       "rules/Animation.js", "rules/TurnManager.js",
                       "entity/Stats.js", "entity/AI.js", "rules/Combat.js", "rules/Status.js", "entity/EntityOverlay.js",
                       // entity: 방 안의 것들
-                      "entity/Props.js", "entity/EnemyAI.js", "entity/Monster.js", "entity/Allies.js", "entity/SlimeKing.js", "entity/Merchant.js", "entity/Pickups.js",
+                      "entity/Props.js", "entity/EnemyAI.js", "entity/Monster.js", "entity/Allies.js", "entity/SlimeKing.js", "entity/SlimeKingPull.js", "entity/Merchant.js", "entity/Pickups.js",
                       // card: 정의 체계 → 효과 → 카드 정의들 → 체계별 등록 (장비·주문·젬)
                       "card/CardText.js", "card/CardDef.js", "card/CardEffects.js", "card/defs/ActionCards.js", "card/Card.js", "card/CardKit.js",
                       "card/Gear.js", "card/Spell.js", "card/Gem.js", "card/DrawRule.js",

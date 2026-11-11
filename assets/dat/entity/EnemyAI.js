@@ -385,6 +385,7 @@ class EnemyMoves {
                         if (intent.root) anims.push(EnemyMoves.inflict(v, "root", intent.root));
                         if (intent.slow) anims.push(EnemyMoves.inflict(v, "slow", intent.slow.v, intent.slow.t));
                     }
+                    if (intent.pull && v === p && v.alive) anims.push(...SlimeKingPull.pull(w, e, v)); // 점액 손: 킹 옆으로 끌어온다
                     if (v === p) {
                         hitPlayer = true;
                         if (intent.cards && intent.dmg > 0) anims.push(...SlimeKing.giveSlime(e, p, intent.cards.pct ?? 100));
@@ -687,7 +688,7 @@ class EnemyMoves {
             charge: () => `돌진 준비: 빨간 줄을 따라 돌진, 부딪히면 ${it.dmg} 피해`,
             rush: () => `돌진 준비: 방어도 ${EnemyMoves.val(e, "def", it.block.pct ?? 100)} (${it.block.turns ?? 1}턴) · 달려가 부딪히면 ${it.col} 피해 · 주변 3x3을 휘둘러 ${it.swing} 피해`,
             leap: () => `도약 준비: 표시한 칸으로 뛰어올라 주변 2칸에 ${it.dmg} 피해 (한가운데에 있으면 밀려난다)`,
-            area: () => `${it.name}: 표시한 칸에 ${it.dmg ? it.dmg + " 피해" : ""}${it.root ? ` 속박 ${it.root}턴` : ""}${it.slow ? ` 둔화 ${it.slow.v}% ${it.slow.t}턴` : ""}`,
+            area: () => `${it.name}: 표시한 칸에 ${it.dmg ? it.dmg + " 피해" : ""}${it.root ? ` 속박 ${it.root}턴` : ""}${it.slow ? ` 둔화 ${it.slow.v}% ${it.slow.t}턴` : ""}${it.pull ? " · 맞으면 슬라임킹 옆으로 끌려온다" : ""}`,
             move: () => "자리를 옮긴다",
             howl: () => "울부짖는다: 힘이 영구히 +1",
             block: () => `몸을 웅크린다: 방어도 ${EnemyMoves.val(e, "def", it.pct ?? 100)} (${it.turns ?? 1}턴)${it.harden ? ` · 경질화 ${EnemyMoves.val(e, "def", it.harden)}` : ""}`,
