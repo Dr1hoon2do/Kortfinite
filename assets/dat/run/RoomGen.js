@@ -98,6 +98,21 @@ class RoomPlan {
         }
         const right = Rng.shuffle(rng, free.filter((p) => p.x >= Math.ceil(this.w / 2) + 1));
         const center = { x: Math.ceil(this.w / 2) + 1, y: Math.ceil(this.h / 2) };
+        // 적 놓을 자리. 큰 적(2x2)은 비어 있는 size×size 칸을 통째로 쓴다
+        const place = (kind) => {
+            const size = (Monster.KINDS[kind] && Monster.KINDS[kind].size) || 1;
+            if (size === 1) return right.pop();
+            const open = new Set(right.map((p) => p.x + "," + p.y));
+            for (let i = right.length - 1; i >= 0; i--) {
+                const q = right[i];
+                const cells = [];
+                for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) cells.push((q.x + dx) + "," + (q.y + dy));
+                if (!cells.every((c) => open.has(c))) continue;
+                for (const c of cells) { const k = right.findIndex((p) => p.x + "," + p.y === c); if (k >= 0) right.splice(k, 1); }
+                return { x: q.x, y: q.y };
+            }
+            return right.pop();
+        };
 
         this.spawns.push({ type: "entrance", ...this.entrance }, { type: "exit", ...this.exit });
         const lv = this.lv;
@@ -107,18 +122,20 @@ class RoomPlan {
             // 적 없음
         } else if (this.type === "battle") {
             const [base, per] = RoomPlan.BUDGET.battle;
-            for (const kind of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row)) this.spawns.push({ type: kind, ...right.pop(), data: { lv } });
+            for (const kind of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row)) this.spawns.push({ type: kind, ...place(kind), data: { lv } });
         } else if (this.type === "elite") {
             const pool = EnemyData.at(floor).slice().sort((a, b) => b.threat - a.threat);
             const lead = Rng.pick(rng, pool.slice(0, Math.max(1, Math.ceil(pool.length / 2))));
-            this.spawns.push({ type: lead.id, ...right.pop(), data: { lv, rank: "elite" } });
+            this.spawns.push({ type: lead.id, ...place(lead.id), data: { lv, rank: "elite" } });
             const [base, per] = RoomPlan.BUDGET.elite;
-            for (const m of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row, 2)) this.spawns.push({ type: m, ...right.pop(), data: { lv } });
+            for (const m of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row, 2)) this.spawns.push({ type: m, ...place(m), data: { lv } });
         } else if (this.type === "boss") {
             const pool = EnemyData.at(floor).slice().sort((a, b) => b.threat - a.threat);
             const lead = Rng.pick(rng, pool.slice(0, Math.min(2, pool.length)));
-            this.spawns.push({ type: lead.id, x: this.w - 2, y: center.y, data: { lv, rank: "boss" } });
-            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === this.w - 2 && p.y === center.y)).pop(), data: { lv } });
+            const bigBoss = ((Monster.KINDS[lead.id] && Monster.KINDS[lead.id].size) || 1) > 1;
+            const bossAt = bigBoss ? place(lead.id) : { x: this.w - 2, y: center.y };
+            this.spawns.push({ type: lead.id, ...bossAt, data: { lv, rank: "boss" } });
+            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === bossAt.x && p.y === bossAt.y)).pop(), data: { lv } });
         } else if (this.type === "shop") {
             const stock = RoomPlan.rollStock(rng, this.node.row);
             stock.forEach((offer, i) => { offer.sold = !!(this.state.sold && this.state.sold.includes(i)); }); // 이미 산 물건

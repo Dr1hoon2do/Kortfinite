@@ -109,7 +109,7 @@ class EnemyMoves {
 
     // ---------- 도우미 ----------
     static dist(a, b) {
-        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        return Entity.gap(a, b);
     }
 
     // 같은 줄(가로·세로)이면 방향 [dx, dy], 아니면 null
@@ -264,6 +264,7 @@ class EnemyMoves {
                         break;
                     }
                     moved++;
+                    if (Goo.stuck(e)) break; // 점액 장판을 밟으면 멈춘다
                 }
                 if (!bumped && e.alive && foe.alive && EnemyMoves.dist(e, foe) === 1 && moved < n) {
                     if (e.x !== foe.x) e.flipX = foe.x < e.x;
@@ -369,7 +370,8 @@ class EnemyMoves {
             case "area": {
                 const name = intent.name ?? "공격";
                 const center = intent.tiles[0];
-                if (intent.thrown && center) anims.push(new ProjectileAnim(w, "cards", 70, new Vector(e.x * t, e.y * t), new Vector(center[0] * t, center[1] * t)));
+                const half = (e.size - 1) / 2; // 큰 몸은 한가운데에서 던진다
+                if (intent.thrown) for (const c of intent.centers ?? (center ? [center] : [])) anims.push(new ProjectileAnim(w, "cards", 70, new Vector((e.x + half) * t, (e.y + half) * t), new Vector(c[0] * t, c[1] * t)));
                 anims.push(new AreaFlashAnim(w, intent.tiles, intent.color ?? "#e05040", 0.3, !!intent.dmg));
                 const victims = EnemyMoves.victims(w, p, intent.tiles);
                 if (!victims.length) MessageLog.add(`${josa(e.displayName, "의")} ${name}을(를) 피했다`, "#a0d0a0");
@@ -382,8 +384,17 @@ class EnemyMoves {
                         if (intent.root) anims.push(EnemyMoves.inflict(v, "root", intent.root));
                         if (intent.slow) anims.push(EnemyMoves.inflict(v, "slow", intent.slow.v, intent.slow.t));
                     }
-                    if (v === p) hitPlayer = true;
+                    if (v === p) {
+                        hitPlayer = true;
+                        if (intent.cards && intent.dmg > 0) anims.push(...SlimeKing.giveSlime(e, p, intent.cards.pct ?? 100));
+                    }
                 }
+                break;
+            }
+            case "custom": {
+                const r = intent.run(ai, ctx, turns, intent);
+                anims.push(...r.anims);
+                hitPlayer = hitPlayer || r.hitPlayer;
                 break;
             }
             case "charge": {
@@ -503,7 +514,7 @@ class EnemyMoves {
     static victims(w, p, tiles) {
         const out = [];
         for (const [x, y] of tiles) for (const o of w.entitiesAt(x, y)) {
-            if (o.alive && (o === p || o instanceof Ally) && !out.includes(o)) out.push(o);
+            if (o.alive && (o === p || o instanceof Ally) && !out.includes(o)) out.push(o); // 큰 엔티티는 한 번만
         }
         return out;
     }
@@ -629,6 +640,7 @@ class EnemyMoves {
         let it = given ?? ai.intent;
         if (!given && it === undefined && e.world) it = ai.plan({ world: e.world, player: p, turn: 0 });
         if (!it) return null;
+        if (it.kind === "custom") return it.view(ai, p);
         switch (it.kind) {
             case "approach": {
                 const foe = ai.focus({ world: e.world, player: p });
@@ -665,6 +677,7 @@ class EnemyMoves {
         const n = e.speedNow;
         const foe = ai.focus({ world: e.world, player: p });
         const text = {
+            custom: () => it.text(),
             approach: () => {
                 const dmg = EnemyMoves.val(e, it.stat ?? "atk", it.poison ?? it.pct ?? 100);
                 const what = it.charm ? (Status.charmedBy(foe, e) ? `${dmg} 피해 (피해를 입히면 체력 회복·힘·경질화)` : `매료 ${it.charm.n ?? 2}칸 ${it.charm.turns ?? 3}턴을 건다`) : it.poison ? `독 ${dmg}을 건다` : `${dmg} 피해${it.lifesteal ? " (준 만큼 절반 회복)" : ""}`;
@@ -720,6 +733,7 @@ class IntentOverlay extends Renderer {
             if (it === undefined) it = e.ai.plan({ world: room, player: p, turn: 0 });
             if (!it || !it.tiles) continue;
             const color = it.kind === "charge" ? IntentOverlay.RUSH : it.kind === "web" ? "#e8e8f0" : it.color ?? "#e04030";
+            if (it.zone) this.zone(ctx, it.zone, t, px, pulse);
             this.marks(ctx, e, it, color, t, px, pulse);
             if (it.double && it.next && it.next.tiles) this.marks(ctx, e, it.next, it.next.color ?? "#e04030", t, px, pulse, "2");
         }
@@ -753,6 +767,19 @@ class IntentOverlay extends Renderer {
             ctx.fillRect(lx * t - t * 0.15, ly * t - t * 0.15, t * 0.3, t * 0.3);
         }
         ctx.globalAlpha = 1;
+    }
+
+    // 점액 장판이 깔릴 칸: 옅은 초록 칸 (피해는 없다)
+    zone(ctx, tiles, t, px, pulse) {
+        ctx.fillStyle = "#5fae4a";
+        ctx.globalAlpha = 0.16 + 0.1 * pulse;
+        for (const [x, y] of tiles) ctx.fillRect(x * t - t / 2, y * t - t / 2, t, t);
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = "#7cd47c";
+        ctx.lineWidth = px * 1.5;
+        ctx.setLineDash([px * 3, px * 3]);
+        for (const [x, y] of tiles) ctx.strokeRect(x * t - t / 2 + 1, y * t - t / 2 + 1, t - 2, t - 2);
+        ctx.setLineDash([]);
     }
 
     // 맞는 칸 표시: 어두운 바깥선 + 밝은 선 + 빗금 + 피해 숫자, 던지는 공격은 던지는 선도 그린다 (바닥색과 비슷해도 눈에 띄게)
@@ -807,9 +834,10 @@ class IntentOverlay extends Renderer {
             ctx.setLineDash([px * 5, px * 4]);
             ctx.lineWidth = px * 2;
             ctx.strokeStyle = color;
-            for (const [x, y] of it.tiles) {
+            const half = (e.size - 1) / 2;
+            for (const [x, y] of it.centers ?? it.tiles) {
                 ctx.beginPath();
-                ctx.moveTo(e.x * t, e.y * t);
+                ctx.moveTo((e.x + half) * t, (e.y + half) * t);
                 ctx.lineTo(x * t, y * t);
                 ctx.stroke();
             }

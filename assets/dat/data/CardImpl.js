@@ -441,8 +441,9 @@ const CARDS = {
         short: () => `${CK.spd(CardOps.spd(PL(), 50) + 3)}장 뽑기 (패 제한 무시)`
     },
 
-    // 점액: 상태이상 카드 (슬라임킹이 패에 끼워 넣는다). 쓸 수 없다 — 패 칸만 차지하고, 버리면 묘지로 간다
-    slime: { icon: "drop", color: "#7cd47c" },
+    // 점액: 상태이상 카드 (슬라임킹이 패에 끼워 넣는다). 쓸 수 없다 — 패 칸만 차지한다
+    // 손으로 [묘지로] 버리려면 기력 2를 내야 한다 (discardCost). 카드 효과로 버려질 땐 그냥 버려진다
+    slime: { icon: "drop", color: "#7cd47c", discardCost: { energy: 2 } },
 
     // 투척용 단검: 나이프 홀스터가 준다 (임시 카드 — 쓰거나 전투가 끝나면 사라진다)
     throwing_knife: {

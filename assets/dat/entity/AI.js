@@ -18,14 +18,15 @@ class AI {
     onAttacked(attacker) {}
 
     distance(a, b) {
-        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        return Entity.gap(a, b);
     }
 
     // 대상 쪽으로 한 칸. 길찾기로 막힌 길을 돌아가고, 대상 칸 자체는 막혀 있어도 고른다(공격).
     stepToward(target) {
         const e = this.entity;
-        if (this.distance(e, target) === 1) return [target.x - e.x, target.y - e.y];
-        const path = Pathfinder.find(e.world, e.x, e.y, target.x, target.y, { maxNodes: 1500 });
+        const goal = target.nearestTile(e.x, e.y); // 큰 대상은 가장 가까운 칸으로
+        if (this.distance(e, target) === 1) return [goal[0] - e.x, goal[1] - e.y];
+        const path = Pathfinder.find(e.world, e.x, e.y, goal[0], goal[1], { maxNodes: 1500 });
         if (path && path.length) return path[0];
         // 길이 막혔으면(다른 몬스터가 막고 있다) 가까워지는 쪽 빈칸으로
         const dx = Math.sign(target.x - e.x);

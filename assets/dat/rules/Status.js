@@ -152,6 +152,7 @@ class Status {
 
     // 이동속도 (둔화: -%): base는 원래 이동속도
     static speed(e, base) {
+        if (typeof Goo !== "undefined" && Goo.on(e)) base = Math.floor(base * 50 / 100 + 1e-9); // 점액 장판 위: 이동속도 절반
         const slow = Status.get(e, "slow");
         return slow ? Math.floor(base * (100 - slow) / 100 + 1e-9) : base;
     }

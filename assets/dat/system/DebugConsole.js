@@ -210,8 +210,9 @@ DebugConsole.register("summon", {
         const p = ctx.player;
         let made = 0;
         for (let i = 0; i < count; i++) {
-            const spot = ctx.world.findFreeTile(p.x + 2, p.y, 8);
-            if (!ctx.world.isWalkable(spot.x, spot.y)) continue;
+            const size = Monster.KINDS[type].size ?? 1;
+            const spot = size > 1 ? ctx.world.findFreeArea(p.x + 2, p.y, size, 8) : ctx.world.findFreeTile(p.x + 2, p.y, 8);
+            if (size > 1 ? !ctx.world.canEnter({ size, tilesOf: (ax, ay) => { const o = []; for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) o.push([ax + dx, ay + dy]); return o; } }, spot.x, spot.y) : !ctx.world.isWalkable(spot.x, spot.y)) continue;
             ctx.world.spawn(EntityTypes.create(type, spot.x, spot.y, { lv: Math.max(1, DebugConsole.int(lv, 1)), rank: rank === "boss" || rank === "elite" ? rank : "normal" }));
             made++;
         }

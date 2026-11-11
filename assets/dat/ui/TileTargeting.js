@@ -133,7 +133,7 @@ class TileTargeting extends Component {
             const terms = CardInspector.enabled() ? CardText.glossary(body) : "";
             this.terms.setText(terms);
             termLines = terms ? this.terms.measureLines(this._ctx, w - 20) : 0;
-            this.discardButton.text.setText(card.isSkill ? "묘지로" : "버리기");
+            this.discardButton.text.setText(card.isSkill ? (card.def.discardCost ? `묘지로 (기력 ${card.def.discardCost.energy})` : "묘지로") : "버리기");
         } else {
             this.desc.setText("");
             this.terms.setText("");
@@ -149,7 +149,7 @@ class TileTargeting extends Component {
         const card = this.card;
         if (!card) return;
         this.cancel(true);
-        if (!this.player.cards.discard(card)) return;
+        if (!this.player.discardByHand(card)) return;
         if (!card.isSkill) MessageLog.add(`${josa(card.name, "을를")} 버렸다`, "#e8c860");
     }
 

@@ -259,7 +259,7 @@ class Spell {
         }
         const tiles = Spell.square(at.x, at.y, t.radius);
         const targets = [];
-        for (const [x, y] of tiles) for (const e of ctx.world.entitiesAt(x, y)) if (e !== ctx.user && e.alive) targets.push(e);
+        for (const [x, y] of tiles) for (const e of ctx.world.entitiesAt(x, y)) if (e !== ctx.user && e.alive && !targets.includes(e)) targets.push(e);
         const hits = targets.length;
         const size = ctx.world.tileSize;
         const fly = new ProjectileAnim(ctx.world, "cards", frame,

@@ -37,10 +37,11 @@ class EntityOverlay extends Renderer {
     static draw(ctx, m, e, bar, popup, intent = null) {
         ctx.setTransform(m.a, m.b, m.c, m.d, Math.round(m.e), Math.round(m.f));
         ctx.scale(1, -1); // 월드 Y-up → 여기서부터 y는 아래로 +, 엔티티 중심이 원점
+        if (e.size > 1) ctx.translate((e.size - 1) * 8, -(e.size - 1) * 8); // 큰 엔티티: 차지한 칸들의 가운데 위로 (타일 16 기준 반 칸씩)
         if (intent) Intent.draw(ctx, intent, !!popup);
 
         if (bar) {
-            const w = 12;
+            const w = 12 * (e.size > 1 ? e.size : 1);
             const fill = Math.ceil(w * e.stats.hp / e.stats.maxHp);
             ctx.fillStyle = "rgba(20, 14, 10, 0.85)";
             ctx.fillRect(-w / 2 - 1, -12, w + 2, 3);

@@ -61,6 +61,7 @@ class ActionCards {
             const fy = u.y;
             if (!ctx.world.moveEntity(u, dx, dy)) break;
             anims.push([new MoveAnim(u, new Vector(fx * size, fy * size), new Vector(u.x * size, u.y * size))]);
+            if (Goo.stuck(u)) break; // 점액 장판을 밟으면 거기서 멈춘다
         }
         if (!anims.length) return null;
         if (u instanceof Player) Equip.moved(u); // 나이프 홀스터

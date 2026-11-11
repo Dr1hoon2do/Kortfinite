@@ -225,6 +225,20 @@ EnemyMoves.SPECS = {
     // 돌 골렘: [ABCDBD, ADCBDB] 중 하나
     //   A 사거리 5, 플레이어 칸에 돌 공격력 100% — 안 닿으면 D / B 다가가거나 옆칸이면 방어력 100% 피해
     //   C 경질화(방어력 20%) + 방어력 100% 방어도 2턴 / D 쉼
+    // 슬라임킹 (2x2): [ABCDE, ACEBD, ACDEB] 중 하나. 동작은 entity/SlimeKing.js
+    //   A 점액 돌진(지나간 자리·멈춘 곳 4x4에 장판) / B 점액 던지기 / C 다가가기·공격 / D 방어도 / E 슬라임 소환
+    slime_king: {
+        rotations: ["ABCDE", "ACEBD", "ACDEB"],
+        fallback: { A: "C", B: "C", E: "D" },
+        actions: {
+            A: (ai, ctx, e, foe) => SlimeKing.chargeIntent(ctx, e, foe),
+            B: (ai, ctx, e, foe) => SlimeKing.throwIntent(ctx, e, foe),
+            C: (ai, ctx, e, foe) => SlimeKing.biteIntent(ctx, e, foe),
+            D: () => ({ kind: "block", pct: 100, turns: 1 }),
+            E: (ai, ctx, e) => SlimeKing.summonIntent(ctx, e)
+        }
+    },
+
     stone_golem: {
         rotations: ["ABCDBD", "ADCBDB"],
         fallback: { A: "D" },
@@ -253,6 +267,12 @@ class EnemyData {
         return [a, /^\d+$/.test(m[2]) ? +m[2] : Infinity];
     }
 
+    // 설명(note)의 "2x2의 크기" → 한 변 2칸 (없으면 1)
+    static size(note) {
+        const m = String(note ?? "").match(/(\d+)\s*[xX×]\s*(\d+)\s*의?\s*크기/);
+        return m ? Math.max(1, Math.min(+m[1], +m[2])) : 1;
+    }
+
     // 설명(note)의 "(2~3마리)" / "(2마리)"
     static group(note) {
         const m = String(note ?? "").match(/\((\d+)\s*(?:~\s*(\d+))?\s*마리\)/);
@@ -265,7 +285,7 @@ class EnemyData {
         for (const e of GAME_DATA.enemies) {
             if (!EnemyMoves.SPECS[e.id]) console.warn("적 패턴이 아직 없다 (data/EnemyImpl.js에 추가). 그때까지 방에는 나오지 않는다:", e.id);
             Monster.KINDS[e.id] = {
-                name: e.name, hp: e.hp, attack: e.atk, defense: e.def, moves: e.speed ?? 1,
+                name: e.name, hp: e.hp, attack: e.atk, defense: e.def, moves: e.speed ?? 1, size: EnemyData.size(e.note),
                 tags: e.tags ?? [], pattern: e.pattern ?? "", note: e.note ?? ""
             };
             EntityTypes.register(e.id, (x, y, d) => new Monster(x, y, e.id, d));

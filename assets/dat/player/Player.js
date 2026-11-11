@@ -290,6 +290,20 @@ class Player extends Entity {
         return "";
     }
 
+    // 손으로 [묘지로] 버리기. 상태이상 카드(점액)는 비용(discardCost)을 내야 버려진다. 카드 효과로 버려질 땐 이걸 안 쓴다
+    discardByHand(card) {
+        const cost = card.def.discardCost;
+        if (cost) {
+            if (!this.canPay(cost)) {
+                MessageLog.add(`${card.name}: 버리려면 ${this.lackText(cost) || "비용이 모자란다"}`, "#c8b890");
+                return false;
+            }
+            this.pay(cost);
+            MessageLog.add(`${card.name}: 기력 ${cost.energy}을 내고 버렸다`, "#c8b890");
+        }
+        return !!this.cards.discard(card);
+    }
+
     pay(cost) {
         if (cost.energy) this.energy -= cost.energy;
         if (cost.mana) this.mana -= cost.mana;

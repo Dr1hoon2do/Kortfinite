@@ -46,8 +46,9 @@ class Ally extends Entity {
             const tiles = EnemyMoves.around(world, this.x, this.y, 2);
             anims.push(new AreaFlashAnim(world, tiles, "#ff8a30", 0.3));
             MessageLog.add(`${josa(this.displayName, "이가")} 폭발했다!`, "#ff9a50");
+            const hit = new Set();
             for (const [x, y] of tiles) for (const o of world.entitiesAt(x, y)) {
-                if (o instanceof Monster && o.alive) anims.push(...Combat.hit(o, this.stats.attack, Player.current, world, "heat"));
+                if (o instanceof Monster && o.alive && !hit.has(o)) { hit.add(o); anims.push(...Combat.hit(o, this.stats.attack, Player.current, world, "heat")); }
             }
         }
         return anims;
@@ -151,7 +152,7 @@ class Hazard extends Entity {
         const barrier = kind === "barrier";
         super(x, y, barrier ? "barrier" : kind === "mine" ? "mine" : "field", { // 동전도 "field" 그림(안 보임)을 쓰고 HazardOverlay가 그린다
             type: kind,
-            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판", coin: "동전" }[kind],
+            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판", coin: "동전", goo: "점액 장판" }[kind],
             stats: { maxHp: data.hp ?? 12, attack: 0, defense: 0 },
             solid: barrier,
             tags: ["hazard"]
@@ -168,7 +169,7 @@ class Hazard extends Entity {
 
     start() {
         super.start();
-        if ((this.kind === "field" || this.kind === "coin" || this.kind === "pickup") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
+        if ((this.kind === "field" || this.kind === "coin" || this.kind === "pickup" || this.kind === "goo") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
         if (this.sr) this.sr.orderInLayer = this.kind === "barrier" ? 2 : 1;
     }
 
@@ -203,7 +204,8 @@ class Hazard extends Entity {
         const anims = [new AreaFlashAnim(w, tiles, "#ff8a30")];
         MessageLog.add(`지뢰가 터졌다! ${this.dmg} 피해`, "#ff9a50");
         this.remove(w);
-        for (const [x, y] of tiles) for (const o of w.entitiesAt(x, y)) if (o instanceof Monster && o.alive) anims.push(...Combat.hit(o, this.dmg, Player.current, w, "heat"));
+        const hit = new Set();
+        for (const [x, y] of tiles) for (const o of w.entitiesAt(x, y)) if (o instanceof Monster && o.alive && !hit.has(o)) { hit.add(o); anims.push(...Combat.hit(o, this.dmg, Player.current, w, "heat")); }
         return anims;
     }
 
@@ -289,6 +291,23 @@ class HazardOverlay extends Renderer {
                 ctx.fillRect(h.x * t - 1, h.y * t - 3 + pulse, 1, 2);
                 continue;
             }
+            if (h.kind === "goo" && h.world) {
+                // 점액 장판: 초록 점액 칸. 곧 사라질수록 옅다
+                const fade = h.life >= 3 ? 1 : h.life === 2 ? 0.8 : 0.6;
+                ctx.globalAlpha = (0.38 + 0.08 * pulse) * fade;
+                ctx.fillStyle = "#5fae4a";
+                ctx.fillRect(h.x * t - t / 2, h.y * t - t / 2, t, t);
+                ctx.globalAlpha = 0.75 * fade;
+                ctx.fillStyle = "#a6e68c";
+                ctx.fillRect(h.x * t - 5, h.y * t - 4 + pulse, 3, 2);
+                ctx.fillRect(h.x * t + 1, h.y * t + 2 - pulse, 4, 2);
+                ctx.fillRect(h.x * t - 1, h.y * t - 6, 2, 1);
+                ctx.globalAlpha = 0.9 * fade;
+                ctx.strokeStyle = "#2f6a2a";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(h.x * t - t / 2 + 0.5, h.y * t - t / 2 + 0.5, t - 1, t - 1);
+                continue;
+            }
             if (h.kind !== "field" || !h.world) continue;
             ctx.globalAlpha = 0.25 + 0.1 * pulse;
             ctx.fillStyle = h.color;
@@ -298,5 +317,36 @@ class HazardOverlay extends Renderer {
             ctx.fillRect(h.x * t + 2, h.y * t + 3 - pulse * 2, 2, 2);
         }
         ctx.globalAlpha = 1;
+    }
+}
+
+// 점액 장판 (슬라임킹): 밟으면 이동이 멈추고, 위에 서 있으면 이동속도가 절반이다. 슬라임 종류는 영향받지 않는다.
+class Goo {
+    static at(world, x, y) {
+        return world.entitiesAt(x, y).find((h) => h.kind === "goo" && h.isHazard);
+    }
+
+    static affects(e) {
+        return !(e instanceof Monster && (e.kind === "slime" || e.kind === "slime_king"));
+    }
+
+    // e가 지금 장판 위에 있는가
+    static on(e) {
+        return !!(e.world && e.size === 1 && Goo.affects(e) && Goo.at(e.world, e.x, e.y));
+    }
+
+    // 걷다가 장판을 밟았으면 true (그 자리에서 멈춘다)
+    static stuck(e) {
+        if (!Goo.on(e)) return false;
+        MessageLog.add(`${josa(e.displayName, "이가")} 점액에 붙잡혔다`, "#7cd47c");
+        return true;
+    }
+
+    // (x, y)에 장판을 깐다 (이미 있으면 남은 턴을 다시 채운다)
+    static lay(world, x, y, life = 3) {
+        if (!world.getChunkAt(x, y) || !ChunkManager.tileOk(world.getTile(x, y))) return;
+        const old = Goo.at(world, x, y);
+        if (old) old.life = Math.max(old.life, life);
+        else world.spawn(new Hazard(x, y, "goo", { life }));
     }
 }

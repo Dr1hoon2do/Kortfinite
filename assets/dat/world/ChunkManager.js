@@ -155,20 +155,28 @@ class ChunkManager extends Component {
     }
 
     // 칸 색인 (chunk.cells) 맞추기: 청크에 넣고 뺄 때, 칸을 옮길 때 부른다
+    // 큰 엔티티는 차지한 칸마다 색인에 들어간다 (그 칸 어디를 눌러도 같은 엔티티)
     _cellAdd(chunk, e) {
-        const i = this.localIndex(e.x, e.y);
-        const cell = chunk.cells.get(i);
-        if (cell) cell.push(e);
-        else chunk.cells.set(i, [e]);
+        for (const [x, y] of e.tilesOf()) {
+            const c = this.getChunkAt(x, y) ?? this.ensureChunk(Math.floor(x / this.chunkSize), Math.floor(y / this.chunkSize));
+            const i = this.localIndex(x, y);
+            const cell = c.cells.get(i);
+            if (cell) cell.push(e);
+            else c.cells.set(i, [e]);
+        }
     }
 
     _cellRemove(chunk, e, x = e.x, y = e.y) {
-        const i = this.localIndex(x, y);
-        const cell = chunk.cells.get(i);
-        if (!cell) return;
-        const k = cell.indexOf(e);
-        if (k >= 0) cell.splice(k, 1);
-        if (!cell.length) chunk.cells.delete(i);
+        for (const [tx, ty] of e.tilesOf(x, y)) {
+            const c = this.getChunkAt(tx, ty);
+            if (!c) continue;
+            const i = this.localIndex(tx, ty);
+            const cell = c.cells.get(i);
+            if (!cell) continue;
+            const k = cell.indexOf(e);
+            if (k >= 0) cell.splice(k, 1);
+            if (!cell.length) c.cells.delete(i);
+        }
     }
 
     // 여러 칸에 있는 엔티티 중 조건에 맞는 것. tag를 주면 그 태그가 있는 것만
@@ -194,7 +202,13 @@ class ChunkManager extends Component {
     }
 
     canEnter(mover, x, y) {
-        return ChunkManager.tileOk(this.getTile(x, y)) && !this.entityAt(x, y);
+        if (!mover || mover.size === 1 || mover.size === undefined) return ChunkManager.tileOk(this.getTile(x, y)) && !this.entityAt(x, y);
+        for (const [tx, ty] of mover.tilesOf(x, y)) {
+            if (!ChunkManager.tileOk(this.getTile(tx, ty))) return false;
+            const o = this.entityAt(tx, ty);
+            if (o && o !== mover) return false;
+        }
+        return true;
     }
 
     // (예전: 저장 대상 표시) 방은 저장하지 않는다. 부르는 곳이 많아 빈 함수로 둔다
@@ -309,6 +323,20 @@ class ChunkManager extends Component {
                     if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
                     this.ensureChunk(Math.floor((x + dx) / this.chunkSize), Math.floor((y + dy) / this.chunkSize));
                     if (this.isWalkable(x + dx, y + dy)) return { x: x + dx, y: y + dy };
+                }
+            }
+        }
+        return { x, y };
+    }
+
+    // (x, y) 근처에서 size×size 칸이 모두 비어 있는 자리의 왼쪽 아래 칸 (큰 몬스터 놓을 곳)
+    findFreeArea(x, y, size = 2, maxRadius = 12) {
+        const probe = { size, tilesOf: (ax, ay) => { const o = []; for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) o.push([ax + dx, ay + dy]); return o; } };
+        for (let r = 0; r <= maxRadius; r++) {
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                    if (this.canEnter(probe, x + dx, y + dy)) return { x: x + dx, y: y + dy };
                 }
             }
         }

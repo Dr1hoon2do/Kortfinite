@@ -17,6 +17,8 @@ class Entity extends Component {
         this.sprite = sprite;
         this.flipX = false;
         this.world = null;
+        // 크기: 한 변의 칸 수 (슬라임킹 2). (x, y)는 왼쪽 아래 칸이고 size×size 칸을 차지한다
+        this.size = options.size ?? 1;
 
         this.type = options.type ?? null;
         this.displayName = options.name ?? sprite;
@@ -37,7 +39,9 @@ class Entity extends Component {
     }
 
     start() {
-        this.sr = new SpriteRenderer(Resource.image(this.sprite), { orderInLayer: 2 });
+        // 큰 엔티티는 그림 중심이 차지한 칸들의 한가운데다 (엔티티 좌표는 왼쪽 아래 칸 중심)
+        const pivot = this.size > 1 ? { x: 0.5 / this.size, y: 0.5 / this.size } : undefined;
+        this.sr = new SpriteRenderer(Resource.image(this.sprite), { orderInLayer: 2, pivot });
         this.addComponent(this.sr);
         this.overlay = this.addComponent(new EntityOverlay(this));
         this.sync();
@@ -51,7 +55,33 @@ class Entity extends Component {
     }
 
     applyFlip() {
-        if (this.sr) this.sr.flipX = this.flipX;
+        if (this.sr && this.size === 1) this.sr.flipX = this.flipX; // 큰 그림은 좌우로 안 뒤집는다 (중심이 한가운데가 아니라서)
+    }
+
+    // 차지한 칸들 [[x, y]…] (기본은 지금 자리, 다른 자리를 주면 그 자리에 놓았을 때)
+    tilesOf(x = this.x, y = this.y) {
+        const out = [];
+        for (let dy = 0; dy < this.size; dy++) for (let dx = 0; dx < this.size; dx++) out.push([x + dx, y + dy]);
+        return out;
+    }
+
+    // 두 엔티티 사이 칸 거리 (맨해튼, 차지한 칸 가운데 가장 가까운 두 칸 사이). 붙어 있으면 1
+    static gap(a, b) {
+        if (a.size === 1 && b.size === 1) return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        let best = Infinity;
+        for (const [ax, ay] of a.tilesOf()) for (const [bx, by] of b.tilesOf()) best = Math.min(best, Math.abs(ax - bx) + Math.abs(ay - by));
+        return best;
+    }
+
+    // b가 차지한 칸 중 (x, y)에 가장 가까운 칸 [x, y]
+    nearestTile(x, y) {
+        let best = null;
+        let bd = Infinity;
+        for (const [tx, ty] of this.tilesOf()) {
+            const d = Math.abs(tx - x) + Math.abs(ty - y);
+            if (d < bd) { bd = d; best = [tx, ty]; }
+        }
+        return best;
     }
 
     setAI(ai) {

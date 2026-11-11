@@ -151,7 +151,7 @@ class Codex extends Component {
             const icon = rt.createChild("icon");
             UIKit.place(icon, 6, 6, 44, 44);
             icon.addComponent(new UIRect({ color: "#2a2520", borderColor: "#1e1610", borderWidth: 1 }));
-            icon.addComponent(new UIImage(Resource.image(k.sprite ?? kind), { region: { x: 0, y: 0, width: 16, height: 16 } }));
+            icon.addComponent(new UIImage(Resource.image(k.sprite ?? kind), { region: { x: 0, y: 0, width: 16 * (k.size ?? 1), height: 16 * (k.size ?? 1) } }));
             UIKit.label(rt, "name", k.name, 58, 6, textW, 16, { fontSize: 13, fontWeight: "bold", color: UIKit.COLORS.text });
             const stats = `[[hp:체력 ${k.hp}]] · [[atk:공격력 ${k.attack}]] · [[def:방어력 ${k.defense}]]${k.moves > 1 ? ` · [[spd:이동 ${k.moves}칸]]` : ""}`;
             UIKit.label(rt, "stats", stats, 58, 24, textW, 14, { fontSize: 11, color: "#c8b890", rich: true });

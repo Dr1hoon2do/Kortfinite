@@ -54,7 +54,7 @@ class CardEffects {
         }
         const tiles = Spell.square(at.x, at.y, radius);
         const targets = [];
-        for (const [x, y] of tiles) for (const e of ctx.world.entitiesAt(x, y)) if (e !== u && e.alive && !e.invulnerable) targets.push(e);
+        for (const [x, y] of tiles) for (const e of ctx.world.entitiesAt(x, y)) if (e !== u && e.alive && !e.invulnerable && !targets.includes(e)) targets.push(e);
         const size = ctx.world.tileSize;
         const fly = new ProjectileAnim(ctx.world, "cards", frame, new Vector(u.x * size, u.y * size), new Vector(at.x * size, at.y * size));
         MessageLog.add(targets.length ? `펑! ${targets.length}개 대상에게 ${damage} 피해` : "펑! 아무것도 맞지 않았다", "#ff9a50");

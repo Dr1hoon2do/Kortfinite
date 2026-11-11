@@ -25,7 +25,9 @@ class Monster extends Entity {
         super(x, y, k.sprite ?? kind, {
             type: kind,
             name: R.title ? `${R.title} ${base}` : base,
-            stats: {
+            size: k.size ?? 1,
+            // data.stats: 소환된 것처럼 능력치를 정해 줄 때 { hp, atk, def } (층·등급 보정 없이 그대로)
+            stats: data.stats ? { maxHp: Math.max(1, data.stats.hp), attack: data.stats.atk, defense: data.stats.def } : {
                 maxHp: Math.floor(k.hp * (1 + 0.3 * (lv - 1)) * R.hp + 1e-9),
                 attack: k.attack + (lv - 1) + R.attack,
                 defense: k.defense + Math.floor((lv - 1) / 2)
