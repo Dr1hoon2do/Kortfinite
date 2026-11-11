@@ -373,6 +373,7 @@ class EnemyMoves {
                 const half = (e.size - 1) / 2; // 큰 몸은 한가운데에서 던진다
                 if (intent.thrown) for (const c of intent.centers ?? (center ? [center] : [])) anims.push(new ProjectileAnim(w, "cards", 70, new Vector((e.x + half) * t, (e.y + half) * t), new Vector(c[0] * t, c[1] * t)));
                 anims.push(new AreaFlashAnim(w, intent.tiles, intent.color ?? "#e05040", 0.3, !!intent.dmg));
+                if (intent.goo) for (const [x, y] of intent.tiles) Goo.lay(w, x, y, intent.goo); // 떨어진 자리에 점액 장판
                 const victims = EnemyMoves.victims(w, p, intent.tiles);
                 if (!victims.length) MessageLog.add(`${josa(e.displayName, "의")} ${name}을(를) 피했다`, "#a0d0a0");
                 for (const v of victims) {
