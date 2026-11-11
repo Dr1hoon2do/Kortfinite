@@ -17,26 +17,50 @@ class RoomPlan {
 
     // 방에 나오는 적은 공방 데이터(EnemyData)에서 고른다: 층에 맞는 적들 중, 위험도(threat) 예산 안에서 무작위로.
     // 설명(note)의 "(2~3마리)" 같은 말은 무리 크기가 된다.
+    // 몬스터 등급(공방 '등급'): 소형·중형은 일반 방의 주력, 대형은 방마다 한 마리까지 (정예 방의 대장), 보스는 우두머리 방에만 나온다.
+    //   일반 방: 소형·중형 + 대형 최대 1  / 정예 방: 대장은 대형(없으면 중형), 곁에 소형·중형 최대 2
+    //   우두머리 방: 대장은 보스(없으면 대형), 곁에 소형 최대 2 (없으면 중형)
     static BUDGET = { battle: [40, 4], elite: [22, 2] }; // [기본, 층(row)마다 +]
     static MAX_ENEMIES = 5;
 
     // 예산 안에서 적 id 목록 (한 번에 무리 단위로 더한다)
-    static pickEnemies(rng, floor, budget, maxCount = RoomPlan.MAX_ENEMIES) {
-        const pool = EnemyData.at(floor);
+    // grades: 나올 수 있는 등급들, maxLarge: 대형은 이 수까지만
+    static pickEnemies(rng, floor, budget, maxCount = RoomPlan.MAX_ENEMIES, grades = ["small", "medium", "large"], maxLarge = 1) {
+        const pool = RoomPlan.poolOf(floor, grades);
         const out = [];
         let spent = 0;
+        let large = 0;
         for (let tries = 0; tries < 16 && out.length < maxCount && pool.length; tries++) {
             const r = Rng.pick(rng, pool);
             const n = Math.min(maxCount - out.length, Rng.int(rng, r.group[0], r.group[1]));
+            if (r.grade === "large" && large + n > maxLarge) continue;
             const cost = r.threat * n;
             if (spent + cost > budget) continue;
             for (let i = 0; i < n; i++) out.push(r.id);
+            if (r.grade === "large") large += n;
             spent += cost;
             if (spent >= budget * 0.8) break;
         }
         if (out.length) return out;
         const weakest = pool.slice().sort((a, b) => a.threat - b.threat)[0];
         return [weakest ? weakest.id : "rat"];
+    }
+
+    // 이 층에 나오는 적 중 등급이 grades 안인 것 (없으면 보스가 아닌 아무 적)
+    static poolOf(floor, grades) {
+        const all = EnemyData.at(floor);
+        const pool = all.filter((r) => grades.includes(r.grade));
+        return pool.length ? pool : all.filter((r) => r.grade !== "boss");
+    }
+
+    // 대장 후보: 등급 우선순위대로 처음으로 비지 않은 등급의 적들 (위험도 큰 순)
+    static leadPool(floor, order) {
+        const all = EnemyData.at(floor);
+        for (const g of order) {
+            const list = all.filter((r) => r.grade === g);
+            if (list.length) return list.slice().sort((a, b) => b.threat - a.threat);
+        }
+        return all.slice().sort((a, b) => b.threat - a.threat);
     }
 
     // node: RunMap 칸, seed: 방 시드, state: 이미 다녀간 방의 기록 { cleared, used, sold:[…] } (없으면 처음 들어가는 방)
@@ -124,18 +148,16 @@ class RoomPlan {
             const [base, per] = RoomPlan.BUDGET.battle;
             for (const kind of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row)) this.spawns.push({ type: kind, ...place(kind), data: { lv } });
         } else if (this.type === "elite") {
-            const pool = EnemyData.at(floor).slice().sort((a, b) => b.threat - a.threat);
-            const lead = Rng.pick(rng, pool.slice(0, Math.max(1, Math.ceil(pool.length / 2))));
+            const lead = Rng.pick(rng, RoomPlan.leadPool(floor, ["large", "medium", "small"]));
             this.spawns.push({ type: lead.id, ...place(lead.id), data: { lv, rank: "elite" } });
             const [base, per] = RoomPlan.BUDGET.elite;
-            for (const m of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row, 2)) this.spawns.push({ type: m, ...place(m), data: { lv } });
+            for (const m of RoomPlan.pickEnemies(rng, floor, base + per * this.node.row, 2, ["small", "medium"], 0)) this.spawns.push({ type: m, ...place(m), data: { lv } });
         } else if (this.type === "boss") {
-            const pool = EnemyData.at(floor).slice().sort((a, b) => b.threat - a.threat);
-            const lead = Rng.pick(rng, pool.slice(0, Math.min(2, pool.length)));
+            const lead = Rng.pick(rng, RoomPlan.leadPool(floor, ["boss", "large", "medium", "small"]));
             const bigBoss = ((Monster.KINDS[lead.id] && Monster.KINDS[lead.id].size) || 1) > 1;
             const bossAt = bigBoss ? place(lead.id) : { x: this.w - 2, y: center.y };
             this.spawns.push({ type: lead.id, ...bossAt, data: { lv, rank: "boss" } });
-            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === bossAt.x && p.y === bossAt.y)).pop(), data: { lv } });
+            for (const m of RoomPlan.pickEnemies(rng, floor, 40, 2, ["small"], 0)) this.spawns.push({ type: m, ...right.filter((p) => !(p.x === bossAt.x && p.y === bossAt.y)).pop(), data: { lv } });
         } else if (this.type === "shop") {
             const stock = RoomPlan.rollStock(rng, this.node.row);
             stock.forEach((offer, i) => { offer.sold = !!(this.state.sold && this.state.sold.includes(i)); }); // 이미 산 물건

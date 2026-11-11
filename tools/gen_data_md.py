@@ -23,9 +23,9 @@ o += ["", "### 강화(변형)", "", "| 카드 | 강화 | 이름 | 강화 전 | �
 for c in D["cards"]:
     for u in c.get("upgrades", []):
         o.append("| %s | %s | %s | %s | %s | %s | %s |" % (c["id"], u["key"], u["name"], u.get("from", "default"), cost(u.get("costs")), cell(u.get("effect")), tags(u.get("tags"))))
-o += ["", "## 2. 적 (%d종)" % len(D["enemies"]), "", "| id | 이름 | 층 | 체력 | 공격 | 방어 | 이동 | 패턴 |", "|---|---|---|---|---|---|---|---|"]
+o += ["", "## 2. 적 (%d종)" % len(D["enemies"]), "", "| id | 이름 | 등급 | 층 | 체력 | 공격 | 방어 | 이동 | 패턴 |", "|---|---|---|---|---|---|---|---|---|"]
 for e in D["enemies"]:
-    o.append("| %s | %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], e.get("floors", ""), e.get("hp"), e.get("atk"), e.get("def"), e.get("speed"), cell(e.get("pattern"))))
+    o.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (e["id"], e["name"], {"small": "소형", "medium": "중형", "large": "대형", "boss": "보스"}.get(e.get("grade"), "중형"), e.get("floors", ""), e.get("hp"), e.get("atk"), e.get("def"), e.get("speed"), cell(e.get("pattern"))))
 RAR = {"common": "흔함", "uncommon": "드묾", "rare": "희귀", "boss": "우두머리"}
 eq = D.get("equipment", [])
 o += ["", "## 2-1. 장비 (%d개)" % len(eq), "", "소지품 패에서 장착해야 효과가 나는 유물형 장비 (공방 '장비' 탭). 동작은 `data/EquipImpl.js`의 `EQUIP`.", "",

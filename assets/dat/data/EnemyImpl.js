@@ -267,6 +267,12 @@ class EnemyData {
         return [a, /^\d+$/.test(m[2]) ? +m[2] : Infinity];
     }
 
+    // 몬스터 등급 small(소형)·medium(중형)·large(대형)·boss(보스). 비어 있으면 중형
+    static GRADES = { small: "소형", medium: "중형", large: "대형", boss: "보스" };
+    static grade(g) {
+        return EnemyData.GRADES[g] ? g : "medium";
+    }
+
     // 설명(note)의 "2x2의 크기" → 한 변 2칸 (없으면 1)
     static size(note) {
         const m = String(note ?? "").match(/(\d+)\s*[xX×]\s*(\d+)\s*의?\s*크기/);
@@ -285,13 +291,13 @@ class EnemyData {
         for (const e of GAME_DATA.enemies) {
             if (!EnemyMoves.SPECS[e.id]) console.warn("적 패턴이 아직 없다 (data/EnemyImpl.js에 추가). 그때까지 방에는 나오지 않는다:", e.id);
             Monster.KINDS[e.id] = {
-                name: e.name, hp: e.hp, attack: e.atk, defense: e.def, moves: e.speed ?? 1, size: EnemyData.size(e.note),
+                name: e.name, hp: e.hp, attack: e.atk, defense: e.def, moves: e.speed ?? 1, size: EnemyData.size(e.note), grade: EnemyData.grade(e.grade),
                 tags: e.tags ?? [], pattern: e.pattern ?? "", note: e.note ?? ""
             };
             EntityTypes.register(e.id, (x, y, d) => new Monster(x, y, e.id, d));
             if (!EnemyMoves.SPECS[e.id]) continue; // 패턴이 없는 적은 방에 안 내보낸다
             EnemyData.rooms.push({
-                id: e.id, floors: EnemyData.floors(e.floors), group: EnemyData.group(e.note),
+                id: e.id, grade: EnemyData.grade(e.grade), floors: EnemyData.floors(e.floors), group: EnemyData.group(e.note),
                 threat: e.hp + e.atk * 2 + e.def
             });
         }

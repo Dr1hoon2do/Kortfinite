@@ -1028,7 +1028,8 @@ const GAME_DATA = {
    "tags": [
     "charge"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "mini_stone_golem",
@@ -1043,7 +1044,8 @@ const GAME_DATA = {
    "tags": [
     "defense"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "ogre",
@@ -1059,7 +1061,8 @@ const GAME_DATA = {
     "health",
     "area"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "large"
   },
   {
    "id": "rat",
@@ -1072,7 +1075,8 @@ const GAME_DATA = {
    "pattern": "A. 플레이어에게 이동속도만큼 이동, 옆칸이거나 최대이동거리가 아니었다면 플레이어에게 공격력 100% 피해\nA 반복",
    "speed": 2,
    "memo": [],
-   "tags": []
+   "tags": [],
+   "grade": "small"
   },
   {
    "id": "skeleton",
@@ -1089,7 +1093,8 @@ const GAME_DATA = {
     "area",
     "defense"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "skeleton_kinght",
@@ -1107,7 +1112,8 @@ const GAME_DATA = {
     "defense",
     "attack"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "medium"
   },
   {
    "id": "slime",
@@ -1125,7 +1131,8 @@ const GAME_DATA = {
     "area",
     "defense"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "slime_king",
@@ -1144,7 +1151,8 @@ const GAME_DATA = {
     "defense",
     "summon"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "boss"
   },
   {
    "id": "spider",
@@ -1161,7 +1169,8 @@ const GAME_DATA = {
     "root",
     "ranged"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "stone_golem",
@@ -1178,7 +1187,8 @@ const GAME_DATA = {
     "hardening",
     "ranged"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "large"
   },
   {
    "id": "succubus",
@@ -1198,7 +1208,8 @@ const GAME_DATA = {
     "charm",
     "growth"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   },
   {
    "id": "wolf",
@@ -1214,7 +1225,8 @@ const GAME_DATA = {
     "health",
     "strength"
    ],
-   "memo": []
+   "memo": [],
+   "grade": "small"
   }
  ],
  "tags": [
