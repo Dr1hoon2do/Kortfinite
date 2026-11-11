@@ -86,8 +86,12 @@ class CardOps {
         return [[fly], Combat.hit(foe, d, u, w, "physical", false)];
     }
 
-    // 상태 이상 주기 (연출 하나)
+    // 상태 이상 주기 (연출 하나). 우두머리는 기절에 면역인 동안 걸리지 않는다
     static inflict(target, key, n, turns = null) {
+        if (Status.immune(target, key)) {
+            MessageLog.add(`${josa(target.displayName, "은는")} 기절에 면역이다`, "#c8c0a0");
+            return new PopupAnim(target, "기절 면역", Status.DEFS.stunimm.color);
+        }
         Status.add(target, key, n, turns);
         const d = Status.DEFS[Status.key(key)];
         return new PopupAnim(target, `${d.name} ${n}`, d.color);
@@ -166,6 +170,18 @@ class CardOps {
         return got;
     }
 
+    // 덱에서 조건에 맞는 카드를 n장까지 패로 가져온다 (맨 위부터). 가져온 카드들
+    static fetchWhere(ctx, pred, n) {
+        const got = [];
+        for (let i = ctx.cards.deck.length - 1; i >= 0 && got.length < n; i--) {
+            const c = ctx.cards.deck[i];
+            if (!pred(c)) continue;
+            if (!ctx.cards.fetch(c)) break; // 행동 패가 가득 차면 못 가져온다
+            got.push(c);
+        }
+        return got;
+    }
+
     // 고른 카드들을 버린다 (원한이 터진다). 버린 카드들
     static dump(ctx, cards) {
         const out = [];
@@ -189,6 +205,7 @@ const CK = {
     energy: (v) => CardText.tag("energy", v),
     st: (key, text) => CardText.tag(key, text)
 };
+const CARD_TAG_NAMES = { attack: "공격", defense: "방어", move: "이동" };
 // 지금 플레이어. 시작 화면(도감)처럼 플레이어가 없으면 기본 능력치의 모형을 쓴다
 const PL = () => Player.current ?? { x: 0, y: 0, status: {}, statusT: {}, speed: Player.BASE_SPEED, maxMana: Player.MAX_MANA, mana: Player.MAX_MANA, stats: { attack: Player.BASE_ATTACK, defense: Player.BASE_DEFENSE, maxHp: Player.BASE_HP, hp: Player.BASE_HP } };
 
@@ -201,9 +218,9 @@ const CARDS = {
         target: () => ({ range: CardOps.spd(PL()), radius: 0, taps: 1, verb: "쏘기", color: "#e8a040" }),
         use(ctx) {
             const foe = CardOps.pickFoe(ctx, CardOps.spd(ctx.user));
-            return foe ? CardOps.shoot(ctx, foe, CardOps.atk(ctx.user, 60)) : null;
+            return foe ? CardOps.shoot(ctx, foe, CardOps.atk(ctx.user, 80)) : null;
         },
-        short: () => `${CK.atk(CardOps.atk(PL(), 60))} 피해 · ${CK.spd(CardOps.spd(PL()))}칸`
+        short: () => `${CK.atk(CardOps.atk(PL(), 80))} 피해 · ${CK.spd(CardOps.spd(PL()))}칸`
     },
 
     blast: {
@@ -296,18 +313,46 @@ const CARDS = {
     },
 
     // 몽둥이: 옆칸 단일 대상 공격력 150% 피해 + 기절 1턴
+    //   붉은: + 대상 최대 체력 5%(최소 1) 화상 2턴 / 푸른: 고른 옆칸 중심 3x3 모두 / 노란: 기절 2턴
     club: {
-        icon: "hammer", color: "#b08860",
-        target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" }),
+        icon: "hammer", color: "#b08860", stunTurns: 1,
+        target(card) {
+            return card && card.def.area ? { range: 1, radius: 1, taps: 2, verb: "공격", color: "#d8443c" } : { range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" };
+        },
         use(ctx) {
+            const d = ctx.card.def;
+            const u = ctx.user;
+            const dmg = CardOps.atk(u, 150);
+            if (d.area) {
+                const t = ctx.target;
+                if (!t || CardOps.dist(u, t) !== 1) return CardOps.say("바로 옆 칸을 골라야 한다");
+                const foes = CardOps.foesSquare(ctx, t.x, t.y, 1);
+                if (!foes.length) return CardOps.say("범위 안에 대상이 없다");
+                if (t.x !== u.x) u.flipX = t.x < u.x;
+                u.applyFlip();
+                const tiles = [];
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) tiles.push([t.x + dx, t.y + dy]);
+                const hits = [new AttackAnim(u, t, ctx.world.tileSize), new AreaFlashAnim(ctx.world, tiles, ctx.card.def.color, 0.3, false)];
+                MessageLog.add(`${josa(u.displayName, "이가")} 몽둥이를 휘둘러 ${foes.length}개 대상에게 ${dmg} 피해`, "#e8d9b8");
+                const after = [];
+                for (const f of foes) {
+                    hits.push(...Combat.hit(f, dmg, u, ctx.world, "physical"));
+                    if (f.alive) after.push(CardOps.inflict(f, "stun", d.stunTurns));
+                }
+                return [hits, after];
+            }
             const foe = CardOps.pickAdjacent(ctx);
             if (!foe) return null;
-            const steps = Combat.strike(ctx.user, foe, ctx.world, CardOps.atk(ctx.user, 150), ctx.card.name);
+            const steps = Combat.strike(u, foe, ctx.world, dmg, ctx.card.name);
             const out = [steps];
-            if (foe.alive) out.push([CardOps.inflict(foe, "stun", 1)]);
+            if (foe.alive) {
+                const after = [CardOps.inflict(foe, "stun", d.stunTurns)];
+                if (d.burnPct) after.push(CardOps.inflict(foe, "burn", Math.max(1, CardOps.pct(foe.stats.maxHp, d.burnPct)), 2));
+                out.push(after);
+            }
             return out;
         },
-        short: () => `${CK.atk(CardOps.atk(PL(), 150))} 피해 · ${CK.st("stun", "기절")} 1턴`
+        short: (c) => `${CK.atk(CardOps.atk(PL(), 150))} 피해${c.def.area ? " · 3×3" : ""} · ${CK.st("stun", "기절")} ${c.def.stunTurns}턴${c.def.burnPct ? " · " + CK.st("burn", "화상") + " 최대체력 " + c.def.burnPct + "%" : ""}`
     },
 
     concentration: {
@@ -316,11 +361,54 @@ const CARDS = {
         short: () => `${CK.spd(CardOps.spd(PL(), 25) + 2)}장 뽑기`
     },
 
+    // 대시: 이동속도 50% + 1 이동. 붉은: 이동 뒤 옆 적에게 화상 / 푸른: 직선이면 이동속도 100% + 2 / 노란: 덱에서 이동 카드 1장
     dash: {
         icon: "boot", color: "#7cc4e8",
-        target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" }),
-        use: (ctx) => CardOps.walk(ctx, CardOps.spd(ctx.user, 50) + 1),
-        short: () => `${CK.spd(CardOps.spd(PL(), 50) + 1)}칸 이동`
+        target(card) {
+            const small = CardOps.spd(PL(), 50) + 1;
+            if (!(card && card.def.straightBonus)) return { range: small, radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8" };
+            const big = CardOps.spd(PL(), 100) + 2;
+            return {
+                range: big, radius: 0, walk: true, taps: 1, verb: "이동", color: "#7cc4e8",
+                tiles: (w) => {
+                    const u = PL();
+                    const out = new Set(ActionCards.reachable(w, u, small).keys());
+                    for (const k of ActionCards.reachable(w, u, big).keys()) {
+                        const [x, y] = k.split(",").map(Number);
+                        if (x === u.x || y === u.y) out.add(k); // 직선으로만 멀리
+                    }
+                    return out;
+                }
+            };
+        },
+        use(ctx) {
+            const d = ctx.card.def;
+            const u = ctx.user;
+            const t = ctx.target;
+            let n = CardOps.spd(u, 50) + 1;
+            if (d.straightBonus && t && (t.x === u.x || t.y === u.y)) n = Math.max(n, CardOps.spd(u, 100) + 2);
+            const steps = CardOps.walk(ctx, n);
+            if (!steps) return null;
+            if (d.burnAround) {
+                const burn = CardOps.atk(u, 60);
+                const foes = Entity.DIRS.map(([dx, dy]) => CardOps.foeAt(ctx, u.x + dx, u.y + dy)).filter((f, i, a) => f && a.indexOf(f) === i);
+                if (foes.length) steps.push(foes.map((f) => CardOps.inflict(f, "burn", burn, 2)));
+            }
+            if (d.fetchMove) {
+                const got = CardOps.fetchWhere(ctx, (c) => (c.def.tags ?? []).includes("move"), 1);
+                if (got.length) steps.push([new PopupAnim(u, got[0].name, "#7cc4e8")]);
+                else MessageLog.add("덱에 이동 카드가 없다", "#c8b890");
+            }
+            return steps;
+        },
+        short: (c) => {
+            const d = c.def;
+            const base = `${CK.spd(CardOps.spd(PL(), 50) + 1)}칸 이동`;
+            if (d.straightBonus) return `${base} · 직선이면 ${CK.spd(CardOps.spd(PL(), 100) + 2)}칸`;
+            if (d.burnAround) return `${base} · 옆 적에게 ${CK.st("burn", "화상 " + CardOps.atk(PL(), 60))} 2턴`;
+            if (d.fetchMove) return `${base} · 덱에서 이동 카드 1장`;
+            return base;
+        }
     },
 
     first_aid: {
@@ -355,44 +443,106 @@ const CARDS = {
         short: () => `${CK.hp(CardOps.pct(PL().stats.maxHp, 5))} 회복 · 소멸`
     },
 
+    // 서리: 빙결. 붉은: 3턴, 이미 빙결이면 1 피해를 방어력 50%번 / 푸른: 준비(턴 끝마다 지속 +방어력 20%, 쓰면 초기화) / 노란: 사거리 100% + 2
     frost: {
-        icon: "drop", color: "#8cd0ff",
-        target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, taps: 1, verb: "시전", color: "#7ab8ff" }),
+        icon: "drop", color: "#8cd0ff", turns: 2,
+        reach: (c) => (c && c.def.wide ? CardOps.spd(PL(), 100) + 2 : CardOps.spd(PL(), 50) + 1),
+        target(card) {
+            return { range: CARDS.frost.reach(card), radius: 0, taps: 1, verb: "시전", color: "#7ab8ff" };
+        },
         use(ctx) {
             const u = ctx.user;
-            const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50) + 1);
+            const d = ctx.card.def;
+            const foe = CardOps.pickFoe(ctx, CARDS.frost.reach(ctx.card));
             if (!foe) return null;
             const w = ctx.world;
-            const fly = new ProjectileAnim(w, "kicons", ctx.card.def.frame, CardOps.px(w, u), CardOps.px(w, foe));
+            const fly = new ProjectileAnim(w, "kicons", d.frame, CardOps.px(w, u), CardOps.px(w, foe));
             const n = CardOps.def(u, 60);
-            MessageLog.add(`${josa(foe.displayName, "이가")} 얼어붙는다 (빙결 ${n}, 2턴)`, "#7ab8ff");
-            return [[fly], [CardOps.inflict(foe, "ice", n, 2)]];
+            const data = ctx.card.ensureData();
+            const turns = d.turns + (d.prepare === "frostIce" ? data.iceBonus ?? 0 : 0);
+            if (d.prepare === "frostIce") data.iceBonus = 0; // 쓰면 초기화
+            const had = Status.get(foe, "ice") > 0;
+            MessageLog.add(`${josa(foe.displayName, "이가")} 얼어붙는다 (빙결 ${n}, ${turns}턴)`, "#7ab8ff");
+            const out = [[fly], [CardOps.inflict(foe, "ice", n, turns)]];
+            if (d.repeatIce && had) {
+                const hits = CardOps.def(u, 50);
+                const anims = [];
+                for (let i = 0; i < hits && foe.alive; i++) anims.push(...Combat.hit(foe, 1, u, w, "cold"));
+                if (hits) {
+                    MessageLog.add(`빙결로 ${hits}번 파고든다`, "#7ab8ff");
+                    out.push(anims);
+                }
+            }
+            return out;
         },
-        short: () => `${CK.st("ice", "빙결 " + CardOps.def(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸`
+        short: (c) => {
+            const d = c.def;
+            const bonus = d.prepare === "frostIce" ? c.data?.iceBonus ?? 0 : 0;
+            return `${CK.st("ice", "빙결 " + CardOps.def(PL(), 60))} ${d.turns + bonus}턴 · ${CK.spd(CARDS.frost.reach(c))}칸${d.repeatIce ? " · 이미 빙결이면 1 피해 ×" + CardOps.def(PL(), 50) : ""}${d.prepare === "frostIce" ? " · 준비" : ""}`;
+        }
     },
 
+    // 방어: 방어력 100% 방어도. 붉은(방패치기): 지금 방어도만큼 피해 / 푸른: 2턴 + 모든 방어도 +1턴 / 노란: + 골드 5%
     guard: {
         icon: "shield", color: "#8cc8f0", turns: 1,
+        target: (c) => (c && c.def.bash ? { range: 1, radius: 0, entity: true, taps: 1, verb: "방패치기", color: "#d8443c" } : null),
         use(ctx) {
-            const v = CardOps.def(ctx.user, 100);
-            const t = ctx.card.def.turns;
-            ctx.user.addBlock(v, t);
-            MessageLog.add(`방어도 +${v} (${t}턴)`, "#8cc8f0");
-            return [[new PopupAnim(ctx.user, "+" + v, "#8cc8f0")]];
+            const u = ctx.user;
+            const d = ctx.card.def;
+            if (d.bash) {
+                if (u.block <= 0) return CardOps.say("방어도가 없다");
+                const foe = CardOps.pickAdjacent(ctx);
+                if (!foe) return null;
+                return [Combat.strike(u, foe, ctx.world, u.block, ctx.card.name)];
+            }
+            const v = CardOps.def(u, 100) + (d.goldPct ? CardOps.pct(u.money ?? 0, d.goldPct) : 0);
+            u.addBlock(v, d.turns);
+            if (d.extendAll) for (const b of u.blocks) b.t += 1;
+            MessageLog.add(`방어도 +${v} (${d.turns}턴)${d.extendAll ? " · 모든 방어도 +1턴" : ""}`, "#8cc8f0");
+            return [[new PopupAnim(u, "+" + v, "#8cc8f0")]];
         },
-        short: (c) => `방어도 ${CK.def(CardOps.def(PL(), 100))} · ${c.def.turns}턴`
+        short: (c) => {
+            const d = c.def;
+            if (d.bash) return `지금 방어도(${CK.def(PL() ? PL().block : 0)}) 만큼 피해`;
+            const gold = d.goldPct ? CardOps.pct(PL().money ?? 0, d.goldPct) : 0;
+            return `방어도 ${CK.def(CardOps.def(PL(), 100) + gold)} · ${d.turns}턴${d.extendAll ? " · 모든 방어도 +1턴" : ""}`;
+        }
     },
 
+    // 굳히기: 이번 전투 동안 방어력 20% 경질화. 붉은: 공격력 20% 힘 / 푸른: + 경질화 수치만큼 보호(1턴) / 노란: 신속 1 (소멸)
     harden: {
         icon: "wall", color: "#9ad0e8",
         use(ctx) {
             const u = ctx.user;
+            const d = ctx.card.def;
+            if (d.swift) {
+                Status.add(u, "swift", 1, Status.ENDLESS);
+                MessageLog.add("신속 1 (이번 전투 동안 이동속도 +1)", Status.DEFS.swift.color);
+                return [[new PopupAnim(u, "신속 1", Status.DEFS.swift.color)]];
+            }
+            if (d.strength) {
+                const n = CardOps.atk(u, 20);
+                Status.add(u, "str", n, Status.ENDLESS);
+                MessageLog.add(`힘 ${n} (이번 전투 동안 공격력 +${n})`, Status.DEFS.str.color);
+                return [[new PopupAnim(u, `힘 ${n}`, Status.DEFS.str.color)]];
+            }
             const n = CardOps.def(u, 20);
             Status.add(u, "harden", n, Status.ENDLESS);
             MessageLog.add(`경질화 ${n} (이번 전투 동안 방어력 +${n})`, "#9ad0e8");
-            return [[new PopupAnim(u, `경질화 ${n}`, Status.DEFS.harden.color)]];
+            const out = [new PopupAnim(u, `경질화 ${n}`, Status.DEFS.harden.color)];
+            if (d.protect && n > 0) {
+                Status.add(u, "protect", n, 1);
+                MessageLog.add(`보호 ${n}회 (1턴)`, Status.DEFS.protect.color);
+                out.push(new PopupAnim(u, `보호 ${n}`, Status.DEFS.protect.color));
+            }
+            return [out];
         },
-        short: () => `${CK.st("harden", "경질화 " + CardOps.def(PL(), 20))} · 전투 중`
+        short: (c) => {
+            const d = c.def;
+            if (d.swift) return `${CK.st("swift", "신속 1")} · 전투 중 · 소멸`;
+            if (d.strength) return `${CK.st("str", "힘 " + CardOps.atk(PL(), 20))} · 전투 중`;
+            return `${CK.st("harden", "경질화 " + CardOps.def(PL(), 20))} · 전투 중${d.protect ? " · " + CK.st("protect", "보호 " + CardOps.def(PL(), 20)) + " 1턴" : ""}`;
+        }
     },
 
     heavy: {
@@ -419,20 +569,42 @@ const CARDS = {
         short: (c) => `${CK.atk(CardOps.atk(PL(), 250))} 피해${c.def.bonusMaxHp ? " + 최대체력 " + c.def.bonusMaxHp + "%" : ""}${c.def.stun ? " · " + CK.st("stun", "기절") : ""}${c.def.manaOnKill ? " · 처치 시 마나" : ""}`
     },
 
+    // 방화: 화상. 붉은: 3턴, 이미 화상이면 그 화상을 소모해 (턴×수치) + 공격력 150% 즉시 피해 / 푸른: 공격력 40%, 방어력 100% 턴
     ignite: {
         icon: "flame", color: "#ff8a40",
         target: () => ({ range: CardOps.spd(PL(), 50) + 1, radius: 0, taps: 1, verb: "시전", color: "#ff8a40" }),
         use(ctx) {
             const u = ctx.user;
+            const d = ctx.card.def;
             const foe = CardOps.pickFoe(ctx, CardOps.spd(u, 50) + 1);
             if (!foe) return null;
             const w = ctx.world;
-            const fly = new ProjectileAnim(w, "kicons", ctx.card.def.frame, CardOps.px(w, u), CardOps.px(w, foe));
-            const n = CardOps.atk(u, 60);
-            MessageLog.add(`${josa(foe.displayName, "이가")} 불타오른다 (화상 ${n}, 2턴)`, "#ff8a40");
-            return [[fly], [CardOps.inflict(foe, "burn", n, 2)]];
+            const fly = new ProjectileAnim(w, "kicons", d.frame, CardOps.px(w, u), CardOps.px(w, foe));
+            const n = CardOps.atk(u, d.longBurn ? 40 : 60);
+            const turns = d.longBurn ? Math.max(1, CardOps.def(u, 100)) : d.burnTurns ?? 2;
+            const out = [[fly]];
+            if (d.consume) {
+                const b = Status.get(foe, "burn");
+                const t = Math.min(Status.turns(foe, "burn"), 9);
+                if (b > 0) {
+                    const dmg = b * t + CardOps.atk(u, 150);
+                    Status.set(foe, "burn", 0);
+                    MessageLog.add(`화상을 태워 ${dmg} 피해`, "#ff8a40");
+                    out.push(Combat.hit(foe, dmg, u, w, "heat"));
+                }
+            }
+            if (foe.alive) {
+                MessageLog.add(`${josa(foe.displayName, "이가")} 불타오른다 (화상 ${n}, ${turns}턴)`, "#ff8a40");
+                out.push([CardOps.inflict(foe, "burn", n, turns)]);
+            }
+            return out;
         },
-        short: () => `${CK.st("burn", "화상 " + CardOps.atk(PL(), 60))} 2턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸`
+        short: (c) => {
+            const d = c.def;
+            const n = CardOps.atk(PL(), d.longBurn ? 40 : 60);
+            const turns = d.longBurn ? Math.max(1, CardOps.def(PL(), 100)) : d.burnTurns ?? 2;
+            return `${CK.st("burn", "화상 " + n)} ${turns}턴 · ${CK.spd(CardOps.spd(PL(), 50) + 1)}칸${d.consume ? " · 이미 화상이면 소모해 폭발" : ""}`;
+        }
     },
 
     insight: {
@@ -441,9 +613,16 @@ const CARDS = {
         short: () => `${CK.spd(CardOps.spd(PL(), 50) + 3)}장 뽑기 (패 제한 무시)`
     },
 
-    // 점액: 상태이상 카드 (슬라임킹이 패에 끼워 넣는다). 쓸 수 없다 — 패 칸만 차지한다
-    // 손으로 [묘지로] 버리려면 기력 2를 내야 한다 (discardCost). 카드 효과로 버려질 땐 그냥 버려진다
-    slime: { icon: "drop", color: "#7cd47c", discardCost: { energy: 2 } },
+    // 점액: 상태이상 카드 (슬라임킹이 패에 끼워 넣는다). 손으로 [묘지로] 버릴 수 없고 (noDiscard), 기력 1을 내고 써서 소멸시킨다.
+    // 카드 효과로는 버려진다
+    slime: {
+        icon: "drop", color: "#7cd47c", noDiscard: true,
+        use(ctx) {
+            MessageLog.add("점액을 털어냈다", "#7cd47c");
+            return [[new PopupAnim(ctx.user, "소멸", "#7cd47c")]];
+        },
+        short: () => "[묘지로] 사용불가 · 쓰면 소멸"
+    },
 
     // 투척용 단검: 나이프 홀스터가 준다 (임시 카드 — 쓰거나 전투가 끝나면 사라진다)
     throwing_knife: {
@@ -492,31 +671,99 @@ const CARDS = {
         short: () => `주변 3×3 ${CK.atk(CardOps.atk(PL(), 100))} 피해 · ${CK.st("stun", "기절")}`
     },
 
+    // 과부하: [턴 제한(3)] 기력 +2, 무기력 2 (1턴). 붉은: 이번 턴 쓴 기력만큼 힘 1턴 / 푸른: 방어도가 있으면 하나를 없애고 무기력 없음 / 노란: 카드 1장 버리고 기력 +2
     overload: {
         icon: "bolt", color: "#f08040",
         use(ctx) {
             const u = ctx.user;
+            const d = ctx.card.def;
+            const out = [];
+            if (d.discardOne) {
+                const [pick] = ctx.picks ?? [];
+                if (!pick || !ctx.cards.hand.includes(pick)) return CardOps.say("버릴 카드를 골라야 한다");
+                CardOps.dump(ctx, [pick]);
+                u.energy += 2;
+                MessageLog.add("과부하! 카드를 버리고 기력 +2", "#f0a050");
+                return [[new PopupAnim(u, "기력 +2", "#f29a3a")]];
+            }
+            const spent = u.energySpent ?? 0;
             u.energy += 2;
-            Status.add(u, "lethargy", 2, 1);
-            MessageLog.add("과부하! 기력 +2, 다음 턴 기력이 2 줄어든다 (무기력)", "#f0a050");
-            return [[new PopupAnim(u, "기력 +2", "#f29a3a")]];
+            out.push(new PopupAnim(u, "기력 +2", "#f29a3a"));
+            if (d.shieldSwap && u.blocks.length) {
+                u.blocks.sort((a, b) => a.t - b.t);
+                const gone = u.blocks.shift();
+                MessageLog.add(`과부하! 기력 +2, 방어도 ${gone.v}를 내놓아 무기력이 없다`, "#f0a050");
+            } else {
+                Status.add(u, "lethargy", 2, 1);
+                MessageLog.add("과부하! 기력 +2, 다음 턴 기력이 2 줄어든다 (무기력)", "#f0a050");
+            }
+            if (d.strengthFromSpent && spent > 0) {
+                Status.add(u, "str", spent, 1);
+                out.push(new PopupAnim(u, `힘 ${spent}`, Status.DEFS.str.color));
+                MessageLog.add(`이번 턴 쓴 기력 ${spent}만큼 힘 (1턴)`, Status.DEFS.str.color);
+            }
+            return [out];
         },
-        short: () => `기력 +2 · ${CK.st("lethargy", "무기력 2")} 1턴`
+        short: (c) => {
+            const d = c.def;
+            if (d.discardOne) return `1장 버리고 ${CK.energy("기력 +2")}`;
+            return `${CK.energy("기력 +2")} · ${d.shieldSwap ? "방어도가 있으면 하나 내놓고 무기력 없음" : CK.st("lethargy", "무기력 2") + " 1턴"}${d.strengthFromSpent ? " · 쓴 기력만큼 힘" : ""}`;
+        }
     },
 
+    // 기도: [턴 제한(3)] 덱/묘지에서 1장 골라 패로. 붉은: 그 카드 이번 턴 피해 +75% / 푸른: 비용 -(1 + 방어력 10%) / 노란: 덱과 묘지에서 각각 1장
     pray: {
         icon: "star", color: "#f0e8b0",
-        picker: (u) => ({ title: "덱/묘지에서 패로 가져올 카드를 고른다", cards: [...u.cards.deck, ...u.cards.graveyard], min: 1, max: 1 }),
+        picker: (u, card) => ({
+            title: card.def.two ? "덱과 묘지에서 각각 1장을 고른다 (한쪽만 골라도 된다)" : "덱/묘지에서 패로 가져올 카드를 고른다",
+            cards: [...u.cards.deck, ...u.cards.graveyard], min: 1, max: card.def.two ? 2 : 1
+        }),
         use(ctx) {
-            const [pick] = ctx.picks ?? [];
-            if (!pick) return CardOps.say("가져올 카드를 골라야 한다");
+            const u = ctx.user;
+            const d = ctx.card.def;
+            const picks = ctx.picks ?? [];
+            if (!picks.length) return CardOps.say("가져올 카드를 골라야 한다");
+            if (picks.filter((c) => ctx.cards.deck.includes(c)).length > 1 || picks.filter((c) => ctx.cards.graveyard.includes(c)).length > 1) return CardOps.say("덱과 묘지에서 각각 1장까지만 고를 수 있다");
             if (ctx.cards.actionFull) return CardOps.say("행동 패가 가득 찼다");
-            if (!ctx.cards.fetch(pick)) return CardOps.say("그 카드는 이제 덱·묘지에 없다");
-            return [[new PopupAnim(ctx.user, pick.name, "#f0e8b0")]];
+            const got = [];
+            for (const c of picks) {
+                if (!ctx.cards.fetch(c)) continue; // 못 가져오면 못 가져온다
+                got.push(c);
+                if (d.boostPct) { const data = c.ensureData(); data.boostPct = d.boostPct; data.boostTurn = u.turnNo; }
+                if (d.cutCost) c.ensureData().costCut = 1 + CardOps.def(u, 10);
+            }
+            if (!got.length) return CardOps.say("그 카드는 이제 덱·묘지에 없다");
+            return [got.map((c) => new PopupAnim(u, c.name, "#f0e8b0"))];
         },
-        short: () => "덱/묘지에서 1장 골라 패로"
+        short: (c) => {
+            const d = c.def;
+            return `${d.two ? "덱과 묘지에서 각각 1장" : "덱/묘지에서 1장"} 골라 패로${d.boostPct ? " · 이번 턴 피해 +" + d.boostPct + "%" : ""}${d.cutCost ? " · 비용 -" + (1 + CardOps.def(PL(), 10)) : ""}`;
+        }
     },
 
+    // 포식: 옆칸 대상 공격력 250% 피해. 처치하면 피해량의 10%(최소 1)만큼 최대 체력을 얻는다 (소멸)
+    predation: {
+        icon: "skull", color: "#d04050",
+        target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" }),
+        use(ctx) {
+            const u = ctx.user;
+            const foe = CardOps.pickAdjacent(ctx);
+            if (!foe) return null;
+            const steps = Combat.strike(u, foe, ctx.world, CardOps.atk(u, 250), ctx.card.name);
+            const out = [steps];
+            const dealt = Combat.last?.dealt ?? 0;
+            if (!foe.alive) {
+                const gain = Math.max(1, CardOps.pct(dealt, 10));
+                u.addPerm("maxHp", gain);
+                MessageLog.add(`포식! 최대 체력 +${gain}`, "#e06070");
+                out.push([new PopupAnim(u, `최대 체력 +${gain}`, "#e06070")]);
+            }
+            return out;
+        },
+        short: () => `${CK.atk(CardOps.atk(PL(), 250))} 피해 · 처치하면 피해량의 10%(최소 1)만큼 최대 체력 · 소멸`
+    },
+
+    // 리로드: 1장 버리고 2 + 이동속도 25%장 뽑기. 붉은/푸른/노란: 덱에서 공격/방어/이동 카드를 가져온다
     reload: {
         icon: "cycle", color: "#a0d0ff",
         picker: CardOps.handPick("버릴 카드를 한 장 고른다", 1, 1),
@@ -524,9 +771,17 @@ const CARDS = {
             const [pick] = ctx.picks ?? [];
             if (!pick || !ctx.cards.hand.includes(pick)) return CardOps.say("버릴 카드를 골라야 한다");
             CardOps.dump(ctx, [pick]);
-            return [CardOps.draw(ctx, 2 + CardOps.spd(ctx.user, 25))];
+            const n = 2 + CardOps.spd(ctx.user, 25);
+            const tag = ctx.card.def.fetchTag;
+            if (!tag) return [CardOps.draw(ctx, n)];
+            const got = CardOps.fetchWhere(ctx, (c) => (c.def.tags ?? []).includes(tag), n);
+            if (!got.length) MessageLog.add(`덱에 ${CARD_TAG_NAMES[tag] ?? tag} 카드가 없다`, "#c8b890");
+            return [got.length ? [new PopupAnim(ctx.user, `+${got.length}장`, "#a0b8e8")] : []];
         },
-        short: () => `1장 버리고 ${CK.spd(2 + CardOps.spd(PL(), 25))}장 뽑기`
+        short: (c) => {
+            const tag = c.def.fetchTag;
+            return `1장 버리고 ${CK.spd(2 + CardOps.spd(PL(), 25))}장 ${tag ? "덱에서 " + (CARD_TAG_NAMES[tag] ?? tag) + " 카드 가져오기" : "뽑기"}`;
+        }
     },
 
     rest: {
@@ -626,6 +881,7 @@ const CARDS = {
         short: (c) => `${CK.spd(CardOps.spd(PL()))}칸 이동${c.def.strengthPerStep ? " · " + CK.st("str", "힘 +칸 수") : ""}`
     },
 
+    // 공격: 옆칸 단일대상 공격력 100%. 붉은: 80% 2회 / 푸른: 준비(카드를 쓸 때마다 이 카드 피해 +25%, 턴 끝에 초기화) / 노란: 1장 뽑기 ([턴 제한(3)]은 드로우 효과에)
     strike: {
         icon: "sword", color: "#e8d9b8", hits: 1, pct: 100,
         target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "공격", color: "#d8443c" }),
@@ -633,11 +889,26 @@ const CARDS = {
             const foe = CardOps.pickAdjacent(ctx);
             if (!foe) return null;
             const d = ctx.card.def;
+            const u = ctx.user;
+            const prep = d.prepare === "strikeUp" ? ctx.card.data?.prep ?? 0 : 0;
+            const dmg = Math.floor(CardOps.atk(u, d.pct) * (100 + 25 * prep) / 100 + 1e-9);
             const out = [];
-            for (let i = 0; i < d.hits && foe.alive; i++) out.push(Combat.strike(ctx.user, foe, ctx.world, CardOps.atk(ctx.user, d.pct), ctx.card.name));
+            for (let i = 0; i < d.hits && foe.alive; i++) out.push(Combat.strike(u, foe, ctx.world, dmg, ctx.card.name));
+            if (d.drawOnUse) {
+                const key = ctx.card.defId + ":draw";
+                if ((u.turnUses[key] ?? 0) < d.turnLimit) {
+                    u.turnUses[key] = (u.turnUses[key] ?? 0) + 1;
+                    out.push(CardOps.draw(ctx, d.drawOnUse));
+                } else MessageLog.add(`${ctx.card.name}: 이번 턴 드로우는 더 못 한다 (턴 제한 ${d.turnLimit})`, "#c8b890");
+            }
             return out;
         },
-        short: (c) => `${CK.atk(CardOps.atk(PL(), c.def.pct))} 피해${c.def.hits > 1 ? " ×" + c.def.hits : ""}`
+        short: (c) => {
+            const d = c.def;
+            const prep = d.prepare === "strikeUp" ? c.data?.prep ?? 0 : 0;
+            const v = Math.floor(CardOps.atk(PL(), d.pct) * (100 + 25 * prep) / 100 + 1e-9);
+            return `${CK.atk(v)} 피해${d.hits > 1 ? " ×" + d.hits : ""}${d.prepare === "strikeUp" ? ` · 준비 +${25 * prep}%` : ""}${d.drawOnUse ? " · 1장 뽑기" : ""}`;
+        }
     },
 
     zoom_punch: {
@@ -701,18 +972,48 @@ const VARIANTS = {
         }
     },
     guard: {
-        purple: {
-            target: () => ({ range: 1, radius: 0, entity: true, taps: 1, verb: "방패치기", color: "#d8443c" }),
-            use(ctx) {
-                const u = ctx.user;
-                if (u.block <= 0) return CardOps.say("방어도가 없다");
-                const foe = CardOps.pickAdjacent(ctx);
-                if (!foe) return null;
-                return [Combat.strike(u, foe, ctx.world, u.block, ctx.card.name)];
-            },
-            short: () => `지금 방어도(${CK.def(PL() ? PL().block : 0)}) 만큼 피해`
-        },
-        blue: { turns: 3 }
+        red: { bash: true },
+        blue: { turns: 2, extendAll: true },
+        yellow: { goldPct: 5 }
+    },
+    club: {
+        red: { burnPct: 5 },
+        blue: { area: true },
+        yellow: { stunTurns: 2 }
+    },
+    dash: {
+        red: { burnAround: true },
+        blue: { straightBonus: true },
+        yellow: { fetchMove: true }
+    },
+    frost: {
+        red: { turns: 3, repeatIce: true },
+        blue: { prepare: "frostIce" },
+        yellow: { wide: true }
+    },
+    harden: {
+        red: { strength: true },
+        blue: { protect: true },
+        yellow: { swift: true }
+    },
+    ignite: {
+        red: { consume: true, burnTurns: 3 },
+        blue: { longBurn: true }
+    },
+    overload: {
+        red: { strengthFromSpent: true },
+        blue: { shieldSwap: true },
+        yellow: { discardOne: true, picker: CardOps.handPick("버릴 카드를 한 장 고른다", 1, 1) }
+    },
+    pray: {
+        red: { boostPct: 75 },
+        blue: { cutCost: true },
+        yellow: { two: true }
+    },
+    reload: {
+        red: { fetchTag: "attack" },
+        blue: { fetchTag: "defense" },
+        yellow: { fetchTag: "move" }
     },
     heavy: {
         red: { bonusMaxHp: 10 },
@@ -729,7 +1030,9 @@ const VARIANTS = {
         red: { strengthPerStep: true }
     },
     strike: {
-        red: { pct: 80, hits: 2 }
+        red: { pct: 80, hits: 2 },
+        blue: { prepare: "strikeUp" },
+        yellow: { drawOnUse: 1, limitDraw: true }
     },
     totem: {
         red: { explode: true }
@@ -743,6 +1046,12 @@ class GameContent {
     static tagNames = new Map();
     static starter = [];         // [[id, n]]
     static iconSeq = 0;
+
+    // 설명글의 "[턴 제한(3)]" → 3 (없으면 0)
+    static turnLimitOf(effect) {
+        const m = /\[턴 제한\((\d+)\)\]/.exec(effect ?? "");
+        return m ? +m[1] : 0;
+    }
 
     static costObject(cost) {
         const out = {};
@@ -790,7 +1099,9 @@ class GameContent {
         const def = {
             type: "skill", sprite: "kicons", frame, kit: true, icon: impl.icon ?? "card", color: extra.color ?? impl.color ?? "#e8d9b8",
             name: data.name, cost, costs, price: Math.floor(30 + 14 * total), tags: data.tags ?? [], effect: data.effect ?? "",
-            exhaust: !!impl.exhaust, grudge: impl.grudge ?? null, picker: impl.picker ?? null,
+            exhaust: !!impl.exhaust || (data.tags ?? []).includes("exhaustion"),
+            turnLimit: GameContent.turnLimitOf(data.effect),
+            grudge: impl.grudge ?? null, picker: impl.picker ?? null,
             ...impl, ...extra,
             text: () => GameContent.render(data.effect),
             short: (card) => (impl.short ? impl.short(card) : GameContent.render(data.effect).split("\n")[0]),
@@ -840,14 +1151,38 @@ class GameContent {
 
     // 용어 풀이: 데이터 태그의 설명 (상태 이상 · 원한 · 도발)
     static buildTerms() {
-        const keyOf = { burning: "burn", ice: "ice", lethargy: "lethargy", hardening: "harden", slowness: "slow", strength: "str", root: "root", sturn: "stun", taunt: "taunt", poison: "poison" };
+        const keyOf = { burning: "burn", ice: "ice", lethargy: "lethargy", hardening: "harden", slowness: "slow", strength: "str", root: "root", sturn: "stun", taunt: "taunt", poison: "poison", swift: "swift", protect: "protect" };
         const terms = [];
         for (const t of GAME_DATA.tags) {
             if (!t.note) continue;
             if (keyOf[t.id] || t.id === "grudge") terms.push([t.name, keyOf[t.id] ?? null, t.note]);
+        }
+        for (const [id, name] of [["exhaustion", "소멸"], ["prepare", "준비"], ["turn_limit", "턴 제한"]]) {
+            const t = GAME_DATA.tags.find((x) => x.id === id);
+            if (t && t.note) terms.push([t.name ?? name, null, t.note]);
         }
         terms.push(["방어도", "def", "받는 피해를 먼저 막아 주는 수치. 정해진 턴이 지나면 사라진다. (곧 끝나는 것부터 깎인다)"]);
         terms.push(["소멸", null, "쓰면 이 방에서는 다시 나오지 않는다. 다음 방에서 덱으로 돌아온다."]);
         CardText.TERMS = terms;
     }
 }
+
+// ---------- 준비 (패에 들고 있는 동안 발동하는 카드 효과) ----------
+//   strikeUp: 다른 카드를 쓸 때마다 이 카드(공격 푸른 변형)의 피해 +25% (data.prep), 턴이 끝나면 초기화
+//   frostIce: 턴이 끝날 때마다 이 카드(서리 푸른 변형)의 빙결 지속시간 +방어력 20% (data.iceBonus), 쓰면 초기화
+class CardPrep {
+    static used(user) {
+        if (!user || !user.cards) return;
+        for (const c of user.cards.hand) if (c.def.prepare === "strikeUp") c.ensureData().prep = (c.data.prep ?? 0) + 1;
+    }
+
+    static turnEnd(player) {
+        if (!player || !player.cards) return;
+        for (const c of player.cards.hand) {
+            const kind = c.def.prepare;
+            if (kind === "strikeUp") c.ensureData().prep = 0;
+            else if (kind === "frostIce") c.ensureData().iceBonus = (c.data.iceBonus ?? 0) + CardOps.def(player, 20);
+        }
+    }
+}
+Events.on(GameEvent.CARD_USED, ({ user }) => CardPrep.used(user));

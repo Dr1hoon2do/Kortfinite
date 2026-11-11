@@ -32,9 +32,13 @@ class Card {
     get cost() {
         if (this.def.spell) return Spell.costObject(this);
         const opts = Card.costOptions(this.def);
-        if (opts.length < 2) return this.def.cost;
-        // 비용 경우가 여럿인 카드는 "그중 하나": 카드 한 장마다 하나로 정해져 있다 (data.pay = 몇 번째 경우)
-        return opts[this.costIndex];
+        const base = opts.length < 2 ? this.def.cost : opts[this.costIndex]; // 비용 경우가 여럿인 카드는 "그중 하나": 카드 한 장마다 하나로 정해져 있다 (data.pay = 몇 번째 경우)
+        const cut = this.data && this.data.costCut;
+        if (!cut || !base) return base;
+        // 기도 푸른 변형: 가져온 카드의 비용이 종류 상관없이 줄어든다 (0까지)
+        const out = {};
+        for (const [k, v] of Object.entries(base)) out[k] = Math.max(0, v - cut);
+        return out;
     }
 
     // 정의에 적힌 비용의 경우들 [{ energy: 2 }, { mana: 2 }, { energy: 1, mana: 1 }]. 공방 카드의 costs. 없으면 def.cost 하나
@@ -523,8 +527,19 @@ class CardSystem {
             MessageLog.add(`${card.name}: ${ctx.user.lackText(cost)}`, "#c8b890");
             return null;
         }
+        if (ctx.user && ctx.user.turnLimited && ctx.user.turnLimited(card)) {
+            MessageLog.add(`${card.name}: 이번 턴에는 더 쓸 수 없다 (턴 제한 ${def.turnLimit})`, "#c8b890");
+            return null;
+        }
         const index = this.removeFromHand(card);
-        const steps = def.use({ ...ctx, cards: this, card });
+        // 기도 붉은 변형으로 가져온 카드는 이번 턴 피해가 늘어난다
+        if (ctx.user && card.data && card.data.boostTurn === ctx.user.turnNo && card.data.boostPct) ctx.user.dmgBoost = 1 + card.data.boostPct / 100;
+        let steps;
+        try {
+            steps = def.use({ ...ctx, cards: this, card });
+        } finally {
+            if (ctx.user) ctx.user.dmgBoost = 0;
+        }
         if (!steps) {
             this.hand.splice(index, 0, card);
             this._changed();
@@ -532,6 +547,8 @@ class CardSystem {
         }
         if (!ctx.quiet) MessageLog.add(`${josa(card.name, "을를")} 썼다${cost ? ` (${CardDef.costText(cost)})` : ""}`, card.isSkill ? "#a0b8e8" : "#e8c860");
         if (cost && ctx.user) ctx.user.pay(cost, ctx.turns);
+        if (ctx.user && def.turnLimit && !def.limitDraw) ctx.user.turnUses[card.defId] = (ctx.user.turnUses[card.defId] ?? 0) + 1;
+        if (card.data) { delete card.data.costCut; delete card.data.boostPct; delete card.data.boostTurn; } // 가져올 때 얹힌 효과는 한 번 쓰면 끝
         if (card.isSkill) {
             if (card.isTemp) this._changed(); // 임시 카드는 쓰면 사라진다
             else if (card.def.exhaust) this.exhaust(card);

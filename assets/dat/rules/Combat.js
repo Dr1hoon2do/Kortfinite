@@ -31,6 +31,13 @@ class Combat {
     static hit(target, damage, source, world, type = "physical", mod = true) {
         if (target.invulnerable) return [];
         if (mod) damage = Status.modify(damage, source, target);
+        // 보호: 피해를 한 번 통째로 무시한다 (수치 = 남은 횟수)
+        if (damage > 0 && Status.get(target, "protect") > 0) {
+            Status.set(target, "protect", Status.get(target, "protect") - 1);
+            MessageLog.add(`${josa(target.displayName, "은는")} 보호로 피해를 무시했다`, "#70d0c0");
+            Combat.last = { target, dealt: 0, blocked: 0, dies: false, damage: 0 };
+            return [new PopupAnim(target, "보호", "#70d0c0")];
+        }
         let blocked = 0;
         if (source && target.absorb) {
             const left = target.absorb(damage);

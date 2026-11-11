@@ -61,6 +61,7 @@ class TurnManager extends Component {
         this.turn++;
         const together = Settings.get("together");
         const ctx = { world: this.world, player, turn: this.turn };
+        if (typeof CardPrep !== "undefined") CardPrep.turnEnd(player); // 준비: 패에 들고 있는 카드의 턴 끝 효과
         const step = [...lead];
         const ambient = [];
         // 상태 이상의 남은 턴은 플레이어가 턴을 넘길 때 1 준다 (적이 건 것은 이 뒤에 걸리므로 플레이어 턴 n번 동안 이어진다)

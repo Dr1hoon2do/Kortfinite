@@ -1,6 +1,6 @@
 // 슬라임킹 (공방 데이터 slime_king, 2x2). 행동 하나하나가 의도(intent)를 만들고, kind "custom"은 run/view/describe를 스스로 가진다.
 //   A 점액 돌진 — 플레이어 쪽으로 벽·무언가에 부딪힐 때까지 돌진. 지나간 자리와 멈춘 곳 4x4에 점액 장판 3턴. 충돌 공격력 200% + 점액 카드
-//   B 점액 던지기 — 플레이어 자리와 그 주변 무작위 2곳에 1칸 범위. 공격력 100%, 둔화 50% 5턴, 맞으면 점액 카드, 떨어진 범위에 점액 장판 3턴
+//   B 점액 던지기 — 플레이어 자리와 그 주변 무작위 2곳에 1칸 범위. 공격력 100%, 맞으면 점액 카드, 떨어진 범위에 점액 장판 3턴
 //   C 다가가기 — 이동속도만큼 다가가거나 옆이면 공격력 100%. 맞히면 점액 카드
 //   D 방어 — 방어력 100% 방어도 1턴
 //   E 슬라임 소환 — 현재 체력 20%를 체력으로, 공격·방어는 자기 50%인 슬라임을 곁에
@@ -164,7 +164,7 @@ class SlimeKing {
         for (const [cx, cy] of centers) for (const [x, y] of EnemyMoves.around(w, cx, cy, 1)) if (!seen.has(x + "," + y)) { seen.add(x + "," + y); tiles.push([x, y]); }
         return {
             kind: "area", name: "점액 던지기", tiles, centers, dmg: EnemyMoves.val(e, "atk", 100), thrown: true, color: "#7cd47c",
-            slow: { v: 50, t: 5 }, cards: { pct: 100 }, goo: 3
+            cards: { pct: 100 }, goo: 3
         };
     }
 

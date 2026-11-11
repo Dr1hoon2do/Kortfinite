@@ -27,6 +27,9 @@ class Status {
         stun: { name: "기절", color: "#f0e070", kind: "turns", max: 3, tag: "sturn", desc: "행동할 수 없다" },
         taunt: { name: "도발", color: "#f08080", kind: "turns", max: 9, tag: "taunt", desc: "공격 대상이 도발한 쪽이 된다" },
         growth: { name: "성장", color: "#e0605a", kind: "vt", max: 99, buff: true, tag: "growth", desc: "최대 체력이 수치만큼 증가" },
+        swift: { name: "신속", color: "#b8d070", kind: "vt", max: 9, buff: true, tag: "swift", desc: "수치만큼 이동속도 증가" },
+        protect: { name: "보호", color: "#70d0c0", kind: "vt", max: 9, buff: true, tag: "protect", desc: "피해를 수치(회)만큼 무시한다" },
+        stunimm: { name: "기절 면역", color: "#c8c0a0", kind: "turns", max: 99, buff: true, desc: "기절에 걸리지 않는다 (우두머리)" },
         charm: { name: "매료", color: "#f080c0", kind: "vt", max: 9, tag: "charm", desc: "건 상대에게서 수치칸 이내로만 움직일 수 있다 (여럿이면 겹치는 범위)" }
     };
 
@@ -109,10 +112,22 @@ class Status {
     }
 
     // 더하기. 수치는 쌓이고, 턴은 더 긴 쪽을 따른다. 턴만 있는 것(속박·기절·도발)은 턴이 늘어난다(긴 쪽)
+    // 우두머리는 기절한 동안과 그 뒤 일정 턴 동안 기절에 걸리지 않는다. 면역 턴 = 기절 턴 + 루트(지금까지 걸린 기절 턴 합)
+    static immune(e, key) {
+        return Status.key(key) === "stun" && e.rank === "boss" && (Status.get(e, "stun") > 0 || Status.get(e, "stunimm") > 0);
+    }
+
     static add(e, key, n, turns = null) {
         key = Status.key(key);
         const d = Status.DEFS[key];
         if (!d) return 0;
+        if (key === "stun" && e.rank === "boss") {
+            if (Status.immune(e, key)) return Status.get(e, "stun");
+            e.stunTotal = (e.stunTotal ?? 0) + n;
+            Status.set(e, "stun", Math.max(Status.get(e, "stun"), n));
+            Status.set(e, "stunimm", n + Math.floor(Math.sqrt(e.stunTotal) + 1e-9));
+            return Status.get(e, "stun");
+        }
         if (d.kind === "turns") {
             Status.set(e, key, Math.max(Status.get(e, key), n));
             return Status.get(e, key);
@@ -146,13 +161,15 @@ class Status {
     // 피해 보정: 맞는 쪽이 빙결이면 수치만큼 추가 피해
     static modify(dmg, source, target) {
         if (typeof Equip !== "undefined") dmg = Equip.dealt(dmg, source, target); // 장착한 장비 (구부러진 단검 …)
+        if (typeof Player !== "undefined" && source instanceof Player && source.dmgBoost && dmg > 0) dmg = Math.floor(dmg * source.dmgBoost + 1e-9); // 기도 붉은 변형: 이번 턴 피해 증가
         if (target && dmg > 0) dmg += Status.get(target, "ice");
         return Math.max(dmg > 0 ? 1 : 0, dmg);
     }
 
     // 이동속도 (둔화: -%): base는 원래 이동속도
     static speed(e, base) {
-        if (typeof Goo !== "undefined" && Goo.on(e)) base = Math.floor(base * 50 / 100 + 1e-9); // 점액 장판 위: 이동속도 절반
+        base += Status.get(e, "swift"); // 신속
+        if (typeof Goo !== "undefined" && Goo.on(e)) base = Math.floor(base * 67 / 100 + 1e-9); // 점액 장판 위: 둔화 33%
         const slow = Status.get(e, "slow");
         return slow ? Math.floor(base * (100 - slow) / 100 + 1e-9) : base;
     }
@@ -250,7 +267,7 @@ class Status {
     static describe(en) {
         if (en.key === "block") return { title: `방어도 ${en.value} · ${en.t}턴`, desc: "피해를 체력보다 먼저 막는다. 곧 끝나는 것부터 깎이고, 턴이 지나면 사라진다" };
         const d = Status.DEFS[en.key];
-        const unit = en.key === "slow" ? "%" : "";
+        const unit = en.key === "slow" ? "%" : en.key === "protect" ? "회" : "";
         const turns = en.t >= Status.ENDLESS ? "전투 중" : `${en.t}턴`;
         let part;
         if (d.kind === "dot") part = `${en.value}`;
@@ -271,7 +288,7 @@ class Status {
                 return e.charms.filter((c) => c.t > 0).map((c) => `${d.name}(${c.by ? Status.casterName(c.by) : "?"}) ${c.n}칸(${c.t}턴)`).join(" · ");
             }
             const t = Status.turns(e, k);
-            const unit = k === "slow" ? "%" : "";
+            const unit = k === "slow" ? "%" : k === "protect" ? "회" : "";
             if (d.kind === "turns") return `${d.name} ${t >= Status.ENDLESS ? "" : t + "턴"}`.trim();
             const tt = d.kind === "vt" ? (t >= Status.ENDLESS ? "(전투 중)" : `(${t}턴)`) : "";
             return `${d.name} ${e.status[k]}${unit}${tt}`;

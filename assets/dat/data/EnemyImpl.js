@@ -138,7 +138,7 @@ EnemyMoves.SPECS = {
             C: () => ({ kind: "idle" }),
             D(ai, ctx, e, foe) {
                 if (EnemyMoves.dist(e, foe) > 5 || !EnemyMoves.sightLine(ctx.world, e, foe)) return null;
-                return { kind: "area", name: "점액 던지기", tiles: EnemyMoves.around(ctx.world, foe.x, foe.y, 1), dmg: EnemyMoves.val(e, "atk", 80), slow: { v: 50, t: 2 }, thrown: true, color: "#7cd47c" };
+                return { kind: "area", name: "점액 던지기", tiles: EnemyMoves.around(ctx.world, foe.x, foe.y, 1), dmg: EnemyMoves.val(e, "atk", 80), slow: { v: 33, t: 1 }, thrown: true, color: "#7cd47c" };
             }
         }
     },

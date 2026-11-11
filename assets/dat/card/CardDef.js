@@ -36,8 +36,11 @@ class CardDef {
         return CardDef.SLOTS[slot] ?? slot;
     }
 
+    // 예전에 이름이 바뀐 변형 id → 지금 id (옛 저장본 호환)
+    static ALIASES = { guard__purple: "guard__red" };
+
     static resolve(id) {
-        return id;
+        return CardDef.ALIASES[id] ?? id;
     }
 
     static RESOURCE_NAMES = { energy: "기력", mana: "마나", hp: "체력", gold: "돈" };

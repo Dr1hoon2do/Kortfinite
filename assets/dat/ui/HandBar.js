@@ -403,6 +403,7 @@ class HandBar extends Component {
         this.useButton.text.setText(def.slot ? (this.cards.isEquipped(card) ? "해제" : "장착") : def.gem ? "끼우기" : card.target ? "칸 고르기" : "사용");
         UIKit.setEnabled(this.useButton, !!(def.slot || def.gem || (def.use && payable)));
         if (socketed) this.gemButton.text.setText(`젬 ${Spell.data(card).gems.length}/${Spell.data(card).sockets}`);
-        this.discardButton.text.setText(card.isSkill ? (def.discardCost ? `묘지로 (기력 ${def.discardCost.energy})` : "묘지로") : "버리기");
+        this.discardButton.text.setText(card.isSkill ? (def.noDiscard ? "묘지로 (불가)" : "묘지로") : "버리기");
+        UIKit.setEnabled(this.discardButton, !def.noDiscard);
     }
 }

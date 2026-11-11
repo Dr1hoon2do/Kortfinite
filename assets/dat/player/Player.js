@@ -18,6 +18,10 @@ class Player extends Entity {
         });
         Player.current = this;
         this.kills = 0;
+        this.turnNo = 0;        // 지금 몇 번째 턴인가 (방마다 처음부터는 아니고 세기만 한다)
+        this.turnUses = {};     // 이번 턴에 쓴 횟수 { 카드 id: 번 } — 턴 제한
+        this.energySpent = 0;   // 이번 턴에 쓴 기력 (붉은 과부하)
+        this.dmgBoost = 0;      // 쓰는 중인 카드의 피해 배수 (기도 붉은 변형), 0이면 없음
         this.money = options.money ?? Player.BASE.gold;
         // 마나: 주문 비용. 저절로 차지 않는다 — 방에 들어갈 때 조금, 마나 물약, 명상, 모닥불로 찬다
         this.maxMana = Player.BASE.mana;
@@ -226,6 +230,9 @@ class Player extends Entity {
     // ---------- 턴 ----------
     // 턴이 지난 뒤 (뽑기·대기, 주변이 다 움직인 다음): 방어도 남은 턴 -1, 기력 가득, 쉼 -1
     startTurn() {
+        this.turnNo++;
+        this.turnUses = {};
+        this.energySpent = 0;
         for (const b of this.blocks) b.t--;
         this.blocks = this.blocks.filter((b) => b.t > 0 && b.v > 0);
         this.energy = this.maxEnergy;
@@ -240,6 +247,9 @@ class Player extends Entity {
 
     // 방에 들어갈 때: 방어도·쉼을 비우고 기력을 채운다
     enterRoom() {
+        this.turnUses = {};
+        this.energySpent = 0;
+        this.dmgBoost = 0;
         this.blocks = [];
         Status.clear(this);
         this.onClear = [];
@@ -270,6 +280,7 @@ class Player extends Entity {
     // 이 카드를 지금 쓸 수 있는가 (비용 + 속박이면 이동 카드는 못 쓴다)
     canUse(card) {
         if (this.root > 0 && card.target && (card.target.walk || card.target.move)) return false;
+        if (this.turnLimited(card)) return false;
         return !card.cost || this.canPay(card.cost);
     }
 
@@ -292,20 +303,21 @@ class Player extends Entity {
 
     // 손으로 [묘지로] 버리기. 상태이상 카드(점액)는 비용(discardCost)을 내야 버려진다. 카드 효과로 버려질 땐 이걸 안 쓴다
     discardByHand(card) {
-        const cost = card.def.discardCost;
-        if (cost) {
-            if (!this.canPay(cost)) {
-                MessageLog.add(`${card.name}: 버리려면 ${this.lackText(cost) || "비용이 모자란다"}`, "#c8b890");
-                return false;
-            }
-            this.pay(cost);
-            MessageLog.add(`${card.name}: 기력 ${cost.energy}을 내고 버렸다`, "#c8b890");
+        if (card.def.noDiscard) {
+            MessageLog.add(`${card.name}: [묘지로] 사용불가 — 카드를 써서 소멸시키거나 카드 효과로만 버려진다`, "#c8b890");
+            return false;
         }
         return !!this.cards.discard(card);
     }
 
+    // 턴 제한: 이 턴에 이 카드를 더 쓸 수 없는가 ([턴 제한(3)]). 드로우 효과만 제한하는 카드(limitDraw)는 쓰는 건 막지 않는다
+    turnLimited(card) {
+        const lim = card.def.turnLimit;
+        return !!lim && !card.def.limitDraw && (this.turnUses[card.defId] ?? 0) >= lim;
+    }
+
     pay(cost) {
-        if (cost.energy) this.energy -= cost.energy;
+        if (cost.energy) { this.energy -= cost.energy; this.energySpent += cost.energy; }
         if (cost.mana) this.mana -= cost.mana;
         if (cost.hp) this.stats.hp = Math.max(1, this.stats.hp - cost.hp);
         if (cost.gold) this.money -= cost.gold;

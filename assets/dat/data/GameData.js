@@ -5,7 +5,7 @@ const GAME_DATA = {
  "cards": [
   {
    "id": "arrow",
-   "effect": "이동속도 거리 내 단일대상 공격력 60% 피해",
+   "effect": "이동속도 거리 내 단일대상 공격력 80% 피해",
    "kind": "reward",
    "rarity": "common",
    "name": "화살",
@@ -138,7 +138,9 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "costs": [],
+   "costs": [
+    {}
+   ],
    "upgrades": []
   },
   {
@@ -191,7 +193,9 @@ const GAME_DATA = {
     "draw"
    ],
    "memo": [],
-   "costs": [],
+   "costs": [
+    {}
+   ],
    "upgrades": []
   },
   {
@@ -214,7 +218,67 @@ const GAME_DATA = {
     "sturn"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "옆칸 단일 대상 공격력 150% 피해, 기절 1턴 부여, 대상 최대체력 5%(최소 1)만큼 화상(2턴) 부여",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 몽둥이",
+     "note": "",
+     "tags": [
+      "attack",
+      "sturn",
+      "burning"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "지정된 옆칸 3x3 범위 대상들에게 공격력 150% 피해, 기절 1턴 부여",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 몽둥이",
+     "note": "",
+     "tags": [
+      "attack",
+      "sturn",
+      "area"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 2
+      },
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "옆칸 단일 대상 공격력 150% 피해, 기절 2턴 부여",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 몽둥이",
+     "note": "",
+     "tags": [
+      "attack",
+      "sturn"
+     ]
+    }
+   ]
   },
   {
    "id": "concentration",
@@ -248,8 +312,51 @@ const GAME_DATA = {
     "move"
    ],
    "memo": [],
-   "costs": [],
-   "upgrades": []
+   "costs": [
+    {}
+   ],
+   "upgrades": [
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "이동속도 50% + 1 거리 내 이동, 이동후 옆칸 적들에게 공격력 60%만큼 화상(2턴) 부여",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 대시",
+     "note": "",
+     "tags": [
+      "move",
+      "burning"
+     ]
+    },
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "이동속도 50% + 1 거리 내 이동, 직선으로 이동하는 경우 최대 이동거리가 이동속도 100% + 2가 된다.",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 대시",
+     "note": "",
+     "tags": [
+      "move"
+     ]
+    },
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "이동속도 50% + 1 거리 내 이동, 덱에서 이동 카드를 1장 가져온다.",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 대시",
+     "note": "",
+     "tags": [
+      "move"
+     ]
+    }
+   ]
   },
   {
    "id": "first_aid",
@@ -271,16 +378,19 @@ const GAME_DATA = {
   },
   {
    "id": "food",
-   "effect": "최대체력 5%만큼 체력을 회복한다. 사용 후 이번 전투동안 소멸된다.",
+   "effect": "최대체력 5%만큼 체력을 회복한다. [소멸]",
    "kind": "reward",
    "rarity": "common",
    "name": "비상식량",
    "note": "",
    "tags": [
-    "health"
+    "health",
+    "exhaustion"
    ],
    "memo": [],
-   "costs": [],
+   "costs": [
+    {}
+   ],
    "upgrades": []
   },
   {
@@ -303,7 +413,67 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 50% + 1 거리 내에 대상에게 방어력 60% 만큼 빙결 3턴 부여\n대상에게 이미 빙결이 있다면, 1의 피해를 방어력 50%만큼 반복하여 준다.",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 서리",
+     "note": "",
+     "tags": [
+      "ice",
+      "ranged",
+      "attack"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 50% + 1 거리 내에 대상에게 방어력 60% 만큼 빙결 2턴 부여\n준비: 턴 종료시, 이 카드의 빙결 지속시간이 방어력 20%만큼 증가. 사용하면 초기화된다.",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 서리",
+     "note": "",
+     "tags": [
+      "ice",
+      "ranged",
+      "prepare"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 100% + 2 거리 내에 대상에게 방어력 60% 만큼 빙결 2턴 부여",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 서리",
+     "note": "",
+     "tags": [
+      "ice",
+      "ranged"
+     ]
+    }
+   ]
   },
   {
    "id": "guard",
@@ -335,11 +505,28 @@ const GAME_DATA = {
      ],
      "effect": "옆칸 단일대상에게 지금 가진 방어도 100% 피해",
      "from": "default",
-     "key": "purple",
+     "key": "red",
      "name": "방패치기",
      "note": "",
      "tags": [
-      "attack",
+      "attack"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "방어력 100%만큼 방어도 2턴 획득, 모든 방어도의 지속시간 1턴 증가",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 방어",
+     "note": "",
+     "tags": [
       "defense"
      ]
     },
@@ -352,13 +539,14 @@ const GAME_DATA = {
        "mana": 1
       }
      ],
-     "effect": "방어력 100%만큼 방어도 3턴 획득",
+     "effect": "방어력 100% + 현재 골드의 5%만큼 방어도(1턴) 획득",
      "from": "default",
-     "key": "blue",
-     "name": "푸른 방어",
+     "key": "yellow",
+     "name": "노란 방어",
      "note": "",
      "tags": [
-      "defense"
+      "defense",
+      "gold"
      ]
     }
    ],
@@ -374,13 +562,61 @@ const GAME_DATA = {
    "effect": "이번 전투동안 현재 방어력 20%만큼 경질화 부여",
    "kind": "reward",
    "rarity": "uncommon",
-   "name": "단단해지기",
+   "name": "굳히기",
    "note": "",
    "tags": [
     "hardening"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "이번 전투동안 현재 공격력 20%만큼 힘 부여",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 굳히기",
+     "note": "",
+     "tags": [
+      "strength"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "이번 전투동안 현재 방어력 20%만큼 경질화 부여, 부여된 경질화 수치만큼 보호(1턴) 획득",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 굳히기",
+     "note": "",
+     "tags": [
+      "hardening",
+      "protect"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 2
+      }
+     ],
+     "effect": "이번 전투동안 신속 1 부여 (이동속도 +1). [소멸]",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 굳히기",
+     "note": "",
+     "tags": [
+      "swift",
+      "exhaustion"
+     ]
+    }
+   ]
   },
   {
    "id": "heavy",
@@ -408,9 +644,6 @@ const GAME_DATA = {
       },
       {
        "mana": 2
-      },
-      {
-       "hp": 1
       }
      ],
      "effect": "옆칸 단일대상 공격력 250% 피해 + 대상 최대체력의 10% 피해",
@@ -429,9 +662,6 @@ const GAME_DATA = {
       },
       {
        "mana": 2
-      },
-      {
-       "hp": 1
       }
      ],
      "effect": "옆칸 단일대상 공격력 250% 피해, 대상 1턴 기절 부여",
@@ -451,9 +681,6 @@ const GAME_DATA = {
       },
       {
        "mana": 2
-      },
-      {
-       "hp": 1
       }
      ],
      "effect": "옆칸 단일대상 공격력 250% 피해, 대상을 처치하면 준 피해의 절반만큼 마나 회복",
@@ -489,7 +716,47 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 50% + 1 거리 내 대상에게 공격력 60% 만큼 화상 3턴 부여\n대상이 이미 화상이 있다면, 적용된 화상을 소모하고 그 화상의 (턴*수치) + 공격력 150%만큼 즉시 피해.",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 방화",
+     "note": "",
+     "tags": [
+      "burning",
+      "ranged",
+      "attack"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      },
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "이동속도 50% + 1 거리 내 대상에게 공격력 40% 만큼 화상 방어력 100% 턴만큼 부여",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 방화",
+     "note": "",
+     "tags": [
+      "burning",
+      "ranged"
+     ]
+    }
+   ]
   },
   {
    "id": "insight",
@@ -557,33 +824,152 @@ const GAME_DATA = {
   },
   {
    "id": "overload",
-   "effect": "2만큼 기력을 얻고, 무기력 2만큼 1턴 부여",
+   "effect": "[턴 제한(3)]\n2만큼 기력을 얻고, 무기력 2만큼 1턴 부여",
    "kind": "reward",
    "rarity": "common",
    "name": "과부하",
    "note": "",
    "tags": [
     "energy",
-    "lethargy"
+    "lethargy",
+    "turn_limit"
    ],
    "memo": [],
-   "costs": [],
-   "upgrades": []
+   "costs": [
+    {}
+   ],
+   "upgrades": [
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "[턴 제한(3)]\n2만큼 기력을 얻고, 무기력 2만큼 1턴 부여.\n이번턴 사용한 기력만큼 힘 1턴 부여.",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 과부하",
+     "note": "",
+     "tags": [
+      "energy",
+      "lethargy",
+      "strength",
+      "turn_limit"
+     ]
+    },
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "[턴 제한(3)]\n2만큼 기력을 얻고, 무기력 2만큼 1턴 부여\n방어도가 적용된 경우 무기력을 부여하지 않고, 적용된 방어도 1개(우선순위)를 제거",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 과부하",
+     "note": "",
+     "tags": [
+      "energy",
+      "lethargy",
+      "turn_limit"
+     ]
+    },
+    {
+     "costs": [
+      {}
+     ],
+     "effect": "[턴 제한(3)]\n카드를 1장 버리고, 2만큼 기력을 얻는다.",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 과부하",
+     "note": "",
+     "tags": [
+      "energy",
+      "lethargy",
+      "turn_limit"
+     ]
+    }
+   ]
   },
   {
    "id": "pray",
    "costs": [
     {
-     "mana": 2
+     "mana": 1
     }
    ],
-   "effect": "덱/묘지에서 카드 1장을 골라 패로 가져옴",
+   "effect": "[턴 제한(3)]\n덱/묘지에서 카드 1장을 골라 패로 가져온다.",
    "kind": "reward",
    "rarity": "uncommon",
    "name": "기도",
    "note": "",
    "tags": [
-    "draw"
+    "draw",
+    "turn_limit"
+   ],
+   "memo": [],
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "[턴 제한(3)]\n덱/묘지에서 카드 1장을 골라 패로 가져온다.\n가져온 카드는 이번턴동안 피해량이 75% 증가한다.",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 기도",
+     "note": "",
+     "tags": [
+      "draw",
+      "turn_limit"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "[턴 제한(3)]\n덱/묘지에서 카드 1장을 골라 패로 가져온다. 가져온 카드의 비용이 1 + 방어력 10%만큼 감소한다.(비용의 종류 상관없이)",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 기도",
+     "note": "",
+     "tags": [
+      "draw",
+      "turn_limit"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "mana": 1
+      }
+     ],
+     "effect": "[턴 제한(3)]\n덱과 묘지에서 각각 카드 1장을 골라 패로 가져온다.",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 기도",
+     "note": "",
+     "tags": [
+      "draw",
+      "turn_limit"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "predation",
+   "costs": [
+    {
+     "hp": 2
+    }
+   ],
+   "effect": "옆칸 대상 적에게 공격력 250% 피해\n이 공격으로 적 처치시, 피해량의 10%만큼(최소1) 최대체력을 얻는다. [소멸]",
+   "kind": "reward",
+   "name": "포식",
+   "note": "",
+   "rarity": "uncommon",
+   "tags": [
+    "attack",
+    "exhaustion"
    ],
    "memo": [],
    "upgrades": []
@@ -605,7 +991,56 @@ const GAME_DATA = {
     "dump"
    ],
    "memo": [],
-   "upgrades": []
+   "upgrades": [
+    {
+     "costs": [
+      {
+       "energy": 1
+      }
+     ],
+     "effect": "패를 1장 버리고, 2 + 이동속도 25%만큼 덱에서 공격카드를 가져온다.",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 리로드",
+     "note": "",
+     "tags": [
+      "draw",
+      "dump"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      }
+     ],
+     "effect": "패를 1장 버리고, 2 + 이동속도 25%만큼 덱에서 방어카드를 가져온다.",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 리로드",
+     "note": "",
+     "tags": [
+      "draw",
+      "dump"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      }
+     ],
+     "effect": "패를 1장 버리고, 2 + 이동속도 25%만큼 덱에서 이동카드를 가져온다.",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 리로드",
+     "note": "",
+     "tags": [
+      "draw",
+      "dump"
+     ]
+    }
+   ]
   },
   {
    "id": "rest",
@@ -739,16 +1174,17 @@ const GAME_DATA = {
    "id": "slime",
    "costs": [
     {
-     "energy": 2
+     "energy": 1
     }
    ],
-   "effect": "[묘지로] 사용불가",
+   "effect": "[묘지로] 사용불가, 사용시 [소멸]",
    "kind": "special",
    "rarity": "common",
    "name": "점액",
    "note": "",
    "tags": [
-    "status_effect_card"
+    "status_effect_card",
+    "exhaustion"
    ],
    "memo": [],
    "upgrades": []
@@ -822,18 +1258,50 @@ const GAME_DATA = {
    ],
    "upgrades": [
     {
-     "effect": "옆칸 단일대상 공격력 80% 피해 2회",
-     "from": "default",
-     "key": "red",
-     "name": "연격",
-     "note": "",
-     "tags": [
-      "attack"
-     ],
      "costs": [
       {
        "energy": 1
       }
+     ],
+     "effect": "옆칸 단일대상 공격력 80% 피해 2회",
+     "from": "default",
+     "key": "red",
+     "name": "붉은 공격",
+     "note": "",
+     "tags": [
+      "attack"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      }
+     ],
+     "effect": "옆칸 단일대상 공격력 100% 피해.\n준비: 카드 사용시 이 카드의 피해량이 25% 증가한다. 턴 종료시 증가한 피해량은 초기화된다.",
+     "from": "default",
+     "key": "blue",
+     "name": "푸른 공격",
+     "note": "",
+     "tags": [
+      "attack",
+      "prepare"
+     ]
+    },
+    {
+     "costs": [
+      {
+       "energy": 1
+      }
+     ],
+     "effect": "[턴 제한(3)]\n옆칸 단일대상 공격력 100% 피해, 1장 드로우.\n(턴 제한은 이 카드의 드로우 효과에 적용된다.)",
+     "from": "default",
+     "key": "yellow",
+     "name": "노란 공격",
+     "note": "",
+     "tags": [
+      "attack",
+      "turn_limit"
      ]
     }
    ],
@@ -856,7 +1324,9 @@ const GAME_DATA = {
     "ranged"
    ],
    "memo": [],
-   "costs": [],
+   "costs": [
+    {}
+   ],
    "upgrades": []
   },
   {
@@ -1123,7 +1593,7 @@ const GAME_DATA = {
    "hp": 12,
    "name": "슬라임",
    "note": "",
-   "pattern": "A. 플레이어에게 이동속도만큼 다가가거나, 옆칸에 있다면 100% 피해를 준다.\nB. 방어력 100%에 해당하는 방어도(1턴)을 얻는다.\nC. 1턴 쉰다.\nD. 플레이어 위치로 1칸 거리 범위 점액을 던진다. 공격력 80% 피해. 맞으면 둔화(50%, 2턴 지속)에 걸린다. 벽에 막힌다. 사거리는 5.\n패턴 로테이션은 [ABCD, ACBD, ACDB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
+   "pattern": "A. 플레이어에게 이동속도만큼 다가가거나, 옆칸에 있다면 100% 피해를 준다.\nB. 방어력 100%에 해당하는 방어도(1턴)을 얻는다.\nC. 1턴 쉰다.\nD. 플레이어 위치로 1칸 거리 범위 점액을 던진다. 공격력 80% 피해. 맞으면 둔화(33%, 1턴 지속)에 걸린다. 벽에 막힌다. 사거리는 5.\n패턴 로테이션은 [ABCD, ACBD, ACDB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
    "speed": 1,
    "tags": [
     "slowness",
@@ -1142,7 +1612,7 @@ const GAME_DATA = {
    "hp": 50,
    "name": "슬라임킹",
    "note": "2x2의 크기를 가진다.",
-   "pattern": "A. 플레이어가 있는 방향으로 벽에 부딪힐 때까지 돌진, 지나간 자리 그리고 부딪힌 지점 4x4 영역에 점액 장판(3턴 지속)을 남긴다. 돌진 중 충돌시 공격력 200% 피해, 점액 카드를 이동속도 200%만큼 패에 넣는다.\n점액 장판: 이동 중 장판을 밟을 경우 이동이 중지된다. 또한 장판 위에 있으면 둔화 50% 적용\nB. 플레이어 위치, 그 주변 무작위 위치 2곳에 각각 1칸 거리 범위 점액을 던진다. 공격력 100% 피해. 맞으면 점액 카드 이동속도 100%만큼 패에 삽입. 떨어진 범위에 점액 장판(3턴) 생성\nC. 플레이어에게 이동속도만큼 다가가거나, 옆칸일 경우 공격력 100% 피해. 공격 성공시 점액 카드 이동속도 100%만큼 패에 삽입\nD. 방어력 100%만큼 방어도를 1턴 얻는다.\nE. 자신의 현재체력 20%에 해당하는 슬라임을 소환한다. 각 스탯은 자신의 각 스탯 50%만큼 부여\n패턴 로테이션은 [ABCDE, ACEBD, ACDEB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
+   "pattern": "A. 플레이어가 있는 방향으로 벽에 부딪힐 때까지 돌진, 지나간 자리 그리고 부딪힌 지점 4x4 영역에 점액 장판(3턴 지속)을 남긴다. 돌진 중 충돌시 공격력 200% 피해, 점액 카드를 이동속도 200%만큼 패에 넣는다.\n점액 장판: 이동 중 장판을 밟을 경우 이동이 중지된다. 또한 장판 위에 있으면 둔화 33% 적용(1턴)\nB. 플레이어 위치, 그 주변 무작위 위치 2곳에 각각 1칸 거리 범위 점액을 던진다. 공격력 100% 피해. 맞으면 점액 카드 이동속도 100%만큼 패에 삽입. 떨어진 범위에 점액 장판(3턴) 생성\nC. 플레이어에게 이동속도만큼 다가가거나, 옆칸일 경우 공격력 100% 피해. 공격 성공시 점액 카드 이동속도 100%만큼 패에 삽입\nD. 방어력 100%만큼 방어도를 1턴 얻는다.\nE. 자신의 현재체력 20%에 해당하는 슬라임을 소환한다. 각 스탯은 자신의 각 스탯 50%만큼 부여\n패턴 로테이션은 [ABCDE, ACEBD, ACDEB] 중 1. 어느 행동부터 시작할지는 무작위 결정.",
    "speed": 1,
    "tags": [
     "area",
@@ -1332,6 +1802,16 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "exhaustion",
+   "color": "gray",
+   "name": "소멸",
+   "note": "사용하면 묘지로 가지 않고 이번 전투 동안 제외된다. (다음 방에서 덱으로 돌아온다)",
+   "tags": [
+    "exhaustion"
+   ],
+   "memo": []
+  },
+  {
    "id": "gold",
    "color": "amber",
    "name": "골드",
@@ -1434,6 +1914,26 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "prepare",
+   "color": "violet",
+   "name": "준비",
+   "note": "패에 있는 동안 발동되는 효과",
+   "tags": [
+    "prepare"
+   ],
+   "memo": []
+  },
+  {
+   "id": "protect",
+   "color": "teal",
+   "name": "보호",
+   "note": "버프 상태이상: 피해를 무시한다. (N회, M턴 지속)",
+   "tags": [
+    "protect"
+   ],
+   "memo": []
+  },
+  {
    "id": "ranged",
    "color": "amber",
    "name": "원거리",
@@ -1504,12 +2004,32 @@ const GAME_DATA = {
    "memo": []
   },
   {
+   "id": "swift",
+   "color": "olive",
+   "name": "신속",
+   "note": "버프 상태이상: 수치만큼 이동속도 증가(N턴)",
+   "tags": [
+    "swift"
+   ],
+   "memo": []
+  },
+  {
    "id": "taunt",
    "color": "pink",
    "name": "도발",
    "note": "공격대상이 자신이 되도록 한다.",
    "tags": [
     "taunt"
+   ],
+   "memo": []
+  },
+  {
+   "id": "turn_limit",
+   "color": "orange",
+   "name": "턴 제한",
+   "note": "한 턴에 쓸 수 있는 횟수가 정해져 있다.",
+   "tags": [
+    "turn_limit"
    ],
    "memo": []
   }

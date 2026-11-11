@@ -133,7 +133,8 @@ class TileTargeting extends Component {
             const terms = CardInspector.enabled() ? CardText.glossary(body) : "";
             this.terms.setText(terms);
             termLines = terms ? this.terms.measureLines(this._ctx, w - 20) : 0;
-            this.discardButton.text.setText(card.isSkill ? (card.def.discardCost ? `묘지로 (기력 ${card.def.discardCost.energy})` : "묘지로") : "버리기");
+            this.discardButton.text.setText(card.isSkill ? (card.def.noDiscard ? "묘지로 (불가)" : "묘지로") : "버리기");
+            UIKit.setEnabled(this.discardButton, !card.def.noDiscard);
         } else {
             this.desc.setText("");
             this.terms.setText("");
