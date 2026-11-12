@@ -1,5 +1,5 @@
 // 슬라임퀸 (공방 데이터 slime_queen, 2x2). 로테이션 [ABCDEF, ABCFDE] 중 하나, 시작 위치 무작위.
-//   점액 함정 — 밟으면 점액 카드 1장 + 속박 1턴 (밟으면 사라진다. 방이 끝날 때까지 남는다)
+//   점액 함정 — 밟으면 점액 카드 1장 + 속박 1턴 + 이번 턴 점액 카드 사용 불가 (밟으면 사라진다. 방이 끝날 때까지 남는다)
 //   A 함정 설치 — 플레이어 위치 2칸 범위 테두리에 점액 함정, 방어력 100% 방어도 2턴
 //   B 점액 손 — 플레이어 위치 2칸 범위. 공격력 60%, 점액 카드(이동속도), 퀸 옆으로 당겨온다
 //   C 끌어당기기 — 이동속도 200% 거리 안이면 당겨오고 둔화 100%(이동속도 200% 턴) + 점액 카드(이동속도), 멀면 다가온다
@@ -39,6 +39,7 @@ class SlimeQueen {
             MessageLog.add("점액 함정을 밟았다! 속박 1턴", SlimeQueen.COLOR);
             Status.add(p, "root", 1);
             p._trapStop = true; // 이동 카드는 여기서 멈춘다
+            p.slimeLockTurn = p.turnNo; // 이번 턴에는 점액 카드를 쓸 수 없다
             const anims = [EnemyMoves.inflict(p, "root", 1), ...SlimeQueen.give(p, 1)];
             if (Game && Game.turns && Game.turns.queue) Game.turns.queue.enqueue(anims);
         }
@@ -117,7 +118,7 @@ class SlimeQueen {
         return {
             kind: "custom", name: "함정 설치", tiles, color: SlimeQueen.COLOR,
             view: () => ({ kind: "area", name: "함정 설치" }),
-            text: () => `함정 설치: 표시한 칸(지금 위치 둘레 2칸 테두리)에 점액 함정을 깐다 (밟으면 점액 카드 1장 + 속박 1턴) · 방어도 ${guard} (2턴)`,
+            text: () => `함정 설치: 표시한 칸(지금 위치 둘레 2칸 테두리)에 점액 함정을 깐다 (밟으면 점액 카드 1장 + 속박 1턴 + 이번 턴 점액 카드 사용 불가; 이미 함정이 있는 칸은 건너뛴다) · 방어도 ${guard} (2턴)`,
             run: (ai, c) => {
                 const w = c.world;
                 const made = [];

@@ -531,6 +531,10 @@ class CardSystem {
             MessageLog.add(`${card.name}: 이번 턴에는 더 쓸 수 없다 (턴 제한 ${def.turnLimit})`, "#c8b890");
             return null;
         }
+        if (card.defId === "slime" && ctx.user && ctx.user.slimeLockTurn === ctx.user.turnNo) {
+            MessageLog.add("점액 함정에 붙잡혀 이번 턴에는 점액 카드를 쓸 수 없다", "#c8b890");
+            return null;
+        }
         const index = this.removeFromHand(card);
         // 기도 붉은 변형으로 가져온 카드는 이번 턴 피해가 늘어난다
         if (ctx.user && card.data && card.data.boostTurn === ctx.user.turnNo && card.data.boostPct) ctx.user.dmgBoost = 1 + card.data.boostPct / 100;

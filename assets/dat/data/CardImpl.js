@@ -643,10 +643,13 @@ const CARDS = {
     slime: {
         icon: "drop", color: "#7cd47c", noDiscard: true,
         use(ctx) {
-            MessageLog.add("점액을 털어냈다", "#7cd47c");
-            return [[new PopupAnim(ctx.user, "소멸", "#7cd47c")]];
+            const sticky = !!(ctx.card && ctx.card.data && ctx.card.data.noVanish); // 슬라임퀸이 [소멸]을 없앤 카드
+            MessageLog.add(sticky ? "점액을 털어냈지만 끈적하게 되돌아온다" : "점액을 털어냈다", "#7cd47c");
+            return [[new PopupAnim(ctx.user, sticky ? "끈적" : "소멸", "#7cd47c")]];
         },
-        short: () => "[묘지로] 사용불가 · 쓰면 소멸"
+        // 소멸이 지워진 카드는 설명에서도 소멸이 빠진다
+        text: (card) => (card.data && card.data.noVanish ? "[묘지로] 사용불가" : GameContent.render("[묘지로] 사용불가, 사용시 [소멸]")),
+        short: (card) => (card.data && card.data.noVanish ? "[묘지로] 사용불가" : "[묘지로] 사용불가 · 쓰면 소멸")
     },
 
     // 투척용 단검: 나이프 홀스터가 준다 (임시 카드 — 쓰거나 전투가 끝나면 사라진다)
@@ -1162,7 +1165,7 @@ class GameContent {
             turnLimit: GameContent.turnLimitOf(data.effect),
             grudge: impl.grudge ?? null, picker: impl.picker ?? null,
             ...impl, ...extra,
-            text: () => GameContent.render(data.effect),
+            text: (card) => (impl.text ? impl.text(card) : GameContent.render(data.effect)),
             short: (card) => (impl.short ? impl.short(card) : GameContent.render(data.effect).split("\n")[0]),
             target: impl.target ? (card) => impl.target.call(card.def, card) : null
         };
