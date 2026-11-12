@@ -69,6 +69,8 @@ class HandBar extends Component {
         const bw = HandBar.BUTTON_W;
         this.drawButton = this.textButton("draw", "드로우", 12 + bw / 2, y, () => this.draw());
         this.waitButton = this.textButton("wait", "대기", 12 + bw / 2 + (bw + 6), y, () => this.wait());
+        // [상호작용] 서 있는 칸의 물건·바로 옆의 출구·상인·모닥불·상자 (E 키와 같다). 할 것이 있으면 켜지고 이름이 보인다
+        this.interactButton = this.textButton("interact", "상호작용", 12 + bw / 2 + 2 * (bw + 6), y, () => this.interact());
         this.deckText = this.drawButton.sub;
 
         // 오른쪽: 덱·묘지 (누르면 덱 보기)
@@ -199,6 +201,7 @@ class HandBar extends Component {
         this.deckText.setText(lock ? `쉼 ${p.drawLock}턴` : c.deck.length ? `1장 · 1턴` : c.graveyard.length ? "묘지 섞기" : "덱 없음");
         this.deckText.color = lock ? "#f0a070" : c.deck.length ? "#a8b8d0" : c.graveyard.length ? "#a0b8e8" : "#8a7a6a";
         this.waitButton.sub.setText("1턴 쉬기");
+        this.refreshInteract();
         this.pile.text.setText(`덱 ${c.deck.length} · 묘지 ${c.graveyard.length}`);
 
         if (this.selected && !c.hand.includes(this.selected)) this.selected = null;
@@ -225,7 +228,7 @@ class HandBar extends Component {
             else this.draw();
         }
         if (Input.getButtonDown("wait")) this.wait();
-        if (Input.getButtonDown("interact")) this.interact(); // E 키 (버튼은 없앴다. 탭으로 말 걸기·열기가 된다)
+        if (Input.getButtonDown("interact")) this.interact(); // E 키 (아래 [상호작용] 버튼도 같다)
         if (Input.getButtonDown("handTab")) this.setMode(this.mode === "inv" ? "action" : "inv");
         for (let i = 1; i <= 9; i++) {
             if (Input.getKeyDown("Digit" + i)) {
@@ -245,6 +248,32 @@ class HandBar extends Component {
         this.targeting.cancel(true);
         this.selected = null;
         this.player.wantsWait = true;
+    }
+
+    // 지금 상호작용할 수 있는 것들 [{ e, here }] (서 있는 칸의 물건이 먼저, 그다음 바로 옆)
+    interactables() {
+        const p = this.player;
+        const out = [];
+        for (const e of this.world.entitiesAt(p.x, p.y)) if (e !== p && e.interactable) out.push({ e, here: true });
+        for (const [dx, dy] of Entity.DIRS) {
+            const e = this.world.entityAt(p.x + dx, p.y + dy);
+            if (e && e.interactable && !out.some((o) => o.e === e)) out.push({ e, here: false });
+        }
+        return out;
+    }
+
+    // 상호작용 버튼: 할 것이 있으면 켜고 첫 대상의 이름을 보여 준다
+    refreshInteract() {
+        const list = this.player.alive && this.world.entitiesAt ? this.interactables() : [];
+        const first = list[0];
+        const name = first ? (first.e.displayName ?? "") : "";
+        const label = first ? (list.length > 1 ? `${name} 외 ${list.length - 1}` : name) : "주변에 없음";
+        const key = (first ? name + list.length : "-") + (this.targeting.active ? "t" : "");
+        if (key === this._interactKey) return;
+        this._interactKey = key;
+        UIKit.setEnabled(this.interactButton, list.length > 0);
+        this.interactButton.sub.setText(label || "E");
+        this.interactButton.sub.color = first ? "#f0d878" : "#8a7a6a";
     }
 
     // 상호작용: 바로 옆에 하나뿐이면 바로, 아니면 칸 고르기
