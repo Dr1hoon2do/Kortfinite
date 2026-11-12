@@ -40,7 +40,7 @@ class SlimeQueen {
             Status.add(p, "root", 1);
             p._trapStop = true; // 이동 카드는 여기서 멈춘다
             const anims = [EnemyMoves.inflict(p, "root", 1), ...SlimeQueen.give(p, 1)];
-            if (Game && Game.turns && Game.turns.queue) Game.turns.queue.enqueue([anims]);
+            if (Game && Game.turns && Game.turns.queue) Game.turns.queue.enqueue(anims);
         }
     }
 
