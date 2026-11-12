@@ -1,5 +1,5 @@
-// 바닥에 떨어진 것: 전투 보상, 보물 방의 물건, 상점 진열대. 길을 막는 물건이라 밟을 수 없고,
-// 바로 옆(상하좌우)에서 상호작용(손 버튼·E, 또는 탭해서 옆까지 걸어가기)하면 가진다 (interact → Pickups.collect).
+// 바닥에 떨어진 것: 전투 보상, 보물 방의 물건, 상점 진열대. 길을 막지 않아서 위를 지나다닐 수 있고, 지나가기만 해서는 줍지 않는다.
+// 그 칸 바로 위에 서서 상호작용(손 버튼·E, 서 있는 칸을 다시 탭해도 된다)해야 가진다 (interact → Pickups.collect). 옆칸에서는 안 된다.
 //   gold  돈 더미 (상호작용하면 바로)
 //   card  카드 (행동 카드는 덱에, 물건·장비는 패에). price가 있으면 그 값을 내고 산다 (돈이 모자라면 못 가진다)
 //   gear  장비 (패에, 자리가 있어야)
@@ -12,11 +12,13 @@ class Pickup extends Hazard {
         super(x, y, "pickup", {});
         this.item = data.item;
         this.displayName = data.item.kind === "gold" ? `${data.item.gold} G` : data.item.card.name;
-        this.solid = true; // 상자·상인처럼 길을 막는다 (Hazard는 장벽만 solid라 여기서 켠다)
+        this.stoodMsg = false;
     }
 
+    // 플레이어가 이 칸 위에 서 있을 때만 상호작용할 수 있다 (옆칸에서는 안 된다)
     get interactable() {
-        return true;
+        const p = Player.current;
+        return !!p && p.x === this.x && p.y === this.y;
     }
 
     // 상호작용: 줍기·사기 (돈이 모자라거나 패가 가득 차면 메시지만)
@@ -36,8 +38,14 @@ EntityTypes.register("pickup", (x, y, d) => new Pickup(x, y, d));
 class Pickups {
     static run = null; // 지금 런 (Run 생성자가 넣는다)
 
-    // 예전에는 밟으면 줍고 샀다. 이제 떨어진 것은 길을 막고 상호작용으로만 가진다 (호출하는 곳이 있어 메서드는 남긴다)
-    static stepped(player, world) {}
+    // 플레이어가 (x, y)에 섰다 (걷기·순간이동): 줍지는 않고, 물건 위에 서면 한 번 안내만 한다 (실수로 줍지 않게)
+    static stepped(player, world) {
+        for (const o of world.entitiesAt(player.x, player.y)) {
+            if (!(o instanceof Pickup) || !o.world || o.stoodMsg) continue;
+            o.stoodMsg = true;
+            MessageLog.add(`${o.displayName} 위에 섰다. 상호작용(손 버튼·E)으로 가진다`, "#c8b890");
+        }
+    }
 
     static say(text) {
         MessageLog.add(text, "#c8b890");

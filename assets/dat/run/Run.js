@@ -275,7 +275,7 @@ class Run extends Component {
     // 정리한 방의 바닥에 보상을 떨어뜨린다
     dropRewards() {
         this.spawnPickups(this.rewardItems(), true);
-        MessageLog.add("보상이 바닥에 떨어졌다. 옆에 서서 상호작용(손 버튼)으로 가져가자 (카드는 하나만)", "#f0d878");
+        MessageLog.add("보상이 바닥에 떨어졌다. 물건 위에 올라서서 상호작용(손 버튼)으로 가져가자 (지나가기만 하면 줍지 않는다, 카드는 하나만)", "#f0d878");
     }
 
     // 놓을 자리: scatter면 방 가운데 근처에 흩어 놓고 (출구로 가는 가운데 줄은 되도록 피한다), 아니면 상점 진열대 두 줄

@@ -83,6 +83,11 @@ class Player extends Entity {
     // 땅 탭: 적이 없는 방이면 그 칸으로 걸어간다 (턴·카드 없이). 상호작용할 것(출구·상인·모닥불·상자)을 탭하면 옆까지 가서 쓴다.
     // 적이 있는 방에서는 아무것도 하지 않는다 (움직임은 이동 카드로). 바로 옆의 상호작용 대상은 언제든 쓴다
     setGoal(x, y) {
+        // 서 있는 칸을 다시 탭하면 그 칸의 떨어진 물건을 가진다
+        if (x === this.x && y === this.y && this.world.entitiesAt(x, y).some((e) => e !== this && e.interactable)) {
+            this.wantsInteract = { x, y };
+            return true;
+        }
         const entity = this.world.entityAt(x, y);
         const usable = entity && entity !== this && entity.interactable && !this.isHostileTo(entity);
         if (usable && Math.abs(x - this.x) + Math.abs(y - this.y) === 1) {

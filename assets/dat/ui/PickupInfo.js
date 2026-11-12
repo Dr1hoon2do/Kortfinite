@@ -33,11 +33,11 @@ class PickupInfo extends Component {
         this.root.setActive(false);
     }
 
-    // 플레이어 바로 옆의 Pickup들 (위·오른·아래·왼 순)
+    // 플레이어가 서 있는 칸과 바로 옆의 Pickup들 (서 있는 칸이 먼저, 그다음 위·오른·아래·왼 순). 가지는 건 서 있는 칸의 것뿐
     nearby() {
         const p = this.player;
         const list = [];
-        for (const [dx, dy] of Entity.DIRS) {
+        for (const [dx, dy] of [[0, 0], ...Entity.DIRS]) {
             for (const o of this.world.entitiesAt(p.x + dx, p.y + dy)) {
                 if (o instanceof Pickup && o.world && o.item) list.push({ pickup: o, dx, dy });
             }
@@ -128,7 +128,7 @@ class PickupInfo extends Component {
         const rows = [];
         for (let i = 0; i < n; i += cols) rows.push(cells.slice(i, i + cols));
         const rowH = rows.map((r) => Math.max(...r.map((c) => c.h)));
-        const hintText = "[상호작용] 버튼(손 모양)이나 E로 가진다";
+        const hintText = list.some((n) => n.dx === 0 && n.dy === 0) ? "서 있는 칸의 것을 [상호작용] 버튼(손 모양)이나 E로 가진다" : "그 칸 위에 올라서서 [상호작용] 버튼(손 모양)이나 E로 가진다";
         const footH = 18;
 
         let totalW = cardW * cols + gap * (cols - 1);

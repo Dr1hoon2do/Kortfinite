@@ -251,6 +251,12 @@ class HandBar extends Component {
     interact() {
         if (this.targeting.active && this.targeting.request.kind === "interact") return this.targeting.cancel();
         const p = this.player;
+        // 서 있는 칸의 떨어진 물건이 먼저다 (물건은 그 칸 위에서만 가진다)
+        const under = this.world.entitiesAt(p.x, p.y).find((e) => e !== p && e.interactable);
+        if (under) {
+            p.wantsInteract = { x: p.x, y: p.y };
+            return;
+        }
         const near = [];
         for (const [dx, dy] of Entity.DIRS) {
             const e = this.world.entityAt(p.x + dx, p.y + dy);
