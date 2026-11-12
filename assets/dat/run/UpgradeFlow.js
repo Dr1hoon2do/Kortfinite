@@ -1,4 +1,4 @@
-// 카드 강화 흐름 (모닥불·제단·퀘스트 보상·상인이 같이 쓴다). 담당: UpgradeFlow 에이전트가 채운다.
+// 카드 강화 흐름 (모닥불·상인이 같이 쓴다). 담당: UpgradeFlow 에이전트가 채운다.
 // 강화 색: red 붉은 · blue 푸른 · yellow 노란 (쉬움), green 초록 · purple 보라 (어려움).
 // 계약 (다른 코드가 이 모양으로 부른다):
 //   UpgradeFlow.COLORS[key] = { name: "붉은", css: "#e8584a", hard: false }

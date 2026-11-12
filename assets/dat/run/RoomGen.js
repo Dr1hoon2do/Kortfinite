@@ -12,9 +12,7 @@ class RoomPlan {
         boss: { w: 13, h: 9, floor: TileDef.CAVE_FLOOR, wall: TileDef.CAVE_WALL, pillars: [2, 4] },
         shop: { w: 9, h: 6, floor: TileDef.PLANKS, wall: TileDef.WALL, pillars: [0, 0] },
         rest: { w: 9, h: 6, floor: TileDef.GRASS, wall: TileDef.CAVE_WALL, pillars: [0, 0] },
-        treasure: { w: 9, h: 6, floor: TileDef.FLOOR, wall: TileDef.WALL, pillars: [0, 0] },
-        altar: { w: 9, h: 6, floor: TileDef.CAVE_FLOOR, wall: TileDef.CAVE_WALL, pillars: [0, 0] },
-        quest: { w: 9, h: 6, floor: TileDef.PLANKS, wall: TileDef.WALL, pillars: [0, 0] }
+        treasure: { w: 9, h: 6, floor: TileDef.FLOOR, wall: TileDef.WALL, pillars: [0, 0] }
     };
 
     // 방에 나오는 적은 공방 데이터(EnemyData)에서 고른다: 층에 맞는 적들 중, 위험도(threat) 예산 안에서 무작위로.
@@ -145,7 +143,7 @@ class RoomPlan {
         this.spawns.push({ type: "entrance", ...this.entrance }, { type: "exit", ...this.exit });
         const lv = this.lv;
         const floor = this.node.row + 1;
-        // 소품(제단·게시판·상인)에 넘기는 공통 데이터: 저장된 상태, 방 난수 씨, 층 번호
+        // 소품(상인 등)에 넘기는 공통 데이터: 저장된 상태, 방 난수 씨, 층 번호
         const common = { extra: this.state.extra, seed: Rng.mix(this.seed, 4242), floor: this.floorNo };
         const done = !!this.state.cleared; // 이미 정리한 방은 적이 없다
         if (done && this.combat) {
@@ -176,10 +174,6 @@ class RoomPlan {
             this.spawns.push({ type: "merchant", x: center.x, y: this.h, data: { name: Rng.pick(rng, Merchant.NAMES), stock, money: Rng.int(rng, 40, 90), ...common } });
         } else if (this.type === "rest") {
             this.spawns.push({ type: "campfire", x: center.x, y: center.y, data: { used: !!this.state.used } });
-        } else if (this.type === "altar") {
-            this.spawns.push({ type: "altar", x: center.x, y: center.y, data: { ...common } });
-        } else if (this.type === "quest") {
-            this.spawns.push({ type: "questboard", x: center.x, y: center.y, data: { ...common } });
         }
         // (보물 방의 물건은 방을 만든 뒤 Run이 바닥에 놓는다: Run.spawnPickups)
     }

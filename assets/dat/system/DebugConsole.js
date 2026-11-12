@@ -244,7 +244,7 @@ DebugConsole.register("killall", {
 });
 
 DebugConsole.register("room", {
-    args: "<start|battle|elite|shop|rest|treasure|boss|altar|quest>", aliases: ["go"],
+    args: "<start|battle|elite|shop|rest|treasure|boss>", aliases: ["go"],
     help: "이 층의 그 종류의 방으로 바로 간다 (지도에서 고른 것처럼)",
     run(ctx, [type]) {
         const run = ctx.run;

@@ -16,8 +16,6 @@ async function main() {
     ["mini_stone_golem", "entities/mini_stone_golem.png"],
     ["villager_merchant", "entities/villager_merchant.png"],
     ["chest", "entities/chest.png"],
-    ["altar", "entities/altar.png"],
-    ["questboard", "entities/questboard.png"],
     ["campfire", "entities/campfire.png"],
     ["stairs_down", "entities/stairs_down.png"],
     ["exit_locked", "entities/exit_locked.png"],
@@ -51,20 +49,20 @@ async function main() {
                       "rules/Animation.js", "rules/TurnManager.js",
                       "entity/Stats.js", "entity/AI.js", "rules/Combat.js", "rules/Status.js", "entity/EntityOverlay.js",
                       // entity: 방 안의 것들
-                      "entity/Props.js", "entity/Altar.js", "entity/QuestBoard.js", "entity/EnemyAI.js", "entity/Monster.js", "entity/Allies.js", "entity/SlimeKing.js", "entity/SlimeKingPull.js", "entity/Merchant.js", "entity/Pickups.js",
+                      "entity/Props.js", "entity/EnemyAI.js", "entity/Monster.js", "entity/Allies.js", "entity/SlimeKing.js", "entity/SlimeKingPull.js", "entity/Merchant.js", "entity/Pickups.js",
                       // card: 정의 체계 → 효과 → 카드 정의들 → 체계별 등록 (장비·주문·젬)
                       "card/CardText.js", "card/CardDef.js", "card/CardEffects.js", "card/defs/ActionCards.js", "card/Card.js", "card/CardKit.js",
                       "card/Gear.js", "card/Spell.js", "card/Gem.js", "card/DrawRule.js",
                       // data: 카드 공방에서 내보낸 카드·적 (GameData) + 그 동작 (CardImpl · EnemyImpl)
                       "data/GameData.js", "data/CardImpl.js", "data/EquipImpl.js", "data/EnemyImpl.js",
                       // run: 지도 · 방 · 런
-                      "run/RunMap.js", "run/RoomGen.js", "run/Run.js", "run/UpgradeFlow.js", "run/QuestLog.js",
+                      "run/RunMap.js", "run/RoomGen.js", "run/Run.js", "run/UpgradeFlow.js",
                       // ui
                       "ui/UIKit.js", "ui/CardView.js", "ui/CardInspector.js", "ui/SidePanel.js", "ui/panel/StatusPanel.js",
                       "ui/TileTargeting.js", "ui/WorldInput.js", "ui/PlayerHud.js", "ui/HandBar.js", "ui/MapScreen.js",
                       "ui/dialog/GemDialog.js", "ui/dialog/DeckViewer.js", "ui/dialog/RewardDialog.js", "ui/dialog/ShopDialog.js",
                       "ui/dialog/RestDialog.js", "ui/dialog/EquipDialog.js", "ui/dialog/EndScreen.js", "ui/dialog/Codex.js",
-                      "ui/dialog/AltarDialog.js", "ui/dialog/QuestDialog.js", "ui/PickupInfo.js",
+                      "ui/PickupInfo.js",
                       // system
                       "system/Settings.js", "system/SaveSystem.js", "system/TitleScreen.js", "system/DebugConsole.js",
                       // player
@@ -178,8 +176,6 @@ function startGame(App, meta) {
   const reward = ui.addComponent(new RewardDialog({ engine: App, player }));
   const shop = ui.addComponent(new ShopDialog({ engine: App, player, run, deckView }));
   const rest = ui.addComponent(new RestDialog({ engine: App, player, deckView }));
-  const altar = ui.addComponent(new AltarDialog({ engine: App, player, run, deckView }));
-  const quest = ui.addComponent(new QuestDialog({ engine: App, player, run, deckView }));
   ui.addComponent(new PickupInfo({ engine: App, player, world, run }));
   const equip = ui.addComponent(new EquipDialog({ engine: App, player }));
   const map = ui.addComponent(new MapScreen({ engine: App, run, deckView, equipDialog: equip }));
@@ -194,9 +190,9 @@ function startGame(App, meta) {
     }
   })());
   App.add(ui);
-  run.ui = { map, reward, shop, rest, end, altar, quest };
+  run.ui = { map, reward, shop, rest, end };
 
-  window.Game = { run, world, player, turns, queue, targeting, hand, deckView, gems, reward, shop, rest, altar, quest, equip, map, end, debugConsole, follow, meta };
+  window.Game = { run, world, player, turns, queue, targeting, hand, deckView, gems, reward, shop, rest, equip, map, end, debugConsole, follow, meta };
   MessageLog.add(meta.save ? "이어서 한다" : "새 런을 시작한다. 지도에서 첫 방을 고르자", "#e8b840");
   MessageLog.add("카드를 써서 움직이고 싸운다 (쓰기는 턴이 안 든다). 뽑기·대기만 1턴", "#c8b890");
   // UI가 다 만들어진 다음 프레임에 Run이 시작한다 (지도를 열거나, 못 끝낸 방으로)
