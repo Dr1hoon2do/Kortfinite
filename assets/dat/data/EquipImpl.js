@@ -41,10 +41,11 @@ const EQUIP = {
     knife_holster: {
         icon: "dagger", color: "#a8a8b8",
         moved(user) {
+            // 카드의 드로우가 다 끝난 뒤(Equip.flushMoved) 불린다: 패에 자리가 남을 때만 얻는다 (자리가 없으면 못 얻는다)
             const c = new Card("throwing_knife");
             c.ensureData().temp = true;
-            if (!user.cards.addToHand(c)) user.cards.addToDeck(c);
-            MessageLog.add("투척용 단검을 얻었다", "#c8c8d8");
+            if (user.cards.addToHand(c)) MessageLog.add("투척용 단검을 얻었다", "#c8c8d8");
+            else MessageLog.add("패가 가득 차서 투척용 단검을 얻지 못했다", "#c8b890");
         }
     },
 
@@ -104,8 +105,21 @@ class Equip {
     }
 
     // 이동 카드를 썼다 (ActionCards.move · 순간이동)
+    // 카드를 쓰는 동안(Card.use)이면 끝난 뒤로 미룬다: 이동 + 드로우 카드는 드로우를 먼저 하고, 패가 남으면 장비(나이프 홀스터)가 준다
     static moved(player) {
+        if (player._cardUsing) player._movedPending = true;
+        else Equip.movedNow(player);
+    }
+
+    static movedNow(player) {
         for (const e of Equip.active(player)) if (e.moved) e.moved(player);
+    }
+
+    // 카드 사용이 끝났다: 미뤄 둔 이동 효과를 지금 한다
+    static flushMoved(player) {
+        if (!player._movedPending) return;
+        player._movedPending = false;
+        Equip.movedNow(player);
     }
 
     // 새 턴 시작 (TurnManager). 연출 배열

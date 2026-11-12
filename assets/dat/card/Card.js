@@ -535,10 +535,14 @@ class CardSystem {
         // 기도 붉은 변형으로 가져온 카드는 이번 턴 피해가 늘어난다
         if (ctx.user && card.data && card.data.boostTurn === ctx.user.turnNo && card.data.boostPct) ctx.user.dmgBoost = 1 + card.data.boostPct / 100;
         let steps;
+        if (ctx.user) ctx.user._cardUsing = true; // 이동 효과(나이프 홀스터)는 카드의 드로우 뒤로 미룬다
         try {
             steps = def.use({ ...ctx, cards: this, card });
         } finally {
-            if (ctx.user) ctx.user.dmgBoost = 0;
+            if (ctx.user) {
+                ctx.user.dmgBoost = 0;
+                ctx.user._cardUsing = false;
+            }
         }
         if (!steps) {
             this.hand.splice(index, 0, card);
@@ -554,6 +558,7 @@ class CardSystem {
             else if (card.def.exhaust) this.exhaust(card);
             else this.toGraveyard(card);
         }
+        if (ctx.user) Equip.flushMoved(ctx.user); // 드로우가 다 끝났다: 미뤄 둔 이동 효과(나이프 홀스터)는 패가 남으면 준다
         Events.emit(GameEvent.CARD_USED, { card, user: ctx.user });
         return steps;
     }
