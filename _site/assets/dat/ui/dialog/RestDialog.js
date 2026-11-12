@@ -1,0 +1,117 @@
+// 모닥불 창 (휴식처). 넷 중 하나만 고른다:
+//   쉬기   — 최대 체력의 30%를 회복한다
+//   명상   — 마나를 가득 채운다
+//   정리   — 덱에서 카드 한 장을 아주 없앤다 (공짜)
+//   강화   — 카드를 먼저 고르면(UpgradeFlow) 그 카드가 받을 수 있는 강화와 바뀌는 효과를 보여 주고, 하나를 골라 강화 카드로 바꾼다
+// 고르면 모닥불은 다 쓴 것이 되고, 출구로 나가면 된다.
+class RestDialog extends Component {
+    static HEAL = 0.3;
+
+    constructor(options) {
+        super();
+        this.engine = options.engine;
+        this.player = options.player;
+        this.deckView = options.deckView;
+        this.fire = null;
+        this.buttons = [];
+    }
+
+    get isOpen() {
+        return this.fire !== null;
+    }
+
+    start() {
+        const { root, box } = Modal.create(this.engine, "rest", 360, 296, () => this.close());
+        this.root = root;
+        this.box = box;
+        UIKit.label(box, "title", "모닥불", 14, 10, null, 18, { fontSize: 14, fontWeight: "bold", color: UIKit.COLORS.gold });
+        UIKit.label(box, "sub", "따뜻하다. 하나만 고를 수 있다.", 14, 32, null, 14, { fontSize: 11, color: "#c8b890" });
+        this.options = [
+            ["heal", () => `쉬기 · 체력 +${this.healAmount()} (최대의 30%)`, () => this.heal()],
+            ["mana", () => `명상 · 마나를 가득 (${this.player.mana}/${this.player.maxMana})`, () => this.meditate()],
+            ["purge", () => "정리 · 덱에서 카드 한 장 빼기", () => this.purge()],
+            ["upgrade", () => `강화 · 카드를 고르면 가능한 강화와 바뀌는 효과를 보고 고른다 (${this.upgradable().length}장)`, () => this.upgrade()]
+        ];
+        this.options.forEach(([id, , fn], i) => {
+            const b = UIKit.button(box, id, "", fn, { fontSize: 12 });
+            b.rt.setAnchor(0, 0, 1, 0);
+            b.rt.setOffsets(14, 58 + i * 44, 14, -(58 + i * 44 + 36));
+            b.text.wrap = true; // 긴 글은 줄바꿈 (좁은 창)
+            b.text.lineHeight = 1.2;
+            this.buttons.push(b);
+        });
+        const close = UIKit.button(box, "close", "나중에", () => this.close(), { fontSize: 12 });
+        close.rt.setAnchor(0, 1, 1, 1);
+        close.rt.setOffsets(14, -42, 14, 10);
+    }
+
+    healAmount() {
+        const s = this.player.stats;
+        return Math.min(s.maxHp - s.hp, Math.floor(s.maxHp * RestDialog.HEAL + 1e-9));
+    }
+
+    open(fire) {
+        this.fire = fire;
+        this.options.forEach(([, label], i) => this.buttons[i].text.setText(label()));
+        UIKit.setEnabled(this.buttons[0], this.healAmount() > 0);
+        UIKit.setEnabled(this.buttons[1], this.player.mana < this.player.maxMana);
+        UIKit.setEnabled(this.buttons[2], this.player.cards.allActions.length > 1);
+        UIKit.setEnabled(this.buttons[3], this.upgradable().length > 0);
+        Modal.fit(this.engine, this.box, 360, 296);
+        Modal.show(this.root, true);
+    }
+
+    close() {
+        if (!this.fire) return;
+        this.fire = null;
+        Modal.show(this.root, false);
+    }
+
+    done(message) {
+        if (this.fire) this.fire.used = true;
+        MessageLog.add(message, "#f0c080");
+        this.close();
+    }
+
+    heal() {
+        const n = this.healAmount();
+        if (n <= 0) return;
+        this.player.stats.hp += n;
+        this.player.overlay && (this.player.overlay.popup = null);
+        this.done(`푹 쉬었다. 체력 ${n} 회복`);
+    }
+
+    meditate() {
+        const p = this.player;
+        if (p.mana >= p.maxMana) return;
+        const n = p.maxMana - p.mana;
+        p.mana = p.maxMana;
+        this.done(`명상했다. 마나 ${n} 회복`);
+    }
+
+    purge() {
+        const fire = this.fire;
+        this.close();
+        this.deckView.pick("정리 · 없앨 카드를 고른다", this.player.cards.allActions, (card) => {
+            if (!this.player.cards.removeCard(card)) return;
+            fire.used = true;
+            MessageLog.add(`${josa(card.name, "을를")} 모닥불에 던졌다 (덱에서 빠졌다)`, "#f0c080");
+        });
+    }
+
+    // 강화할 수 있는 카드들
+    upgradable() {
+        return UpgradeFlow.candidates(this.player);
+    }
+
+    // 강화: 공용 흐름(UpgradeFlow)에 맡긴다. 창을 먼저 닫고(겹침 방지) 연다
+    upgrade() {
+        const fire = this.fire;
+        this.close();
+        UpgradeFlow.open({ colors: null, title: "강화 · 카드를 고른다", onDone: (c) => { if (c) fire.used = true; } });
+    }
+
+    update() {
+        if (this.fire && Input.getButtonDown("cancel")) this.close();
+    }
+}

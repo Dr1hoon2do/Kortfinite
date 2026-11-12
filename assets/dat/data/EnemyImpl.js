@@ -242,6 +242,23 @@ EnemyMoves.SPECS = {
         }
     },
 
+    // 슬라임퀸 (2x2): [ABCDEFG]. 동작은 entity/SlimeQueen.js
+    //   A 점액 뒤덮기(방 전체 장판 3턴, 맞으면 취소) / B 점액 손(60%, 속박, 당기기) / C 유혹(매료 + 100%) / D 공격(100% + 점액 카드)
+    //   E 기 모으기 / F 연타(60%, 기를 모았으면 이동속도 300%번) / G 가두기 (못 하면 바로 다음 행동)
+    slime_queen: {
+        rotations: ["ABCDEFG"],
+        fallback: { G: "next" },
+        actions: {
+            A: (ai, ctx, e) => SlimeQueen.floodIntent(ctx, e),
+            B: (ai, ctx, e, foe) => SlimeQueen.handIntent(ctx, e, foe),
+            C: (ai, ctx, e) => SlimeQueen.charmIntent(ctx, e),
+            D: (ai, ctx, e) => SlimeQueen.biteIntent(ctx, e),
+            E: (ai, ctx, e) => SlimeQueen.focusIntent(ctx, e),
+            F: (ai, ctx, e) => SlimeQueen.flurryIntent(ctx, e),
+            G: (ai, ctx, e, foe) => SlimeQueen.holdIntent(ctx, e, foe)
+        }
+    },
+
     stone_golem: {
         rotations: ["ABCDBD", "ADCBDB"],
         fallback: { A: "D" },

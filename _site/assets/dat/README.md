@@ -1,0 +1,98 @@
+# assets/dat — 게임 스크립트
+
+Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자로 이어진 방들이다(아이작식). 시작 방에서 출발해 지도에서 갈 방을 고르며 탐색하고, 우두머리 방을 찾아 쓰러뜨리면 다음 층으로 내려간다(남은 방을 더 둘러봐도 된다). 던전은 3층이고 마지막 층 우두머리를 쓰러뜨리면 이긴다.
+방은 입구 → 공간 → 출구이고, 방 안에서 **카드로** 움직이고 싸운다. 플레이어의 모든 행동은 카드다.
+
+모든 클래스는 전역이다. 불러오는 순서는 `assets/main.js`의 `Load.Scripts` 목록이 정한다. 새 파일을 만들면 그 목록에 경로를 추가한다.
+
+## 데이터와 코드의 분리
+
+카드·적·태그의 **내용**은 카드 공방(Kortfinite-Workshop)에서 짜고, **동작**은 코드에 짠다.
+
+```
+카드 공방 ──내보내기(data.json)──▶ tools/import_data.py ──▶ data/GameData.js   (이름·비용·설명·태그·강화·스탯·드랍)
+                                                            data/CardImpl.js    (CARDS[id] 카드 동작, VARIANTS[id][key] 강화 동작)
+                                                            data/EquipImpl.js   (EQUIP[id] 장비 효과)
+                                                            data/EnemyImpl.js   (EnemyMoves.SPECS[id] 적 행동)
+```
+
+- `GameContent.load()`가 GameData의 카드를 `CardDef`로 등록한다. 동작(`CARDS[id]`)이 없는 카드는 경고만 하고 건너뛴다.
+- 설명글의 "공격력 60%" 같은 말은 `GameContent.render`가 지금 능력치로 바꿔 숫자를 보여 준다.
+- 새 카드/적이 데이터에 생기면 `python3 tools/import_data.py 내보낸파일.json`이 동작이 없는 id를 알려 준다.
+- `DATA.md`는 GameData에서 자동으로 만든 표다 (`python3 tools/gen_data_md.py`).
+- `kind: "basic"` 카드는 시작 덱(3장씩), `reward`는 보상·상점 풀, 강화(upgrades)는 모닥불에서 바꾼다.
+- **비용**: 공방 카드(와 강화)의 `costs`는 "비용의 경우들"이다. 한 경우 안의 자원은 모두 함께 낸다(`{energy:1, mana:1}`). 경우가 여럿이면(`[{energy:2}, {mana:2}]`) 카드 한 장마다 그중 하나로 정해져 나온다 (`Card.costOptions` · `card.costIndex` · `data.pay` = 몇 번째 경우). 도감에는 경우마다 한 장씩 보이고, 모닥불 강화 때 범위를 벗어나면 다시 굴린다. 옛 데이터의 `cost`는 자원마다 한 경우로 쪼개 읽는다.
+
+## 폴더
+
+| 폴더 | 무엇 | 파일 |
+| --- | --- | --- |
+| `system/` | 도우미, 게임 이벤트 이름, 저장, 설정, 시작 화면, 디버그 명령 | Text(조사 `josa`), GameEvents, SaveSystem(`RunStore`), Settings, TitleScreen, DebugConsole |
+| `data/` | 공방 데이터와 그 동작 | GameData, CardImpl(`CardOps`·`CARDS`·`VARIANTS`·`GameContent`), EquipImpl(`EQUIP`·`Equip`·`EquipContent`), EnemyImpl(`EnemyMoves.SPECS`) |
+| `run/` | 런: 지도·방·보상 | RunMap(층 지도: 격자 방 이어 붙이기, `Rng`), RoomGen(`RoomPlan` 방 설계도, `Rewards`), Run(방 들어가기·나가기·정리·저장·카메라) |
+| `world/` | 방의 타일·청크, 그리기, 길찾기 | TileDef, Chunk, ChunkManager, ChunkRenderer, Pathfinder |
+| `entity/` | 방 안에 있는 것 | Entity, Stats, AI, EnemyAI(적 의도·`EnemyMoves`·`IntentOverlay`), EntityOverlay, Props(입구·출구·모닥불·상자), Monster, Allies(소환수·설치물·점액 장판 Goo), SlimeKing(슬라임킹 행동), SlimeQueen(슬라임퀸 행동·가두기), Merchant |
+| `player/` | 플레이어 | Player |
+| `rules/` | 턴, 전투, 상태 이상, 연출 | TurnManager, Combat, Status, Animation |
+| `card/` | 카드 체계 | CardText, CardDef, CardEffects, Card(`Card`·`CardSystem`: 행동 패/인벤토리 패/덱/묘지), CardKit, Gear(장비), Spell(주문), Gem(젬), DrawRule |
+| `card/defs/` | 카드가 같이 쓰는 도우미 | ActionCards(이동·줄 계산) |
+| `ui/` | HUD, 공통 부품, 입력 | UIKit, SidePanel, CardView, CardInspector, PlayerHud, MessageLog, HandBar, MapScreen, WorldInput, TileTargeting |
+| `ui/panel/` | 오른쪽 위 버튼으로 여는 창 | StatusPanel |
+| `ui/dialog/` | 화면 가운데 뜨는 창 | RewardDialog, ShopDialog, RestDialog, EquipDialog(장비 창), DeckViewer, GemDialog, EndScreen, Codex |
+
+## 규칙 요약
+
+- **턴**: 카드 쓰기·상호작용·적 없는 방에서 걷기는 턴이 안 든다. 뽑기(덱에서 1장)와 대기만 1턴. 턴이 지나면 적이 한 번씩 행동하고, 기력이 가득 차며, 방어도·쉼이 1 줄어든다 (`rules/TurnManager.js`).
+- **적의 의도**: 적은 턴이 끝날 때 다음 턴에 할 일(`intent`)을 정해 머리 위에 보여 준다. 맞는 칸은 `IntentOverlay`가 땅에 그린다.
+- **버림**: 모든 % 계산은 반올림·올림 없이 버린다 (`CardOps.pct`·`spd`, `EnemyMoves.val`, 둔화, 장비 피해 보정, 몬스터 체력, 상점 값, 모닥불 회복). 결과가 0이 되면 0 (최소값 없음). 예외: 소환수 체력은 최소 1 (`Ally` 생성자). 화면 배치·클릭 칸 판정 같은 UI 계산은 버림이 아니라 화면에 맞게 반올림한다.
+- **피해**: 공격력(또는 방어력) × %. 방어력은 피해를 줄이지 않는다. 방어도만 피해를 막는다 (`rules/Combat.js`).
+- **시드**: 모든 무작위는 런 시드에서 나온다. 방 안 무작위는 `room.rng`, 덱 섞기는 `player.cards.rng`. `Math.random` 대신 이것을 쓴다.
+- **장비**: 소지품(인벤토리) 패의 카드다. 부위는 없고 몇 개든 겹쳐 입을 수 있다. 입어도 소모되거나 사라지지 않고 패에 그대로 남아 "착용 중"으로 보인다. 패에 들어오면(보상·상점) 자동으로 입는다 (패가 넘치지 않을 때) (`CardSystem.addToHand`). 입은 동안만 효과를 읽으므로 해제하면 그 순간부터 효과가 없다. 입고 벗기는 턴을 쓰지 않는다: 전투 중에는 아래 패에서 카드를 눌러 [장착]/[해제], 지도 화면(아래 패가 가려진 곳)에서는 [장비] 버튼의 `EquipDialog`. 패가 넘치게 되는 장착·해제는 막힌다 (`card/Card.js` `CardSystem.equip`).
+  - 효과 종류 (`data/EquipImpl.js`의 `EQUIP[id]`): `stats`(공격력·방어력·방어력 %·이동속도·행동 패·인벤토리 패·최대 체력, `Gear.sum`) · `dealt`(주는 피해 보정, `Status.modify`) · `turnStart`(새 턴, `TurnManager.passTurn`) · `roomStart`(전투방 입장, `Run.enter`) · `hit`(적에게 피해, `DAMAGED` 이벤트) · `kill`(처치, `KILLED` 이벤트). 공방의 부위(slot) 값은 쓰지 않는다
+  - 얻는 곳 (`run/RoomGen.js`의 `Rewards`): 상점 2개(`rollStock`) · 정예 보상 1개 · 보물 상자 1개 · 우두머리 보상 1개. 희귀도 무게는 `Rewards.GEAR_WEIGHTS`. 보상은 이미 가진 장비를 빼고 굴린다 (`Run.ownedGear`). 일반 전투에서는 안 나온다.
+- **주문·젬**: `Spell`·`Gem` 체계는 코드에 있으나 지금 공방 데이터에는 주문 카드가 없다.
+
+## 어디를 고치면 되는지
+
+| 하고 싶은 일 | 어디 |
+| --- | --- |
+| 카드 동작·강화 동작 | `data/CardImpl.js` — `CARDS[id]`, `VARIANTS[id][key]`. 보조 함수는 `CardOps` |
+| 적 행동 | `data/EnemyImpl.js` — `EnemyMoves.SPECS[id]`(`rotations`+`actions` 또는 `brain`). 새 의도 종류는 `entity/EnemyAI.js` |
+| 상태 이상 종류·수치 | `rules/Status.js`의 `Status.DEFS`, 피해 보정 `Status.modify` |
+| 바닥에 떨어진 보상·상점 진열대·보물 방 물건 | `entity/Pickups.js` (`Pickup`·`Pickups`), 놓는 곳 `run/Run.js` (`rewardItems`·`shopItems`·`spawnPickups`), 그림 `entity/Allies.js` HazardOverlay |
+| 층 수·방 수·방 종류 (전투·정예·상점·휴식·보물·우두머리) | `run/RunMap.js` (`FLOORS`, `ROOMS`, `STEPS`, `TYPES`, `build`), `run/RoomGen.js` (`STYLE`) |
+| 다녀간 방 기록(정리·상점·휴식·상자) | `run/Run.js` (`rooms`, `captureRoom`), `run/RoomGen.js` (`RoomPlan` state) |
+| 방 크기·층별 무리·정예·우두머리 | `run/RoomGen.js` (`RoomPlan.STYLE`, `BUDGET`, `MAX_ENEMIES`) |
+| 보상·상점 값 | `run/RoomGen.js`의 `Rewards`, `run/Run.js`의 `REMOVE_BASE` |
+| 시작 덱·패 크기 | `GameContent.load`가 `basic` 카드로 정함, 패 크기 `CardSystem.ACTION_HAND`·`INV_HAND` |
+| 기본 능력치 | `player/Player.js` 위쪽 상수 |
+| 새 장비 | 공방 장비 탭에서 만들고 `import_data.py` → `data/EquipImpl.js`의 `EQUIP[id]`에 효과. 새 효과 종류는 `Equip` 클래스와 부르는 곳에 한 줄 |
+| 소환수 | `entity/Allies.js`의 `Ally.KINDS` |
+| 방 안 상호작용 물건 | `entity/Props.js`에 `Prop` 상속 + `interact(ctx)` + `EntityTypes.register` |
+| 카드 설명글 색·용어 풀이 | `card/CardText.js` (`[[키:글자]]`, `TERMS`는 데이터 태그 설명에서 만든다) |
+| 저장 형식 | 바꾸면 `system/SaveSystem.js`의 `RunStore.VERSION`을 올린다 (다른 형식은 지워진다) |
+| 디버그 명령 | `system/DebugConsole.js`의 `DebugConsole.register(이름, { args, help, run })` |
+
+## 게임 이벤트
+
+엔진의 전역 버스 `Events`로 알린다. 이름은 `system/GameEvents.js`의 `GameEvent`.
+
+`KILLED` 처치 · `DAMAGED` 피해 · `PLAYER_DIED` · `TURN_END` · `CARD_USED` · `ROOM_ENTERED` · `ROOM_CLEARED` · `RUN_ENDED`
+
+새 기능(업적, 통계, 유물형 장비 등)은 알리는 곳을 고치지 말고 듣는 쪽만 추가한다.
+
+## 엔진 도구
+
+자세한 건 `KuntoGame/API.md`. `Tween.to`, `ParticleSystem.emit`, `RectTransform.alpha`/`UIKit.fadeIn`, `Camera.main.shake`, `Debug.set`(F3).
+
+- **큰 몬스터**: 공방 적 설명(note)에 "2x2의 크기"가 있으면 한 변 2칸을 차지한다 (`Entity.size`). 엔티티 좌표는 왼쪽 아래 칸이고 `tilesOf()`가 차지한 칸들, `Entity.gap(a, b)`가 칸 거리다. 월드의 칸 색인(`ChunkManager`)이 차지한 칸마다 엔티티를 넣어서, 어느 칸을 눌러도 같은 엔티티다. 칸마다 훑는 범위 효과는 같은 엔티티를 한 번만 맞힌다.
+- **custom 의도**: `{ kind: "custom", run, view, text, tiles, zone }` — 새 몬스터가 기존 의도 종류에 없는 행동을 할 때 쓴다 (`entity/SlimeKing.js` 참고).
+- **슬라임퀸 가두기**: `player.heldBy`(가둔 퀸). 플레이어가 퀸의 2x2 안 한 칸에 겹쳐 선다. `SlimeQueen.holder(p)`가 몸 밖으로 나갔는지 보고 풀어 준다. 피해 무효는 `Combat.hit`, 턴 시작 효과는 `TurnManager`, 속박·둔화 갱신은 `Card.js _changed`에서 `SlimeQueen`을 부른다. 로테이션 fallback `"next"`는 못 하는 행동을 건너뛰고 바로 다음 글자를 한다.
+- **몬스터 등급**: 공방 적의 `등급`(소형·중형·대형·보스)이 방 생성(`RoomGen.pickEnemies`·`leadPool`)을 정한다. 일반 방은 소형·중형 + 대형 최대 1, 정예 방은 대장이 대형(없으면 중형)·곁에 소형·중형 최대 2, 우두머리 방은 대장이 보스(없으면 대형)·곁에 소형 최대 2. 보스 등급은 우두머리 방에만 나온다. 등급이 비면 중형.
+- **카드 규칙 글**: 설명글의 `[소멸]`(태그 exhaustion)은 쓰면 이번 전투 동안만 빠지고, `[턴 제한(N)]`(태그 turn_limit)은 한 턴에 N번까지만 쓴다 (`CardDef.turnLimit`, `Player.turnUses`; 노란 공격은 드로우 효과만 제한). `준비`(prepare)는 패에 있는 동안의 효과로 `CardPrep`이 다룬다 (공격 푸른: 카드를 쓸 때마다 +25%·턴 끝 초기화, 서리 푸른: 턴 끝마다 지속 +방어력 20%·쓰면 초기화).
+- **상태이상 추가**: 신속(이동속도 +수치), 보호(피해를 N회 통째로 무시), 기절 면역(우두머리: 기절한 동안과 그 뒤 √(누적 기절 턴)턴). 기도 붉은 변형은 가져온 카드의 이번 턴 피해를 올리고(`Player.dmgBoost`), 푸른 변형은 비용을 줄인다(`card.data.costCut`).
+- **점액 카드**: `noDiscard` — [묘지로]로 못 버리고, 기력 1을 내고 쓰면 소멸한다. 카드 효과로는 버려진다.
+- **바닥 물건·정보**: 떨어진 것(Pickup)은 길을 막는 상호작용 물건이다. 옆칸에서 손 버튼·E·탭으로만 가진다 (밟아서 줍지 않는다). 옆에 서면 `PickupInfo`가 카드 이름·비용·설명·값을 보여 준다. (구부러진 동전은 예외로 밟으면 줍는다.)
+- **강화의 길**: 모닥불(색 상관없이)  · 상인(붉·푸·노 50G, 초록·보라 100G, 살 때마다 +50%). 모두 `UpgradeFlow.open({ colors })`로 카드를 골라 바꾼다.
+- **카드 고르기 구역**: `CardPicker`의 `sections`와 `CardOps.zonePick`으로 덱/묘지 같은 구역을 나눠 보여 준다 (기도).
+- **층 크기·방 모양**: 한 층은 1층 16·2층 20·3층 24개 방(대부분 전투). 방은 종류별 크기 범위에서 시드로 정하고 구조 템플릿 9가지(`RoomPlan.SHAPES`: 아레나·흩어진 기둥·벽 섬·칸막이·기역자·십자·방 두 칸·감실·링) 중 하나를 쓴다. 모닥불·상인 강화는 카드를 먼저 고르고, 그 카드가 받을 수 있는 강화와 바뀌는 효과를 비교해 보고 고른다 (`UpgradeOptionDialog`).

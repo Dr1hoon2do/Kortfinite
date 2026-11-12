@@ -327,7 +327,7 @@ class Goo {
     }
 
     static affects(e) {
-        return !(e instanceof Monster && (e.kind === "slime" || e.kind === "slime_king"));
+        return !(e instanceof Monster && (e.kind === "slime" || e.kind === "slime_king" || e.kind === "slime_queen"));
     }
 
     // e가 지금 장판 위에 있는가

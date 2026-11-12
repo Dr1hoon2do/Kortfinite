@@ -363,6 +363,8 @@ class CardSystem {
             this._pullTokens(card);
         }
         this.version++;
+        // 슬라임퀸에게 갇힌 동안: 패의 점액 카드 유무에 따라 속박·둔화가 걸리고 풀린다
+        if (typeof SlimeQueen !== "undefined" && Player.current && Player.current.cards === this) SlimeQueen.refresh(Player.current);
     }
 
     // ---------- 패 ----------

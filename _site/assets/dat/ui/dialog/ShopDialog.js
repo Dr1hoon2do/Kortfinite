@@ -1,0 +1,349 @@
+// 상점 창 (상인에게 말을 걸면). 물건마다 한 줄: 그림, 이름, 짧은 설명, 값 [사기].
+//   목록은 페이지식이다: 한 쪽에 들어가는 만큼만 보이고, 아래 [▲]/[▼]로 쪽을 넘긴다 (끌어서 스크롤하지 않는다).
+//   행동 카드(주문 포함)는 사면 덱에 들어간다. 장비·소모품·젬은 패에 들어간다 (자리가 있어야).
+//   위쪽 "카드 강화": 상인이 파는 강화 3개 (붉은·푸른·노란 중 2 + 초록·보라 중 1). 사면 카드 한 장을 골라 강화한다 (UpgradeFlow). 살 때마다 값이 50%씩 오른다.
+//   아래쪽 "카드 정리": [카드 빼기]: 덱에서 카드 한 장을 아주 없앤다 (상점마다 한 번, 값은 할 때마다 오른다).
+// 거래는 턴을 쓰지 않는다.
+class ShopDialog extends Component {
+    static ROW = 64;
+    static HEAD = 24;
+
+    constructor(options) {
+        super();
+        this.engine = options.engine;
+        this.player = options.player;
+        this.run = options.run;
+        this.deckView = options.deckView;
+        this.npc = null;
+        this.rows = [];
+        this._key = null;
+    }
+
+    get isOpen() {
+        return this.npc !== null;
+    }
+
+    start() {
+        const { root, box } = Modal.create(this.engine, "shop", 360, 520, () => this.close());
+        this.root = root;
+        this.box = box;
+        this.title = UIKit.label(box, "title", "", 14, 10, null, 18, { fontSize: 13, fontWeight: "bold", color: UIKit.COLORS.gold });
+        this.line = UIKit.label(box, "line", "", 14, 30, null, 30, { fontSize: 11, color: "#e8d9b8", wrap: true, lineHeight: 1.3 });
+        this.moneyText = UIKit.label(box, "money", "", 14, 60, null, 16, { fontSize: 12, color: "#f0d878" });
+
+        const list = box.createChild("list");
+        this.list = list.getComponent(RectTransform);
+        this.list.setAnchor(0, 0, 1, 1);
+        this.list.setOffsets(12, 82, 12, 94);
+        list.addComponent(new UIRect({ color: "rgba(0, 0, 0, 0.25)" }));
+        list.addComponent(new UIMask());
+        this.content = this.list.createChild("content").getComponent(RectTransform);
+        this.content.setAnchor(0, 0, 1, 1);
+        this.content.setOffsets(0, 0, 0, 0);
+
+        // 쪽 넘기기: [▲] 1/2 쪽 [▼]
+        this.page = 0;
+        this.prevButton = UIKit.button(box, "prev", "▲ 위", () => this.turnPage(-1), { fontSize: 12 });
+        this.prevButton.rt.setAnchor(0, 1, 0.4, 1);
+        this.prevButton.rt.setOffsets(12, -86, 3, 52);
+        this.pageText = UIKit.label(box, "page", "", 0, 0, null, 18, { fontSize: 12, color: "#c8b890", align: "center", verticalAlign: "middle" });
+        const prt = this.pageText.gameObject.getComponent(RectTransform);
+        prt.setAnchor(0.4, 1, 0.6, 1);
+        prt.setOffsets(0, -86, 0, 52);
+        this.nextButton = UIKit.button(box, "next", "▼ 아래", () => this.turnPage(1), { fontSize: 12 });
+        this.nextButton.rt.setAnchor(0.6, 1, 1, 1);
+        this.nextButton.rt.setOffsets(3, -86, 12, 52);
+
+        const close = UIKit.button(box, "close", "나가기", () => this.close(), { fontSize: 13 });
+        close.rt.setAnchor(0, 1, 1, 1);
+        close.rt.setOffsets(12, -44, 12, 10);
+    }
+
+    open(npc) {
+        this.npc = npc;
+        this.title.setText(`상점 · ${npc.displayName}`);
+        this.line.setText(`"${npc.line()}"`);
+        this._key = null;
+        this.page = 0;
+        Modal.fit(this.engine, this.box, 360, 520);
+        Modal.show(this.root, true);
+    }
+
+    close() {
+        if (!this.npc) return;
+        this.npc = null;
+        CardInspector.hide(this);
+        CardInspector.untrack(this);
+        Modal.show(this.root, false);
+    }
+
+    update() {
+        if (!this.npc) return;
+        if (Input.getButtonDown("cancel")) return this.close();
+        if (!this.npc.alive || this.npc.angry || !this.player.alive) return this.close();
+        this.moneyText.setText(`내 돈 ${this.player.money} G`);
+        const key = [this.player.money, this.player.cards.version, this.npc.stock.map((s) => s.sold ? 1 : 0).join(""), this.npc.upgrades.map((u) => u.sold ? 1 : 0).join("") + this.npc.buys, this.run.removeCount, this.page, this.pageSize()].join("|");
+        if (key !== this._key) {
+            this._key = key;
+            this.rebuild();
+        }
+    }
+
+    addRow(y, { def, chip, name, info, button, ok, onTap, faded, card, poor }) {
+        const h = ShopDialog.ROW - 6;
+        const go = this.content.createChild("row");
+        const rt = UIKit.place(go, 6, y, null, h);
+        const bg = go.addComponent(new UIRect({ color: faded ? "rgba(30, 26, 22, 0.8)" : "rgba(42, 35, 30, 0.95)", borderColor: UIKit.COLORS.border, borderWidth: 1 }));
+        // 줄을 누르면 카드 정보 창 (마우스를 올려도)
+        if (card) {
+            go.addComponent(new UIButton({ onTap: () => this.inspect(card, rt, bg) }));
+            CardInspector.track(this, rt, card, true);
+        }
+        if (chip) {
+            // 색 칩: 강화 색 사각형
+            const c = rt.createChild("chip");
+            UIKit.place(c, 8, 9, 28, 28);
+            c.addComponent(new UIRect({ color: faded ? UIKit.COLORS.faint : chip, borderColor: "rgba(0, 0, 0, 0.6)", borderWidth: 2 }));
+        } else UIKit.icon(rt, "icon", def, 4, 5, 36);
+        // 글자 칸: 오른쪽 값 버튼과 겹치지 않게 잘라서 보인다
+        const box = rt.createChild("text");
+        const brt = box.getComponent(RectTransform);
+        brt.setAnchor(0, 0, 1, 1);
+        brt.setOffsets(48, 0, 80, 0);
+        box.addComponent(new UIMask());
+        UIKit.label(brt, "name", name, 0, 6, null, 15, { fontSize: 12, fontWeight: "bold", color: faded ? UIKit.COLORS.faint : UIKit.COLORS.text });
+        UIKit.label(brt, "info", info, 0, 22, null, 30, { fontSize: 10, color: faded ? UIKit.COLORS.faint : "#c8b890", rich: !faded, wrap: true, lineHeight: 1.3 });
+        const b = UIKit.button(rt, "deal", button, onTap, { fontSize: 11 });
+        b.rt.setAnchor(1, 0, 1, 0);
+        b.rt.setOffsets(-70, (h - 30) / 2, 6, -((h - 30) / 2 + 30));
+        UIKit.setEnabled(b, ok);
+        if (poor) b.text.color = "#e85a4a"; // 돈이 모자라면 값이 빨갛다
+        this.rows.push(go);
+        return y + ShopDialog.ROW;
+    }
+
+    // 이 상점이 파는 강화 3종: 색 칩 + 이름 + 값 (품절은 흐림, 돈이 모자라면 값이 빨강)
+    addUpgradeInfo(y) {
+        const p = this.player;
+        const go = this.content.createChild("upinfo");
+        const rt = UIKit.place(go, 6, y, null, 64);
+        go.addComponent(new UIRect({ color: "rgba(42, 35, 30, 0.95)", borderColor: UIKit.COLORS.border, borderWidth: 1 }));
+        this.npc.upgrades.forEach((u, i) => {
+            const c = UpgradeFlow.COLORS[u.color];
+            const price = this.npc.upgradePrice(u.color);
+            const ly = 5 + i * 19;
+            const chip = rt.createChild("chip");
+            UIKit.place(chip, 8, ly + 1, 14, 14);
+            chip.addComponent(new UIRect({ color: u.sold ? UIKit.COLORS.faint : c.css, borderColor: "rgba(0, 0, 0, 0.6)", borderWidth: 1 }));
+            UIKit.label(rt, "n" + i, `${c.name} 강화${c.hard ? " (어려움)" : ""}`, 30, ly + 1, null, 15, { fontSize: 12, fontWeight: "bold", color: u.sold ? UIKit.COLORS.faint : UIKit.COLORS.text });
+            const priceText = u.sold ? "품절" : `${price} G`;
+            const l = UIKit.label(rt, "p" + i, priceText, 0, ly + 1, 70, 15, { fontSize: 12, fontWeight: "bold", align: "right", color: u.sold ? UIKit.COLORS.faint : p.money < price ? "#e85a4a" : "#f0d878" });
+            l.gameObject.getComponent(RectTransform).setAnchor(1, 0, 1, 0);
+            l.gameObject.getComponent(RectTransform).setOffsets(-78, ly + 1, 8, -(ly + 16));
+        });
+        this.rows.push(go);
+        return y + 70;
+    }
+
+    // 상점이 파는 색을 받을 수 있는 카드가 있나 (없으면 이유 글)
+    upgradeBlock() {
+        const colors = this.npc.upgrades.filter((u) => !u.sold).map((u) => u.color);
+        if (colors.length === 0) return "강화가 모두 품절이다";
+        if (UpgradeFlow.candidates(this.player, colors).length === 0) return "파는 색 강화를 받을 카드가 없다";
+        return null;
+    }
+
+    addUpgradePick(y) {
+        const why = this.upgradeBlock();
+        const b = UIKit.button(this.content, "pick", why ?? "[ 강화 고르기 ]", () => this.buyUpgrade(), { fontSize: 14 });
+        b.rt.setAnchor(0, 0, 1, 0);
+        b.rt.setOffsets(6, y, 6, -(y + 32));
+        UIKit.setEnabled(b, !why);
+        if (!why) b.text.color = UIKit.COLORS.gold;
+        this.rows.push(b.go);
+        const sub = UIKit.label(this.content, "pickhint", why ? "" : "카드를 고르면 받을 수 있는 강화와 효과 변화를 본다", 10, y + 34, null, 13, { fontSize: 10, color: "#c8b890" });
+        this.rows.push(sub.gameObject);
+        return y + 52;
+    }
+
+    // 목록 높이 (논리 단위)
+    pageSize() {
+        return Math.floor(this.list.rect.height / this.list.uiRoot.scale);
+    }
+
+    // 구분 글자 줄 (낮다)
+    addHeader(y, text) {
+        const go = this.content.createChild("head");
+        const rt = UIKit.place(go, 6, y, null, ShopDialog.HEAD);
+        UIKit.label(rt, "t", text, 4, 5, null, 16, { fontSize: 12, fontWeight: "bold", color: UIKit.COLORS.gold });
+        const line = rt.createChild("line");
+        UIKit.place(line, 0, ShopDialog.HEAD - 2, null, 1);
+        line.addComponent(new UIRect({ color: UIKit.COLORS.border }));
+        this.rows.push(go);
+        return y + ShopDialog.HEAD;
+    }
+
+    // 높이를 채워 가며 쪽으로 나눈다 (구분 글자 줄은 낮다)
+    paginate(entries, height) {
+        const pages = [[]];
+        let used = 6;
+        for (const e of entries) {
+            const h = e.h ?? (e.head ? ShopDialog.HEAD : ShopDialog.ROW);
+            if (used + h > height && pages[pages.length - 1].length > 0) {
+                pages.push([]);
+                used = 6;
+            }
+            pages[pages.length - 1].push(e);
+            used += h;
+        }
+        return pages;
+    }
+
+    turnPage(d) {
+        CardInspector.hide(this);
+        this.page += d;
+        this._key = null; // 다음 update에서 다시 그린다 (쪽이 범위를 넘으면 rebuild가 바로잡는다)
+    }
+
+    // 목록의 줄: 카드 강화 3개, 카드 빼기 (물건은 진열대에 바닥에 놓여 있고 옆에서 상호작용하면 산다: Run.shopItems)
+    entries() {
+        const list = [{ head: "카드 강화" }];
+        list.push({ upgradeInfo: true, h: 70 }, { upgradePick: true, h: 52 });
+        list.push({ head: "카드 정리" }, { remove: true });
+        return list;
+    }
+
+    rebuild() {
+        for (const row of this.rows) row.destroy();
+        this.rows = [];
+        CardInspector.untrack(this);
+        const p = this.player;
+        const entries = this.entries();
+        const chunks = this.paginate(entries, this.pageSize());
+        const pages = chunks.length;
+        this.page = Math.max(0, Math.min(pages - 1, this.page));
+        this.pageText.setText(`${this.page + 1} / ${pages} 쪽`);
+        UIKit.setEnabled(this.prevButton, this.page > 0);
+        UIKit.setEnabled(this.nextButton, this.page < pages - 1);
+        let y = 6;
+        for (const entry of chunks[this.page]) {
+            if (entry.head) {
+                y = this.addHeader(y, entry.head);
+                continue;
+            }
+            if (entry.upgradeInfo) {
+                y = this.addUpgradeInfo(y);
+                continue;
+            }
+            if (entry.upgradePick) {
+                y = this.addUpgradePick(y);
+                continue;
+            }
+            if (entry.remove) {
+                const cost = this.run.removeCost;
+                y = this.addRow(y, {
+                    def: { sprite: "cards", frame: 9 }, name: "카드 빼기",
+                    info: `덱에서 카드 한 장을 아주 없앤다 (이 상점에서 뺄 때마다 +25 G${this.run.removeCount ? `, ${this.run.removeCount}번 뺐다` : ""})`,
+                    button: `${cost} G`, ok: p.money >= cost && p.cards.allActions.length > 1, poor: p.money < cost,
+                    onTap: () => this.remove()
+                });
+                continue;
+            }
+            const offer = entry.offer;
+            const card = offer.card;
+            const where = card.isSkill ? "덱에" : "패에";
+            const kind = CardDef.kindName(card.def) + (card.def.rarity ? ` · ${ShopDialog.RARITY[card.def.rarity]}` : "");
+            const fits = card.isSkill || p.cards.canAdd(card);
+            y = this.addRow(y, {
+                def: card.def, name: offer.sold ? `${card.name} (팔림)` : card.name,
+                info: `${kind}${card.cost ? " · " + CardDef.costText(card.cost) : ""} · ${card.summary.split("\n")[0]}`,
+                button: offer.sold ? "팔림" : fits ? `${offer.price} G` : "패가 가득",
+                ok: !offer.sold && fits && p.money >= offer.price,
+                faded: offer.sold,
+                card,
+                onTap: () => this.buy(offer, where)
+            });
+        }
+    }
+
+    static RARITY = { common: "흔함", uncommon: "드묾", rare: "희귀", boss: "우두머리" };
+
+    // 물건 줄을 누르면 크게 보기 (다시 누르면 닫기)
+    inspect(card, rt, bg) {
+        const same = this.selected === card;
+        CardInspector.hide(this); // 앞에 고른 줄 표시를 푼다 (onHide)
+        if (same) return;
+        this.selected = card;
+        this._selBg = bg;
+        if (bg) bg.borderColor = UIKit.COLORS.gold;
+        CardInspector.show(card, {
+            verbose: true, owner: this, near: rt,
+            onHide: () => {
+                if (this._selBg) this._selBg.borderColor = UIKit.COLORS.border;
+                this._selBg = null;
+                this.selected = null;
+            }
+        });
+    }
+
+    buy(offer, where) {
+        const p = this.player;
+        if (offer.sold || p.money < offer.price) return;
+        const card = offer.card;
+        if (card.isSkill) p.cards.addToDeck(card);
+        else if (!p.cards.addToHand(card)) {
+            MessageLog.add("패가 가득 차서 살 수 없다", "#c8b890");
+            return;
+        }
+        p.money -= offer.price;
+        this.npc.money += offer.price;
+        offer.sold = true;
+        MessageLog.add(`${josa(card.name, "을를")} ${offer.price} G에 샀다 (${where})`, "#e8c860");
+    }
+
+    // 카드 강화 사기: 상점 창을 닫고 강화 흐름을 연다 (카드 → 가능한 강화 전부 보며 고르기).
+    // 실제로 강화됐을 때(onDone(카드, 색))만 그 색의 값을 내고 품절로 한다. 끝나면 상점 창을 다시 연다
+    buyUpgrade() {
+        const p = this.player;
+        const npc = this.npc;
+        if (this.upgradeBlock()) return;
+        const prices = {};
+        const sold = {};
+        for (const u of npc.upgrades) {
+            prices[u.color] = npc.upgradePrice(u.color);
+            if (u.sold) sold[u.color] = true;
+        }
+        this.close();
+        UpgradeFlow.open({
+            title: "강화 · 카드를 고른다",
+            shop: { prices, sold, money: () => p.money },
+            onDone: (card, color) => {
+                const u = card && npc.upgrades.find((x) => x.color === color);
+                if (u && !u.sold) {
+                    const price = prices[color];
+                    p.money -= price;
+                    npc.money += price;
+                    u.sold = true;
+                    npc.buys++;
+                    MessageLog.add(`${UpgradeFlow.COLORS[color].name} 강화를 ${price} G에 샀다`, "#e8c860");
+                }
+                if (npc.alive && !npc.angry && p.alive) this.open(npc);
+            }
+        });
+    }
+
+    remove() {
+        const p = this.player;
+        const cost = this.run.removeCost;
+        if (p.money < cost || p.cards.allActions.length <= 1) return;
+        const npc = this.npc;
+        this.deckView.pick(`카드 빼기 (${cost} G) · 없앨 카드를 고른다`, p.cards.allActions, (card) => {
+            if (p.money < cost || this.run.removeCost !== cost) return;
+            if (!p.cards.removeCard(card)) return;
+            p.money -= cost;
+            npc.money += cost;
+            this.run.removeCount++;
+            MessageLog.add(`${josa(card.name, "을를")} 덱에서 뺐다 (${cost} G)`, "#e8c860");
+        });
+    }
+}

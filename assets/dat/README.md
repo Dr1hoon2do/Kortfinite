@@ -31,7 +31,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 | `data/` | 공방 데이터와 그 동작 | GameData, CardImpl(`CardOps`·`CARDS`·`VARIANTS`·`GameContent`), EquipImpl(`EQUIP`·`Equip`·`EquipContent`), EnemyImpl(`EnemyMoves.SPECS`) |
 | `run/` | 런: 지도·방·보상 | RunMap(층 지도: 격자 방 이어 붙이기, `Rng`), RoomGen(`RoomPlan` 방 설계도, `Rewards`), Run(방 들어가기·나가기·정리·저장·카메라) |
 | `world/` | 방의 타일·청크, 그리기, 길찾기 | TileDef, Chunk, ChunkManager, ChunkRenderer, Pathfinder |
-| `entity/` | 방 안에 있는 것 | Entity, Stats, AI, EnemyAI(적 의도·`EnemyMoves`·`IntentOverlay`), EntityOverlay, Props(입구·출구·모닥불·상자), Monster, Allies(소환수·설치물·점액 장판 Goo), SlimeKing(슬라임킹 행동), Merchant |
+| `entity/` | 방 안에 있는 것 | Entity, Stats, AI, EnemyAI(적 의도·`EnemyMoves`·`IntentOverlay`), EntityOverlay, Props(입구·출구·모닥불·상자), Monster, Allies(소환수·설치물·점액 장판 Goo), SlimeKing(슬라임킹 행동), SlimeQueen(슬라임퀸 행동·가두기), Merchant |
 | `player/` | 플레이어 | Player |
 | `rules/` | 턴, 전투, 상태 이상, 연출 | TurnManager, Combat, Status, Animation |
 | `card/` | 카드 체계 | CardText, CardDef, CardEffects, Card(`Card`·`CardSystem`: 행동 패/인벤토리 패/덱/묘지), CardKit, Gear(장비), Spell(주문), Gem(젬), DrawRule |
@@ -87,6 +87,7 @@ Kortfinite는 덱빌딩 턴제 그리드 로그라이크다. 한 층은 격자�
 
 - **큰 몬스터**: 공방 적 설명(note)에 "2x2의 크기"가 있으면 한 변 2칸을 차지한다 (`Entity.size`). 엔티티 좌표는 왼쪽 아래 칸이고 `tilesOf()`가 차지한 칸들, `Entity.gap(a, b)`가 칸 거리다. 월드의 칸 색인(`ChunkManager`)이 차지한 칸마다 엔티티를 넣어서, 어느 칸을 눌러도 같은 엔티티다. 칸마다 훑는 범위 효과는 같은 엔티티를 한 번만 맞힌다.
 - **custom 의도**: `{ kind: "custom", run, view, text, tiles, zone }` — 새 몬스터가 기존 의도 종류에 없는 행동을 할 때 쓴다 (`entity/SlimeKing.js` 참고).
+- **슬라임퀸 가두기**: `player.heldBy`(가둔 퀸). 플레이어가 퀸의 2x2 안 한 칸에 겹쳐 선다. `SlimeQueen.holder(p)`가 몸 밖으로 나갔는지 보고 풀어 준다. 피해 무효는 `Combat.hit`, 턴 시작 효과는 `TurnManager`, 속박·둔화 갱신은 `Card.js _changed`에서 `SlimeQueen`을 부른다. 로테이션 fallback `"next"`는 못 하는 행동을 건너뛰고 바로 다음 글자를 한다.
 - **몬스터 등급**: 공방 적의 `등급`(소형·중형·대형·보스)이 방 생성(`RoomGen.pickEnemies`·`leadPool`)을 정한다. 일반 방은 소형·중형 + 대형 최대 1, 정예 방은 대장이 대형(없으면 중형)·곁에 소형·중형 최대 2, 우두머리 방은 대장이 보스(없으면 대형)·곁에 소형 최대 2. 보스 등급은 우두머리 방에만 나온다. 등급이 비면 중형.
 - **카드 규칙 글**: 설명글의 `[소멸]`(태그 exhaustion)은 쓰면 이번 전투 동안만 빠지고, `[턴 제한(N)]`(태그 turn_limit)은 한 턴에 N번까지만 쓴다 (`CardDef.turnLimit`, `Player.turnUses`; 노란 공격은 드로우 효과만 제한). `준비`(prepare)는 패에 있는 동안의 효과로 `CardPrep`이 다룬다 (공격 푸른: 카드를 쓸 때마다 +25%·턴 끝 초기화, 서리 푸른: 턴 끝마다 지속 +방어력 20%·쓰면 초기화).
 - **상태이상 추가**: 신속(이동속도 +수치), 보호(피해를 N회 통째로 무시), 기절 면역(우두머리: 기절한 동안과 그 뒤 √(누적 기절 턴)턴). 기도 붉은 변형은 가져온 카드의 이번 턴 피해를 올리고(`Player.dmgBoost`), 푸른 변형은 비용을 줄인다(`card.data.costCut`).
