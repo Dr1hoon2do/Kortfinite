@@ -44,6 +44,7 @@ class SlimeKingPull {
         v.x = to[0];
         v.y = to[1];
         w.addEntity(v);
+        if (v instanceof Player && typeof SlimeQueen !== "undefined") SlimeQueen.trapStepped(v, w); // 끌려가다 점액 함정을 밟으면 발동
         MessageLog.add(`${v instanceof Player ? "당신이" : josa(v.displayName, "이가")} ${e.displayName}에게 끌려갔다!`, "#7cd47c");
         return [new MoveAnim(v, new Vector(fx * t, fy * t), new Vector(v.x * t, v.y * t), 0.18)];
     }

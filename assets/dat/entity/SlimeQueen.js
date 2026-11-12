@@ -1,6 +1,6 @@
 // 슬라임퀸 (공방 데이터 slime_queen, 2x2). 로테이션 [ABCDEF, ABCFDE] 중 하나, 시작 위치 무작위.
 //   점액 함정 — 밟으면 점액 카드 1장 + 속박 1턴 + 이번 턴 점액 카드 사용 불가 (밟으면 사라진다. 방이 끝날 때까지 남는다)
-//   A 함정 설치 — 플레이어 위치 2칸 범위 테두리에 점액 함정, 방어력 100% 방어도 2턴
+//   A 함정 설치 — 플레이어 위치 2칸 범위 테두리에 점액 함정, 방어력 100% 방어도 2턴. 이미 함정이 있는 칸의 몫은 옆칸으로 번져 방을 채운다
 //   B 점액 손 — 플레이어 위치 2칸 범위. 공격력 60%, 점액 카드(이동속도), 퀸 옆으로 당겨온다
 //   C 끌어당기기 — 이동속도 200% 거리 안이면 당겨오고 둔화 100%(이동속도 200% 턴) + 점액 카드(이동속도), 멀면 다가온다
 //   D 소멸 제거 — 다가가거나 옆이면 패·덱·묘지 모든 점액 카드의 [소멸]을 없앤다 (쓰면 묘지로 가서 다시 돈다)
@@ -39,9 +39,11 @@ class SlimeQueen {
             MessageLog.add("점액 함정을 밟았다! 속박 1턴", SlimeQueen.COLOR);
             Status.add(p, "root", 1);
             p._trapStop = true; // 이동 카드는 여기서 멈춘다
-            p.slimeLockTurn = p.turnNo; // 이번 턴에는 점액 카드를 쓸 수 없다
+            const enemyTurn = !!(Game.turns && Game.turns.enemyPhase); // 끌려가거나 밀려나서 밟았다
+            if (enemyTurn) p.slimeLockNext = true;
+            else p.slimeLockTurn = p.turnNo; // 이번 턴에는 점액 카드를 쓸 수 없다
             const anims = [EnemyMoves.inflict(p, "root", 1), ...SlimeQueen.give(p, 1)];
-            if (Game && Game.turns && Game.turns.queue) Game.turns.queue.enqueue(anims);
+            if (Game && Game.turns && Game.turns.queue) for (const a of anims) Game.turns.queue.play(a); // 턴을 붙잡지 않고 머리 위 글자로
         }
     }
 
@@ -112,21 +114,48 @@ class SlimeQueen {
         return out;
     }
 
+    // 함정을 놓을 수 있는 칸인가 (이미 함정이 있거나 무언가 서 있으면 안 된다)
+    static trapFree(w, x, y) {
+        return w.getChunkAt(x, y) && EnemyMoves.walkableTile(w, x, y) && !w.entitiesAt(x, y).some((o) => o.kind === "slimetrap" || o.solid);
+    }
+
+    // 각 칸에 놓을 수 없으면 옆칸으로 옮겨 가며(가까운 순서로) 빈 칸을 찾는다. 방이 가득 차면 못 놓은 만큼은 포기
+    static spread(w, base) {
+        const taken = new Set();
+        const out = [];
+        for (const [bx, by] of base) {
+            const seen = new Set([bx + "," + by]);
+            const queue = [[bx, by]];
+            for (let i = 0; i < queue.length && i < 2000; i++) {
+                const [x, y] = queue[i];
+                if (SlimeQueen.trapFree(w, x, y) && !taken.has(x + "," + y)) {
+                    taken.add(x + "," + y);
+                    out.push([x, y]);
+                    break;
+                }
+                for (const [dx, dy] of Entity.DIRS) {
+                    const k = (x + dx) + "," + (y + dy);
+                    if (seen.has(k) || !w.getChunkAt(x + dx, y + dy) || !EnemyMoves.walkableTile(w, x + dx, y + dy)) continue;
+                    seen.add(k);
+                    queue.push([x + dx, y + dy]);
+                }
+            }
+        }
+        return out;
+    }
+
     static trapIntent(ctx, e, foe) {
-        const tiles = SlimeQueen.ringTiles(ctx.world, foe.x, foe.y);
+        const base = SlimeQueen.ringTiles(ctx.world, foe.x, foe.y);
+        const tiles = SlimeQueen.spread(ctx.world, base);
         const guard = EnemyMoves.val(e, "def", 100);
         return {
             kind: "custom", name: "함정 설치", tiles, color: SlimeQueen.COLOR,
             view: () => ({ kind: "area", name: "함정 설치" }),
-            text: () => `함정 설치: 표시한 칸(지금 위치 둘레 2칸 테두리)에 점액 함정을 깐다 (밟으면 점액 카드 1장 + 속박 1턴 + 이번 턴 점액 카드 사용 불가; 이미 함정이 있는 칸은 건너뛴다) · 방어도 ${guard} (2턴)`,
+            text: () => `함정 설치: 표시한 칸(지금 위치 둘레 2칸 테두리)에 점액 함정을 깐다 (밟으면 점액 카드 1장 + 속박 1턴 + 이번 턴 점액 카드 사용 불가; 이미 함정이 있는 칸의 몫은 옆칸으로 번져 빈 칸에 깐다) · 방어도 ${guard} (2턴)`,
             run: (ai, c) => {
                 const w = c.world;
-                const made = [];
-                for (const [x, y] of tiles) {
-                    if (w.entitiesAt(x, y).some((o) => o.kind === "slimetrap" || o.solid)) continue;
-                    w.spawn(new Hazard(x, y, "slimetrap", {}));
-                    made.push([x, y]);
-                }
+                const made = SlimeQueen.spread(w, base); // 그 사이 바뀐 칸은 다시 계산
+                for (const [x, y] of made) w.spawn(new Hazard(x, y, "slimetrap", {}));
                 if (e.addGuard) e.addGuard(guard, 2);
                 MessageLog.add(`${josa(e.displayName, "이가")} 점액 함정을 깔았다 (${made.length}곳, 방어도 ${guard})`, SlimeQueen.COLOR);
                 return { anims: [new AreaFlashAnim(w, made, SlimeQueen.COLOR, 0.35, false), new PopupAnim(e, "+" + guard, "#8cc8f0")], hitPlayer: false };

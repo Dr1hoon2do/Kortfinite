@@ -59,6 +59,7 @@ class TurnManager extends Component {
     passTurn(lead = []) {
         const player = this.player;
         this.turn++;
+        this.enemyPhase = true; // 적이 움직이는 동안 (끌려가다 함정을 밟는 경우 등)
         const together = Settings.get("together");
         const ctx = { world: this.world, player, turn: this.turn };
         if (typeof CardPrep !== "undefined") CardPrep.turnEnd(player); // 준비: 패에 들고 있는 카드의 턴 끝 효과
@@ -101,10 +102,12 @@ class TurnManager extends Component {
 
         if (player.alive) {
             player.startTurn();
+            this.enemyPhase = false;
             step.push(...Status.tickStart(player, this.world));
             step.push(...Equip.turnStart(player, this.world)); // 장착한 장비 (마력석 마법서 …)
             player.cards.notify("turn", { turn: this.turn });
         }
+        this.enemyPhase = false;
         this.queue.enqueue(step);
         for (const anim of ambient) this.queue.play(anim);
         Events.emit(GameEvent.TURN_END, { turn: this.turn });

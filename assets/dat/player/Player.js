@@ -236,6 +236,7 @@ class Player extends Entity {
     // 턴이 지난 뒤 (뽑기·대기, 주변이 다 움직인 다음): 방어도 남은 턴 -1, 기력 가득, 쉼 -1
     startTurn() {
         this.turnNo++;
+        if (this.slimeLockNext) { this.slimeLockTurn = this.turnNo; this.slimeLockNext = false; } // 적 턴에 함정을 밟았다: 새 턴이 점액 카드 사용 불가
         this.turnUses = {};
         this.energySpent = 0;
         for (const b of this.blocks) b.t--;
