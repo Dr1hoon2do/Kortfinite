@@ -2,7 +2,7 @@
 //   쉬기   — 최대 체력의 30%를 회복한다
 //   명상   — 마나를 가득 채운다
 //   정리   — 덱에서 카드 한 장을 아주 없앤다 (공짜)
-//   강화   — 색을 먼저 골라(UpgradeFlow), 그 색을 받을 수 있는 카드 한 장을 강화 카드로 바꾼다
+//   강화   — 카드를 먼저 고르면(UpgradeFlow) 그 카드가 받을 수 있는 강화와 바뀌는 효과를 보여 주고, 하나를 골라 강화 카드로 바꾼다
 // 고르면 모닥불은 다 쓴 것이 되고, 출구로 나가면 된다.
 class RestDialog extends Component {
     static HEAL = 0.3;
@@ -30,12 +30,14 @@ class RestDialog extends Component {
             ["heal", () => `쉬기 · 체력 +${this.healAmount()} (최대의 30%)`, () => this.heal()],
             ["mana", () => `명상 · 마나를 가득 (${this.player.mana}/${this.player.maxMana})`, () => this.meditate()],
             ["purge", () => "정리 · 덱에서 카드 한 장 빼기", () => this.purge()],
-            ["upgrade", () => `강화 · 색을 골라 카드 한 장을 강화 (${this.upgradable().length}장 가능)`, () => this.upgrade()]
+            ["upgrade", () => `강화 · 카드를 고르면 가능한 강화와 바뀌는 효과를 보고 고른다 (${this.upgradable().length}장)`, () => this.upgrade()]
         ];
         this.options.forEach(([id, , fn], i) => {
             const b = UIKit.button(box, id, "", fn, { fontSize: 12 });
             b.rt.setAnchor(0, 0, 1, 0);
             b.rt.setOffsets(14, 58 + i * 44, 14, -(58 + i * 44 + 36));
+            b.text.wrap = true; // 긴 글은 줄바꿈 (좁은 창)
+            b.text.lineHeight = 1.2;
             this.buttons.push(b);
         });
         const close = UIKit.button(box, "close", "나중에", () => this.close(), { fontSize: 12 });
