@@ -363,8 +363,6 @@ class CardSystem {
             this._pullTokens(card);
         }
         this.version++;
-        // 슬라임퀸에게 갇힌 동안: 패의 점액 카드 유무에 따라 속박·둔화가 걸리고 풀린다
-        if (typeof SlimeQueen !== "undefined" && Player.current && Player.current.cards === this) SlimeQueen.refresh(Player.current);
     }
 
     // ---------- 패 ----------
@@ -556,8 +554,9 @@ class CardSystem {
         if (ctx.user && def.turnLimit && !def.limitDraw) ctx.user.turnUses[card.defId] = (ctx.user.turnUses[card.defId] ?? 0) + 1;
         if (card.data) { delete card.data.costCut; delete card.data.boostPct; delete card.data.boostTurn; } // 가져올 때 얹힌 효과는 한 번 쓰면 끝
         if (card.isSkill) {
-            if (card.isTemp) this._changed(); // 임시 카드는 쓰면 사라진다
-            else if (card.def.exhaust) this.exhaust(card);
+            const sticky = !!(card.data && card.data.noVanish); // 슬라임퀸이 [소멸]을 없앤 카드는 써도 묘지로
+            if (card.isTemp && !sticky) this._changed(); // 임시 카드는 쓰면 사라진다
+            else if (card.def.exhaust && !sticky) this.exhaust(card);
             else this.toGraveyard(card);
         }
         if (ctx.user) Equip.flushMoved(ctx.user); // 드로우가 다 끝났다: 미뤄 둔 이동 효과(나이프 홀스터)는 패가 남으면 준다

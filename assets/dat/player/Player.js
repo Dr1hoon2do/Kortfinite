@@ -256,8 +256,6 @@ class Player extends Entity {
         this.energySpent = 0;
         this.dmgBoost = 0;
         this.blocks = [];
-        this.heldBy = null;
-        this.holdFx = false;
         Status.clear(this);
         this.onClear = [];
         this.drawLock = 0;

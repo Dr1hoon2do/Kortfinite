@@ -152,7 +152,7 @@ class Hazard extends Entity {
         const barrier = kind === "barrier";
         super(x, y, barrier ? "barrier" : kind === "mine" ? "mine" : "field", { // 동전도 "field" 그림(안 보임)을 쓰고 HazardOverlay가 그린다
             type: kind,
-            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판", coin: "동전", goo: "점액 장판" }[kind],
+            name: { barrier: "장벽", mine: "지뢰", field: data.name ?? "장판", coin: "동전", goo: "점액 장판", slimetrap: "점액 함정" }[kind],
             stats: { maxHp: data.hp ?? 12, attack: 0, defense: 0 },
             solid: barrier,
             tags: ["hazard"]
@@ -169,7 +169,7 @@ class Hazard extends Entity {
 
     start() {
         super.start();
-        if ((this.kind === "field" || this.kind === "coin" || this.kind === "pickup" || this.kind === "goo") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
+        if ((this.kind === "field" || this.kind === "coin" || this.kind === "pickup" || this.kind === "goo" || this.kind === "slimetrap") && this.sr) this.sr.opacity = 0; // 장판은 HazardOverlay가 그린다
         if (this.sr) this.sr.orderInLayer = this.kind === "barrier" ? 2 : 1;
     }
 
@@ -291,6 +291,22 @@ class HazardOverlay extends Renderer {
                 ctx.fillRect(h.x * t - 1, h.y * t - 3 + pulse, 1, 2);
                 continue;
             }
+            if (h.kind === "slimetrap" && h.world) {
+                // 점액 함정: 어두운 초록 웅덩이 + 느낌표 가시. 밟으면 점액 카드 + 속박
+                ctx.globalAlpha = 0.55 + 0.15 * pulse;
+                ctx.fillStyle = "#3f8a3a";
+                ctx.fillRect(h.x * t - t / 2 + 1, h.y * t - t / 2 + 1, t - 2, t - 2);
+                ctx.globalAlpha = 0.95;
+                ctx.strokeStyle = "#c8f08a";
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 2]);
+                ctx.strokeRect(h.x * t - t / 2 + 1.5, h.y * t - t / 2 + 1.5, t - 3, t - 3);
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#e8ffc0";
+                ctx.fillRect(h.x * t - 1, h.y * t - 4, 2, 5);
+                ctx.fillRect(h.x * t - 1, h.y * t + 2, 2, 2);
+                continue;
+            }
             if (h.kind === "goo" && h.world) {
                 // 점액 장판: 초록 점액 칸. 곧 사라질수록 옅다
                 const fade = h.life >= 3 ? 1 : h.life === 2 ? 0.8 : 0.6;
@@ -337,6 +353,7 @@ class Goo {
 
     // 걷다가 장판을 밟았으면 true (그 자리에서 멈춘다)
     static stuck(e) {
+        if (e._trapStop) { e._trapStop = false; return true; } // 점액 함정을 밟았다
         if (!Goo.on(e)) return false;
         MessageLog.add(`${josa(e.displayName, "이가")} 점액에 붙잡혔다`, "#7cd47c");
         return true;

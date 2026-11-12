@@ -242,20 +242,18 @@ EnemyMoves.SPECS = {
         }
     },
 
-    // 슬라임퀸 (2x2): [ABCDEFG]. 동작은 entity/SlimeQueen.js
-    //   A 점액 뒤덮기(방 전체 장판 3턴, 맞으면 취소) / B 점액 손(60%, 속박, 당기기) / C 유혹(매료 + 100%) / D 공격(100% + 점액 카드)
-    //   E 기 모으기 / F 연타(60%, 기를 모았으면 이동속도 300%번) / G 가두기 (못 하면 바로 다음 행동)
+    // 슬라임퀸 (2x2): [ABCDEF, ABCFDE] 중 하나. 동작은 entity/SlimeQueen.js
+    //   A 점액 함정 설치(위치 둘레 2칸 테두리) + 방어도 / B 점액 손(2칸 범위, 60%, 당기기) / C 끌어당기기(둔화 100%)
+    //   D 점액 카드 소멸 제거 / E 흡수(점액 카드 수만큼 회복·피해) / F 공격(100% + 점액 카드)
     slime_queen: {
-        rotations: ["ABCDEFG"],
-        fallback: { G: "next" },
+        rotations: ["ABCDEF", "ABCFDE"],
         actions: {
-            A: (ai, ctx, e) => SlimeQueen.floodIntent(ctx, e),
+            A: (ai, ctx, e, foe) => SlimeQueen.trapIntent(ctx, e, foe),
             B: (ai, ctx, e, foe) => SlimeQueen.handIntent(ctx, e, foe),
-            C: (ai, ctx, e) => SlimeQueen.charmIntent(ctx, e),
-            D: (ai, ctx, e) => SlimeQueen.biteIntent(ctx, e),
-            E: (ai, ctx, e) => SlimeQueen.focusIntent(ctx, e),
-            F: (ai, ctx, e) => SlimeQueen.flurryIntent(ctx, e),
-            G: (ai, ctx, e, foe) => SlimeQueen.holdIntent(ctx, e, foe)
+            C: (ai, ctx, e) => SlimeQueen.pullIntent(ctx, e),
+            D: (ai, ctx, e) => SlimeQueen.unvanishIntent(ctx, e),
+            E: (ai, ctx, e, foe) => SlimeQueen.drainIntent(ctx, e, foe),
+            F: (ai, ctx, e) => SlimeQueen.biteIntent(ctx, e)
         }
     },
 

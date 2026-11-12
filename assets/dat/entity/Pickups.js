@@ -40,6 +40,7 @@ class Pickups {
 
     // 플레이어가 (x, y)에 섰다 (걷기·순간이동): 줍지는 않고, 물건 위에 서면 한 번 안내만 한다 (실수로 줍지 않게)
     static stepped(player, world) {
+        if (typeof SlimeQueen !== "undefined") SlimeQueen.trapStepped(player, world); // 점액 함정
         for (const o of world.entitiesAt(player.x, player.y)) {
             if (!(o instanceof Pickup) || !o.world || o.stoodMsg) continue;
             o.stoodMsg = true;

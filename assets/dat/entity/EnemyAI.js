@@ -389,7 +389,7 @@ class EnemyMoves {
                         if (intent.root) anims.push(EnemyMoves.inflict(v, "root", intent.root));
                         if (intent.slow) anims.push(EnemyMoves.inflict(v, "slow", intent.slow.v, intent.slow.t));
                     }
-                    if (intent.pull && v === p && v.alive && SlimeQueen.holder(v) !== e) anims.push(...SlimeKingPull.pull(w, e, v)); // 점액 손: 킹·퀸 옆으로 끌어온다
+                    if (intent.pull && v === p && v.alive) anims.push(...SlimeKingPull.pull(w, e, v)); // 점액 손: 킹·퀸 옆으로 끌어온다
                     if (v === p) {
                         hitPlayer = true;
                         if (intent.cards && intent.dmg > 0) anims.push(...SlimeKing.giveSlime(e, p, intent.cards.pct ?? 100));

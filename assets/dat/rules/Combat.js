@@ -31,12 +31,6 @@ class Combat {
     static hit(target, damage, source, world, type = "physical", mod = true) {
         if (target.invulnerable) return [];
         if (mod) damage = Status.modify(damage, source, target);
-        // 슬라임퀸 가두기: 퀸은 가둔 대상에게서, 가둔 대상은 퀸이 아닌 상대에게서 피해를 입지 않는다
-        if (damage > 0 && typeof SlimeQueen !== "undefined" && SlimeQueen.blocks(target, source)) {
-            MessageLog.add(`${josa(target.displayName, "은는")} 점액에 감싸여 피해를 입지 않았다`, "#7cd47c");
-            Combat.last = { target, dealt: 0, blocked: 0, dies: false, damage: 0 };
-            return [new PopupAnim(target, "무효", "#7cd47c")];
-        }
         // 보호: 피해를 한 번 통째로 무시한다 (수치 = 남은 횟수)
         if (damage > 0 && Status.get(target, "protect") > 0) {
             Status.set(target, "protect", Status.get(target, "protect") - 1);
