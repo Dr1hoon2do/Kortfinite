@@ -4,8 +4,9 @@
 //   보기 모드 (방 안에서 지도 버튼·M): 지도를 본다. [닫기]
 // 칸 그림은 map_icons.png (전투·정예·상점·휴식·보물·우두머리·시작), 칸 사이 선은 MapLines가 그린다.
 class MapScreen extends Component {
-    static SPACING = 56;
+    static SPACING = 56;   // 칸 간격 최댓값 (큰 층은 화면 너비에 맞게 줄인다)
     static NODE = 34;
+    static MIN_SPACING = 26;
 
     // options: { engine, run, deckView }
     constructor(options) {
@@ -40,9 +41,9 @@ class MapScreen extends Component {
         this.legend = UIKit.place(legend, 14, 54, null, 18);
         Object.entries(RunMap.TYPES).forEach(([type, info], i) => {
             const icon = this.legend.createChild("icon");
-            UIKit.place(icon, i * 52, 0, 16, 16);
+            UIKit.place(icon, i * 48, 0, 16, 16);
             icon.addComponent(new UIImage(Resource.image("map_icons"), { region: { x: info.icon * 16, y: 0, width: 16, height: 16 } }));
-            UIKit.label(this.legend, "name", info.name, i * 52 + 18, 1, 34, 16, { fontSize: 9, color: info.color });
+            UIKit.label(this.legend, "name", info.name, i * 48 + 18, 1, 30, 16, { fontSize: 9, color: info.color });
         });
 
         const list = rrt.createChild("list");
@@ -98,12 +99,14 @@ class MapScreen extends Component {
             go.addComponent(new UIButton({ onTap: () => this.tapNode(node) }));
             // 아직 뭔가 남은 방 표시 (못 받은 보상 · 안 연 상자 · 안 쓴 모닥불 · 안 산 물건): 오른쪽 위 노란 느낌표
             const badge = rt.createChild("badge");
-            UIKit.place(badge, MapScreen.NODE - 9, -7, 16, 16);
+            UIKit.place(badge, MapScreen.NODE - 9, -7, 16, 16); // 크기·자리는 update에서 칸 크기에 맞춘다
             badge.addComponent(new UIRect({ color: "#f0c030", borderColor: "#140c08", borderWidth: 1 }));
-            UIKit.label(badge.getComponent(RectTransform), "!", "!", 0, 0, 16, 16, { fontSize: 12, fontWeight: "bold", color: "#140c08", align: "center", verticalAlign: "middle" });
+            const badgeText = UIKit.label(badge.getComponent(RectTransform), "!", "!", 0, 0, 16, 16, { fontSize: 12, fontWeight: "bold", color: "#140c08", align: "center", verticalAlign: "middle" });
+            badgeText.getComponent(RectTransform).setAnchor(0, 0, 1, 1);
+            badgeText.getComponent(RectTransform).setOffsets(0, 0, 0, 0);
             badge.setActive(false);
             go.setActive(false);
-            this.nodes.set(node.id, { go, rt, ring, ringRect, back, node, badge });
+            this.nodes.set(node.id, { go, rt, ring, ringRect, back, node, badge, badgeText });
         }
         this._width = null;
     }
@@ -150,7 +153,7 @@ class MapScreen extends Component {
     // 칸 자리 (content 왼쪽 위 기준, UI 단위). 격자 가운데가 가로 가운데
     nodePos(node, width) {
         const b = this.run.map.bounds();
-        const sp = MapScreen.SPACING;
+        const sp = this.spacing;
         const span = (b.maxY - b.minY) * sp;
         const view = this.list && this.list.rect ? this.list.rect.height / this.list.uiRoot.scale : 0;
         const top = Math.max(34, (view - span) / 2); // 화면이 남으면 가운데로
@@ -159,7 +162,20 @@ class MapScreen extends Component {
 
     get contentHeight() {
         const b = this.run.map.bounds();
-        return 34 * 2 + (b.maxY - b.minY) * MapScreen.SPACING;
+        return 34 * 2 + (b.maxY - b.minY) * this.spacing;
+    }
+
+    // 칸 간격: 가로 칸 수가 많은 큰 층은 화면 너비에 맞춰 줄인다 (세로는 스크롤)
+    get spacing() {
+        return this._spacing ?? MapScreen.SPACING;
+    }
+
+    fitSpacing(width) {
+        const b = this.run.map.bounds();
+        const cols = Math.max(1, b.maxX - b.minX);
+        const fit = Math.floor((width - 40) / cols);
+        this._spacing = Math.max(MapScreen.MIN_SPACING, Math.min(MapScreen.SPACING, fit));
+        this._nodeSize = Math.round(MapScreen.NODE * Math.min(1, this._spacing / 48));
     }
 
     scrollToCurrent() {
@@ -216,9 +232,14 @@ class MapScreen extends Component {
         const width = Math.round(this.list.rect.width / this.list.uiRoot.scale);
         if (width !== this._width && width > 0) {
             this._width = width;
+            this.fitSpacing(width);
+            const unit = this._nodeSize;
+            const bs = unit < 28 ? 12 : 16; // 느낌표 표시 크기
             for (const n of this.nodes.values()) {
                 const p = this.nodePos(n.node, width);
-                const size = n.node.type === "boss" ? MapScreen.NODE + 6 : MapScreen.NODE;
+                const size = n.node.type === "boss" ? unit + 6 : unit;
+                UIKit.place(n.badge, size - Math.round(bs * 0.55), -Math.round(bs * 0.45), bs, bs);
+                n.badgeText.fontSize = bs === 12 ? 9 : 12;
                 n.rt.setAnchor(0, 0, 0, 0);
                 n.rt.setPivot(0.5, 0.5);
                 n.rt.setSizeAndPosition(size, size, p.x, p.y);

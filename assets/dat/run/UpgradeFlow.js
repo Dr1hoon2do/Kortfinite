@@ -50,10 +50,38 @@ class UpgradeFlow {
         });
     }
 
+    // colors가 null이면 먼저 "어떤 색으로 강화할까?"를 물어 색을 정하고(카드 고르기에서 취소하면 색 고르기로 돌아온다),
+    // colors가 주어지면(상인·퀘스트) 색 고르기 없이 곧바로 카드를 고른다.
     static open({ colors = null, title = "강화", onDone = null } = {}) {
         const player = Game.player;
-        const deckView = Game.deckView;
         const done = (card) => { if (onDone) onDone(card); };
+        if (colors) return UpgradeFlow.openCards({ colors, title, done, onCancel: () => done(null) });
+        if (UpgradeFlow.candidates(player).length === 0) {
+            MessageLog.add("강화할 수 있는 카드가 없다", "#c8b890");
+            return done(null);
+        }
+        const choose = () => {
+            UpgradeFlow.colorDialog().open(player, (key) => {
+                if (!key) return done(null);
+                UpgradeFlow.openCards({ colors: [key], title, done, onCancel: choose });
+            });
+        };
+        choose();
+    }
+
+    // 색 고르기 창 (처음 필요할 때 만든다)
+    static colorDialog() {
+        const deckView = Game.deckView;
+        if (!UpgradeFlow._dialog || UpgradeFlow._dialog.engine !== deckView.engine) {
+            UpgradeFlow._dialog = deckView.gameObject.addComponent(new UpgradeColorDialog({ engine: deckView.engine }));
+        }
+        return UpgradeFlow._dialog;
+    }
+
+    // 색이 정해진 카드 고르기 → 강화. 카드 고르기를 취소하면 onCancel
+    static openCards({ colors, title, done, onCancel }) {
+        const player = Game.player;
+        const deckView = Game.deckView;
         const cards = UpgradeFlow.candidates(player, colors);
         if (cards.length === 0) {
             MessageLog.add("강화할 수 있는 카드가 없다", "#c8b890");
@@ -75,6 +103,93 @@ class UpgradeFlow {
             const previews = opts.map((d) => Object.assign(new Card(d.id), { data: card.data ? { ...card.data } : null }).rollCost());
             if (previews.length === 1) return apply(previews[0]);
             UpgradeFlow.pick(deckView, `${head} · ${card.name}`, previews, apply, () => done(null));
-        }, () => done(null));
+        }, onCancel);
+    }
+}
+
+// "어떤 색으로 강화할까?" 창: 색마다 큰 버튼 (색 칩 · 이름 · 받을 수 있는 카드 수). 후보 없는 색은 흐리게 꺼 둔다.
+class UpgradeColorDialog extends Component {
+    static W = 340;
+    static ROW = 48;
+    static GAP = 6;
+
+    constructor(options) {
+        super();
+        this.engine = options.engine;
+        this.onPick = null;
+        this.rows = [];
+        this.armed = false;
+    }
+
+    get isOpen() {
+        return this.onPick !== null;
+    }
+
+    start() {
+        this.build();
+    }
+
+    // 창을 만든다 (런타임에 붙여서 start()가 늦으니 open()에서도 부른다)
+    build() {
+        if (this.root) return;
+        const keys = [...UpgradeFlow.EASY, ...UpgradeFlow.HARD];
+        const { ROW, GAP, W } = UpgradeColorDialog;
+        this.height = 56 + keys.length * (ROW + GAP) + 36 + 10;
+        const { root, box } = Modal.create(this.engine, "upgradeColor", W, this.height, () => this.finish(null));
+        this.root = root;
+        this.box = box;
+        UIKit.label(box, "title", "어떤 색으로 강화할까?", 14, 10, null, 18, { fontSize: 14, fontWeight: "bold", color: UIKit.COLORS.gold });
+        UIKit.label(box, "sub", "색을 고르면, 그 색을 받을 수 있는 카드만 보인다.", 14, 32, null, 14, { fontSize: 11, color: "#c8b890" });
+        keys.forEach((key, i) => {
+            const c = UpgradeFlow.COLORS[key];
+            const b = UIKit.button(box, key, "", () => this.finish(key), { fontSize: 12 });
+            b.rt.setAnchor(0, 0, 1, 0);
+            b.rt.setOffsets(14, 56 + i * (ROW + GAP), 14, -(56 + i * (ROW + GAP) + ROW));
+            const chip = b.rt.createChild("chip");
+            UIKit.place(chip, 10, 10, 28, 28);
+            const chipRect = chip.addComponent(new UIRect({ color: c.css, borderColor: "#1e1610", borderWidth: 1 }));
+            const name = UIKit.label(b.rt, "name", `${c.name} 강화`, 50, 8, null, 18, { fontSize: 14, fontWeight: "bold" });
+            const note = UIKit.label(b.rt, "note", "", 50, 28, null, 14, { fontSize: 11, color: "#e89060" });
+            const count = UIKit.label(b.rt, "count", "", 12, 14, null, 18, { fontSize: 14, fontWeight: "bold", align: "right" });
+            this.rows.push({ key, b, chipRect, name, note, count });
+        });
+        const close = UIKit.button(box, "close", "그만두기", () => this.finish(null), { fontSize: 12 });
+        close.rt.setAnchor(0, 1, 1, 1);
+        close.rt.setOffsets(14, -46, 14, 10);
+    }
+
+    // 색을 정하면 onPick(key), 그만두면 onPick(null)
+    open(player, onPick) {
+        this.build();
+        this.onPick = onPick;
+        this.armed = false;
+        for (const r of this.rows) {
+            const c = UpgradeFlow.COLORS[r.key];
+            const n = UpgradeFlow.candidates(player, [r.key]).length;
+            r.count.setText(n > 0 ? `${n}장` : "0장");
+            r.note.setText(n === 0 ? "받을 카드 없음" : c.hard ? "어려움" : "");
+            r.note.color = n === 0 ? UIKit.COLORS.faint : "#e89060";
+            r.chipRect.color = n > 0 ? c.css : UIKit.COLORS.faint;
+            r.name.color = n > 0 ? UIKit.COLORS.text : UIKit.COLORS.faint;
+            r.count.color = n > 0 ? UIKit.COLORS.gold : UIKit.COLORS.faint;
+            r.b.rect.color = n > 0 ? UIKit.COLORS.button : UIKit.COLORS.buttonOff;
+            r.b.ui.enabled = n > 0;
+        }
+        Modal.fit(this.engine, this.box, UpgradeColorDialog.W, this.height);
+        Modal.show(this.root, true);
+    }
+
+    finish(key) {
+        const fn = this.onPick;
+        if (!fn) return;
+        this.onPick = null;
+        Modal.show(this.root, false);
+        fn(key);
+    }
+
+    update() {
+        if (!this.onPick) return;
+        if (!this.armed) { this.armed = true; return; }
+        if (Input.getButtonDown("cancel")) this.finish(null);
     }
 }

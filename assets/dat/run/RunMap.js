@@ -51,10 +51,11 @@ class Rng {
 //   start 시작(비어 있다) · battle 전투 · elite 정예 · shop 상점 · rest 휴식 · treasure 보물 · boss 우두머리
 // 격자에서 붙어 있는 방끼리는 문으로 이어진다. 지도에는 가 본 방과 그 옆 방(종류가 보인다)만 나타난다.
 // 특수 방(상점·보물·휴식·정예)은 막다른 방에 놓이고, 우두머리는 시작에서 가장 먼 막다른 방이다.
-// 난이도(row)는 층과 시작에서의 거리로 정해진다: 층마다 5단계 (시작에서 멀수록 세다).
+// 난이도(row)는 층과 시작에서의 거리로 정해진다: 층마다 5단계 (시작에서 멀수록 세다, 가장 먼 방이 5단계째).
 class RunMap {
     static FLOORS = 3;
-    static ROOMS = [9, 11, 13];   // 층마다 방 수 (시작·우두머리·특수 방 포함)
+    static ROOMS = [16, 20, 24];  // 층마다 방 수 (시작·우두머리·특수 방 포함)
+    static RANGE = 6;             // 격자 범위 |x|,|y| ≤ RANGE
     static STEPS = 5;             // 층마다 난이도 단계
     static DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     static TYPES = {
@@ -110,15 +111,15 @@ class RunMap {
         const degree = (x, y) => RunMap.DIRS.filter(([dx, dy]) => cells.has(RunMap.id(x + dx, y + dy))).length;
         add(0, 0);
         let queue = [[0, 0]];
-        for (let guard = 0; cells.size < count && guard < 400; guard++) {
+        for (let guard = 0; cells.size < count && guard < 1500; guard++) {
             if (!queue.length) queue = [...cells.values()].map((c) => [c.x, c.y]);
             const [cx, cy] = queue.shift();
             for (const [dx, dy] of Rng.shuffle(rng, RunMap.DIRS.slice())) {
                 const nx = cx + dx;
                 const ny = cy + dy;
                 if (cells.size >= count) break;
-                if (cells.has(RunMap.id(nx, ny)) || Math.abs(nx) > 4 || Math.abs(ny) > 4) continue;
-                if (degree(nx, ny) !== 1 || rng() < 0.5) continue;
+                if (cells.has(RunMap.id(nx, ny)) || Math.abs(nx) > RunMap.RANGE || Math.abs(ny) > RunMap.RANGE) continue;
+                if (degree(nx, ny) !== 1 || rng() < 0.45) continue;
                 add(nx, ny);
                 queue.push([nx, ny]);
             }
@@ -157,14 +158,16 @@ class RunMap {
         if (!restSpot) return false;
         restSpot.type = "rest";
         // 정예: 남은 막다른 방 먼저, 모자라면 시작에서 3칸 이상 떨어진 방. 층이 깊을수록 하나 더
-        const eliteWant = this.floor >= 3 ? 2 : 1;
+        const eliteWant = this.floor >= 2 ? 2 : 1;
         const spots = [...rest.slice(5), ...Rng.shuffle(rng, [...cells.values()].filter((c) => c.type === "battle" && c.dist >= 3 && !rest.slice(5).includes(c)))];
         for (const c of spots.slice(0, eliteWant)) c.type = "elite";
         // 난이도·번호
+        // 방이 많아도 층 전체의 난이도 범위는 5단계 그대로: 거리를 가장 먼 일반 방 기준으로 눌러 담는다
         const base = (this.floor - 1) * RunMap.STEPS;
+        const maxD = Math.max(1, ...[...cells.values()].filter((c) => c.type !== "boss").map((c) => c.dist));
         let i = 0;
         for (const c of [...cells.values()].sort((a, b) => a.dist - b.dist || a.id.localeCompare(b.id))) {
-            c.row = c.type === "boss" ? base + RunMap.STEPS - 1 : base + Math.max(0, Math.min(RunMap.STEPS - 1, c.dist - 1));
+            c.row = c.type === "boss" ? base + RunMap.STEPS - 1 : base + Math.max(0, Math.min(RunMap.STEPS - 1, Math.floor((c.dist - 1) * RunMap.STEPS / maxD)));
             c.col = i++;
         }
         this.nodes = cells;

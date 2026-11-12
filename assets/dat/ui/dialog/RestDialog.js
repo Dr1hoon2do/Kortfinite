@@ -2,7 +2,7 @@
 //   쉬기   — 최대 체력의 30%를 회복한다
 //   명상   — 마나를 가득 채운다
 //   정리   — 덱에서 카드 한 장을 아주 없앤다 (공짜)
-//   강화   — 강화할 수 있는 카드 한 장을 골라, 강화 카드로 바꾼다 (재료 없이 바로 바꾼다)
+//   강화   — 색을 먼저 골라(UpgradeFlow), 그 색을 받을 수 있는 카드 한 장을 강화 카드로 바꾼다
 // 고르면 모닥불은 다 쓴 것이 되고, 출구로 나가면 된다.
 class RestDialog extends Component {
     static HEAL = 0.3;
@@ -21,7 +21,7 @@ class RestDialog extends Component {
     }
 
     start() {
-        const { root, box } = Modal.create(this.engine, "rest", 320, 296, () => this.close());
+        const { root, box } = Modal.create(this.engine, "rest", 360, 296, () => this.close());
         this.root = root;
         this.box = box;
         UIKit.label(box, "title", "모닥불", 14, 10, null, 18, { fontSize: 14, fontWeight: "bold", color: UIKit.COLORS.gold });
@@ -30,7 +30,7 @@ class RestDialog extends Component {
             ["heal", () => `쉬기 · 체력 +${this.healAmount()} (최대의 30%)`, () => this.heal()],
             ["mana", () => `명상 · 마나를 가득 (${this.player.mana}/${this.player.maxMana})`, () => this.meditate()],
             ["purge", () => "정리 · 덱에서 카드 한 장 빼기", () => this.purge()],
-            ["upgrade", () => `강화 · 카드 한 장 강화 (${this.upgradable().length}장 가능)`, () => this.upgrade()]
+            ["upgrade", () => `강화 · 색을 골라 카드 한 장을 강화 (${this.upgradable().length}장 가능)`, () => this.upgrade()]
         ];
         this.options.forEach(([id, , fn], i) => {
             const b = UIKit.button(box, id, "", fn, { fontSize: 12 });
@@ -55,7 +55,7 @@ class RestDialog extends Component {
         UIKit.setEnabled(this.buttons[1], this.player.mana < this.player.maxMana);
         UIKit.setEnabled(this.buttons[2], this.player.cards.allActions.length > 1);
         UIKit.setEnabled(this.buttons[3], this.upgradable().length > 0);
-        Modal.fit(this.engine, this.box, 320, 296);
+        Modal.fit(this.engine, this.box, 360, 296);
         Modal.show(this.root, true);
     }
 
