@@ -7,7 +7,9 @@
 //   UpgradeFlow.open({ colors = null, title = "강화", onDone = null })
 //       ① Game.deckView로 카드를 먼저 고른다(colors가 있으면 그 색 강화를 받을 카드만)
 //       ② 강화 선택 창(UpgradeOptionDialog): 지금 카드 + 그 카드가 받을 수 있는 강화들(colors가 있으면 그 색만)을 현재→강화 후로 비교해 보이고, 하나 골라 [강화한다]. 하나뿐이어도 확인을 거친다.
-//       바꿨으면 onDone(바뀐 Card), 취소하거나 후보가 없으면 onDone(null). 부르는 쪽은 onDone(card)일 때만 값·기회를 쓴다.
+//       상점용: shop = { prices: { 색: 값 }, sold: { 색: true }, money: 숫자 또는 () => 숫자, note }. prices에 있는 색(품절 아님)만 고를 수 있고 값이 보인다.
+//       그 밖의 색은 흐리게 "이 상점에서는 팔지 않는다"/"품절"로 보이기만 한다. 카드 후보도 파는 색을 받을 수 있는 것만. 확정 버튼은 값을 보이고 돈이 모자라면 꺼진다.
+//       바꿨으면 onDone(바뀐 Card, 고른 색 키), 취소하거나 후보가 없으면 onDone(null). 부르는 쪽은 onDone(card)일 때만 값·기회를 쓴다.
 class UpgradeFlow {
     static COLORS = {
         red: { name: "붉은", css: "#e8584a", hard: false },
@@ -53,8 +55,9 @@ class UpgradeFlow {
 
     // 카드 먼저 → 그 카드의 강화 전부와 바뀌는 효과 보기 → 하나 고르기 → [강화한다].
     // 강화 선택 창에서 [뒤로]는 카드 고르기로, 닫기·배경·Esc는 취소(onDone(null)).
-    static open({ colors = null, title = "강화", onDone = null } = {}) {
-        const done = (card) => { if (onDone) onDone(card); };
+    static open({ colors = null, title = "강화", onDone = null, shop = null } = {}) {
+        const done = (card, color = null) => { if (onDone) onDone(card, color); };
+        if (shop) colors = UpgradeFlow.shopColors(shop);
         const cards = UpgradeFlow.candidates(Game.player, colors);
         if (cards.length === 0) {
             MessageLog.add("강화할 수 있는 카드가 없다", "#c8b890");
@@ -64,17 +67,23 @@ class UpgradeFlow {
         const first = title.includes("카드를 고른다") ? (colors && colors.length === 1 ? `${UpgradeFlow.COLORS[colors[0]].name} ${title}` : title) : `${head} · 카드를 고른다`;
         const choose = () => {
             UpgradeFlow.pick(Game.deckView, first, cards, (card) => {
-                const opts = UpgradeFlow.optionsOf(card, colors);
-                if (opts.length === 0) return done(null);
+                const opts = UpgradeFlow.optionsOf(card, shop ? null : colors);
+                if (opts.length === 0 || (shop && UpgradeFlow.optionsOf(card, colors).length === 0)) return done(null);
                 UpgradeFlow.optionDialog().open(card, opts, {
                     title: `${head} · 무엇이 바뀌나`,
-                    onApply: (def) => UpgradeFlow.apply(card, def, done),
+                    shop,
+                    onApply: (def) => UpgradeFlow.apply(card, def, (c) => done(c, def.upgradeKey)),
                     onBack: choose,
                     onCancel: () => done(null)
                 });
             }, () => done(null));
         };
         choose();
+    }
+
+    // 상점이 지금 파는 색들 (값이 있고 품절 아닌 것)
+    static shopColors(shop) {
+        return Object.keys(shop.prices).filter((k) => !(shop.sold && shop.sold[k]));
     }
 
     // 강화 적용: 정의를 바꾸고 비용 경우를 다시 정한다
@@ -289,8 +298,11 @@ class UpgradeOptionDialog extends Component {
         this.opts = opts;
         this.handlers = handlers;
         this.armed = false;
-        this.selected = opts.length === 1 ? opts[0] : null; // 하나뿐이면 미리 골라 둔다 (그래도 [강화한다]를 눌러야 한다)
+        this.shop = handlers.shop ?? null;
+        const pickable = opts.filter((d) => this.canPick(d));
+        this.selected = pickable.length === 1 ? pickable[0] : null; // 하나뿐이면 미리 골라 둔다 (그래도 [강화한다]를 눌러야 한다)
         this.title.setText(handlers.title ?? "강화");
+        this.sub.setText(this.shop ? (this.shop.note ?? "이 상점이 파는 색만 고를 수 있다. 값은 강화할 때 낸다.") : "강화를 하나 고르면 효과가 어떻게 바뀌는지 보인다.");
         const size = Modal.fit(this.engine, this.box, UpgradeOptionDialog.W, UpgradeOptionDialog.H);
         this.scroll.scrollTo(0);
         Modal.show(this.root, true);
@@ -299,7 +311,18 @@ class UpgradeOptionDialog extends Component {
         this.rebuild();
     }
 
+    // 상점이면 파는(품절 아닌) 색만 고를 수 있다
+    canPick(def) {
+        return !this.shop || (def.upgradeKey in this.shop.prices && !(this.shop.sold && this.shop.sold[def.upgradeKey]));
+    }
+
+    shopMoney() {
+        const m = this.shop.money;
+        return typeof m === "function" ? m() : m;
+    }
+
     select(def) {
+        if (!this.canPick(def)) return;
         this.selected = def;
         this.rebuild();
     }
@@ -388,25 +411,29 @@ class UpgradeOptionDialog extends Component {
         for (const def of sorted) {
             const c = UpgradeFlow.COLORS[def.upgradeKey] ?? { name: "", css: UIKit.COLORS.dim, hard: false };
             const on = this.selected === def;
+            const sold = !!(this.shop && this.shop.sold && this.shop.sold[def.upgradeKey]);
+            const off = !this.canPick(def);
+            const price = this.shop ? this.shop.prices[def.upgradeKey] : null;
             const preview = Object.assign(new Card(def.id), { data: card.data ? { ...card.data } : null });
             const diff = UpgradeFlow.diff(nowText, preview.text(true));
             const go = this.content.createChild("opt");
             const rt = UIKit.place(go, 3, y, width, 40);
             const bg = go.addComponent(new UIRect({
-                color: on ? "rgba(80, 62, 28, 0.98)" : "rgba(42, 35, 30, 0.95)",
+                color: off ? "rgba(30, 26, 22, 0.8)" : on ? "rgba(80, 62, 28, 0.98)" : "rgba(42, 35, 30, 0.95)",
                 borderColor: on ? UIKit.COLORS.gold : UIKit.COLORS.border, borderWidth: on ? 3 : 1
             }));
             const chip = rt.createChild("chip");
             UIKit.place(chip, PAD + 1, PAD + 1, 22, 22);
-            chip.addComponent(new UIRect({ color: c.css, borderColor: on ? UIKit.COLORS.gold : "#1e1610", borderWidth: on ? 2 : 1 }));
+            chip.addComponent(new UIRect({ color: off ? UIKit.COLORS.faint : c.css, borderColor: on ? UIKit.COLORS.gold : "#1e1610", borderWidth: on ? 2 : 1 }));
             const tag = c.hard ? "어려움" : "";
-            const mark = on ? (tag ? "어려움 · 선택됨" : "선택됨") : tag;
-            UIKit.label(rt, "mark", mark, PAD, PAD + 4, null, 14, { fontSize: 11, fontWeight: "bold", align: "right", color: on ? UIKit.COLORS.gold : "#e89060" });
-            UIKit.label(rt, "name", preview.name, PAD + 30, PAD + 3, tw - 30 - 52, 17, { fontSize: 14, fontWeight: "bold", color: on ? "#fff0c8" : UIKit.COLORS.text });
+            let mark = on ? (tag ? "어려움 · 선택됨" : "선택됨") : tag;
+            if (this.shop) mark = sold ? "품절" : off ? "이 상점에서는 팔지 않는다" : `${price} G${on ? " · 선택됨" : ""}`;
+            UIKit.label(rt, "mark", mark, PAD, PAD + 4, null, 14, { fontSize: 11, fontWeight: "bold", align: "right", color: off ? UIKit.COLORS.faint : on ? UIKit.COLORS.gold : "#e89060" });
+            UIKit.label(rt, "name", preview.name, PAD + 30, PAD + 3, tw - 30 - (this.shop ? 0 : 52), 17, { fontSize: 14, fontWeight: "bold", color: off ? UIKit.COLORS.faint : on ? "#fff0c8" : UIKit.COLORS.text });
             let by = PAD + 28;
-            by += this.text(rt, "cost", UpgradeFlow.costLine(card, def), PAD, by, tw, 11, { color: "#c8b890" }) + 3;
+            by += this.text(rt, "cost", UpgradeFlow.costLine(card, def), PAD, by, tw, 11, { color: off ? "#7a6e5c" : "#c8b890" }) + 3;
             diff.lines.forEach((ln, k) => {
-                const dim = ln.kind === "same";
+                const dim = ln.kind === "same" || off;
                 const text = ln.kind === "added" ? `+ ${ln.text}` : ln.text;
                 by += this.text(rt, "l" + k, text, PAD, by, tw, 12, { color: dim ? "#8a7c66" : "#f4ead0" });
             });
@@ -425,8 +452,16 @@ class UpgradeOptionDialog extends Component {
 
         // 확정 버튼
         const sel = this.selected;
-        const ok = !!sel;
-        const label = sel ? `[ 강화한다 ▶ ${sel.name} ]` : "위에서 강화를 하나 고른다";
+        let ok = !!sel;
+        let label = sel ? `[ 강화한다 ▶ ${sel.name} ]` : "위에서 강화를 하나 고른다";
+        if (this.shop && sel) {
+            const price = this.shop.prices[sel.upgradeKey];
+            const money = this.shopMoney();
+            if (money < price) {
+                ok = false;
+                label = `돈이 모자란다 (${price} G 필요 · 내 돈 ${money} G)`;
+            } else label = `[ 강화한다 · ${price} G ]`;
+        } else if (this.shop) label = "위에서 파는 강화를 하나 고른다";
         this.confirmButton.text.setText(label);
         this.confirmButton.text.color = ok ? UIKit.COLORS.gold : UIKit.COLORS.faint;
         this.confirmButton.text.fontWeight = ok ? "bold" : "normal";

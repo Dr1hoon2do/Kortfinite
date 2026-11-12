@@ -122,6 +122,50 @@ class ShopDialog extends Component {
         return y + ShopDialog.ROW;
     }
 
+    // 이 상점이 파는 강화 3종: 색 칩 + 이름 + 값 (품절은 흐림, 돈이 모자라면 값이 빨강)
+    addUpgradeInfo(y) {
+        const p = this.player;
+        const go = this.content.createChild("upinfo");
+        const rt = UIKit.place(go, 6, y, null, 64);
+        go.addComponent(new UIRect({ color: "rgba(42, 35, 30, 0.95)", borderColor: UIKit.COLORS.border, borderWidth: 1 }));
+        this.npc.upgrades.forEach((u, i) => {
+            const c = UpgradeFlow.COLORS[u.color];
+            const price = this.npc.upgradePrice(u.color);
+            const ly = 5 + i * 19;
+            const chip = rt.createChild("chip");
+            UIKit.place(chip, 8, ly + 1, 14, 14);
+            chip.addComponent(new UIRect({ color: u.sold ? UIKit.COLORS.faint : c.css, borderColor: "rgba(0, 0, 0, 0.6)", borderWidth: 1 }));
+            UIKit.label(rt, "n" + i, `${c.name} 강화${c.hard ? " (어려움)" : ""}`, 30, ly + 1, null, 15, { fontSize: 12, fontWeight: "bold", color: u.sold ? UIKit.COLORS.faint : UIKit.COLORS.text });
+            const priceText = u.sold ? "품절" : `${price} G`;
+            const l = UIKit.label(rt, "p" + i, priceText, 0, ly + 1, 70, 15, { fontSize: 12, fontWeight: "bold", align: "right", color: u.sold ? UIKit.COLORS.faint : p.money < price ? "#e85a4a" : "#f0d878" });
+            l.gameObject.getComponent(RectTransform).setAnchor(1, 0, 1, 0);
+            l.gameObject.getComponent(RectTransform).setOffsets(-78, ly + 1, 8, -(ly + 16));
+        });
+        this.rows.push(go);
+        return y + 70;
+    }
+
+    // 상점이 파는 색을 받을 수 있는 카드가 있나 (없으면 이유 글)
+    upgradeBlock() {
+        const colors = this.npc.upgrades.filter((u) => !u.sold).map((u) => u.color);
+        if (colors.length === 0) return "강화가 모두 품절이다";
+        if (UpgradeFlow.candidates(this.player, colors).length === 0) return "파는 색 강화를 받을 카드가 없다";
+        return null;
+    }
+
+    addUpgradePick(y) {
+        const why = this.upgradeBlock();
+        const b = UIKit.button(this.content, "pick", why ?? "[ 강화 고르기 ]", () => this.buyUpgrade(), { fontSize: 14 });
+        b.rt.setAnchor(0, 0, 1, 0);
+        b.rt.setOffsets(6, y, 6, -(y + 32));
+        UIKit.setEnabled(b, !why);
+        if (!why) b.text.color = UIKit.COLORS.gold;
+        this.rows.push(b.go);
+        const sub = UIKit.label(this.content, "pickhint", why ? "" : "카드를 고르면 받을 수 있는 강화와 효과 변화를 본다", 10, y + 34, null, 13, { fontSize: 10, color: "#c8b890" });
+        this.rows.push(sub.gameObject);
+        return y + 52;
+    }
+
     // 목록 높이 (논리 단위)
     pageSize() {
         return Math.floor(this.list.rect.height / this.list.uiRoot.scale);
@@ -144,7 +188,7 @@ class ShopDialog extends Component {
         const pages = [[]];
         let used = 6;
         for (const e of entries) {
-            const h = e.head ? ShopDialog.HEAD : ShopDialog.ROW;
+            const h = e.h ?? (e.head ? ShopDialog.HEAD : ShopDialog.ROW);
             if (used + h > height && pages[pages.length - 1].length > 0) {
                 pages.push([]);
                 used = 6;
@@ -164,7 +208,7 @@ class ShopDialog extends Component {
     // 목록의 줄: 카드 강화 3개, 카드 빼기 (물건은 진열대에 바닥에 놓여 있고 옆에서 상호작용하면 산다: Run.shopItems)
     entries() {
         const list = [{ head: "카드 강화" }];
-        this.npc.upgrades.forEach((u, i) => list.push({ upgrade: u, index: i }));
+        list.push({ upgradeInfo: true, h: 70 }, { upgradePick: true, h: 52 });
         list.push({ head: "카드 정리" }, { remove: true });
         return list;
     }
@@ -187,19 +231,12 @@ class ShopDialog extends Component {
                 y = this.addHeader(y, entry.head);
                 continue;
             }
-            if (entry.upgrade) {
-                const u = entry.upgrade;
-                const c = UpgradeFlow.COLORS[u.color];
-                const price = this.npc.upgradePrice(u.color);
-                const none = !u.sold && UpgradeFlow.candidates(p, [u.color]).length === 0;
-                const poor = !u.sold && p.money < price;
-                y = this.addRow(y, {
-                    chip: c.css, name: `${c.name} 강화`,
-                    info: u.sold ? "품절" : none ? "이 색 강화를 받을 카드가 없다" : `카드 한 장을 골라 ${c.name} 강화`,
-                    button: u.sold ? "품절" : `${price} G`, ok: !u.sold && !none && !poor,
-                    faded: u.sold, poor,
-                    onTap: () => this.buyUpgrade(u)
-                });
+            if (entry.upgradeInfo) {
+                y = this.addUpgradeInfo(y);
+                continue;
+            }
+            if (entry.upgradePick) {
+                y = this.addUpgradePick(y);
                 continue;
             }
             if (entry.remove) {
@@ -264,24 +301,31 @@ class ShopDialog extends Component {
         MessageLog.add(`${josa(card.name, "을를")} ${offer.price} G에 샀다 (${where})`, "#e8c860");
     }
 
-    // 카드 강화 사기: 상점 창을 닫고 강화 흐름을 연다. 실제로 강화됐을 때만 돈을 내고 품절로 한다. 끝나면 상점 창을 다시 연다
-    buyUpgrade(u) {
+    // 카드 강화 사기: 상점 창을 닫고 강화 흐름을 연다 (카드 → 가능한 강화 전부 보며 고르기).
+    // 실제로 강화됐을 때(onDone(카드, 색))만 그 색의 값을 내고 품절로 한다. 끝나면 상점 창을 다시 연다
+    buyUpgrade() {
         const p = this.player;
         const npc = this.npc;
-        const price = npc.upgradePrice(u.color);
-        if (u.sold || p.money < price) return;
-        if (UpgradeFlow.candidates(p, [u.color]).length === 0) return;
-        const c = UpgradeFlow.COLORS[u.color];
+        if (this.upgradeBlock()) return;
+        const prices = {};
+        const sold = {};
+        for (const u of npc.upgrades) {
+            prices[u.color] = npc.upgradePrice(u.color);
+            if (u.sold) sold[u.color] = true;
+        }
         this.close();
         UpgradeFlow.open({
-            colors: [u.color], title: `강화 · 카드를 고른다 (${price} G)`,
-            onDone: (card) => {
-                if (card && !u.sold) {
+            title: "강화 · 카드를 고른다",
+            shop: { prices, sold, money: () => p.money },
+            onDone: (card, color) => {
+                const u = card && npc.upgrades.find((x) => x.color === color);
+                if (u && !u.sold) {
+                    const price = prices[color];
                     p.money -= price;
                     npc.money += price;
                     u.sold = true;
                     npc.buys++;
-                    MessageLog.add(`${c.name} 강화를 ${price} G에 샀다`, "#e8c860");
+                    MessageLog.add(`${UpgradeFlow.COLORS[color].name} 강화를 ${price} G에 샀다`, "#e8c860");
                 }
                 if (npc.alive && !npc.angry && p.alive) this.open(npc);
             }
